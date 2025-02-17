@@ -1,0 +1,55 @@
+# Logs
+/client_side/logs
+/client_side/*.log
+/client_side/npm-debug.log*
+/client_side/yarn-debug.log*
+/client_side/yarn-error.log*
+/client_side/pnpm-debug.log*
+/client_side/lerna-debug.log*
+
+/Server_side/logs
+/Server_side/*.log
+/Server_side/npm-debug.log*
+/Server_side/yarn-debug.log*
+/Server_side/yarn-error.log*
+/Server_side/pnpm-debug.log*
+/Server_side/lerna-debug.log*
+
+# Node modules
+/client_side/node_modules
+/Server_side/node_modules
+
+# Build files
+/client_side/dist
+/client_side/dist-ssr
+/Server_side/dist
+
+# Local environment files
+/client_side/*.local
+/Server_side/*.local
+/client_side/.env
+/Server_side/.env
+
+# Editor directories and files
+/client_side/.vscode/*
+/client_side!.vscode/extensions.json
+/client_side/.idea
+/client_side/.DS_Store
+/client_side/*.suo
+/client_side/*.ntvs*
+/client_side/*.njsproj
+/client_side/*.sln
+/client_side/*.sw?
+
+/Server_side/.vscode/*
+/Server_side/.idea
+/Server_side/.DS_Store
+/Server_side/*.suo
+/Server_side/*.ntvs*
+/Server_side/*.njsproj
+/Server_side/*.sln
+/Server_side/*.sw?
+
+# Git ignore file itself
+/client_side/.gitignore
+/Server_side/.gitignore
