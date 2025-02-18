@@ -212,11 +212,11 @@ export const downloadPaper = async (paperId) => {
 };
 
 // ✅ Generate a question paper with course and custom subject
-export const generateQuestionPaper = async (course, customSubject) => {
+export const generateQuestionPaper = async (courseId, customSubject) => {
   try {
     const response = await axios.post(
       `${API_URL}/generate-paper`,
-      { course, customSubject }, // Send both course and custom subject
+      { courseId, customSubject }, // Send both course and custom subject
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }
@@ -226,5 +226,8 @@ export const generateQuestionPaper = async (course, customSubject) => {
     console.error("❌ Error generating question paper:", error.response?.data || error.message);
     throw error;
   }
+};
+export const saveQuestions = async (course, subject, questions) => {
+  await axios.post("/api/questions", { course, subject, questions });
 };
 

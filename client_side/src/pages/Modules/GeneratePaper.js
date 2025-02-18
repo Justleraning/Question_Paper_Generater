@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { generateQuestionPaper, getAvailableCourses } from "../../services/paperService.js";
+import { getAvailableCourses } from "../../services/paperService.js";
 import { useNavigate } from "react-router-dom";
 
 const GeneratePaper = () => {
@@ -7,7 +7,6 @@ const GeneratePaper = () => {
   const [customSubject, setCustomSubject] = useState(""); // Custom subject
   const [courses, setCourses] = useState([]); // Available courses
   const [subjects, setSubjects] = useState([]); // Subjects of selected course
-  const [showSubjects, setShowSubjects] = useState(false); // Show subjects after generating
   const navigate = useNavigate();
 
   // Fetch available courses on component mount
@@ -15,7 +14,6 @@ const GeneratePaper = () => {
     const fetchCourses = async () => {
       try {
         const availableCourses = await getAvailableCourses();
-        console.log("✅ Courses received:", availableCourses);
         setCourses(availableCourses);
       } catch (error) {
         console.error("❌ Error fetching courses:", error);
@@ -24,44 +22,47 @@ const GeneratePaper = () => {
     fetchCourses();
   }, []);
 
-  // Handle course selection and set corresponding subjects
+  // Handle course selection and update subjects
   const handleCourseChange = (e) => {
     const selectedCourseId = e.target.value;
     setCourse(selectedCourseId);
-
     const selectedCourse = courses.find((c) => c.id === selectedCourseId);
-    if (selectedCourse) {
-      setSubjects([...selectedCourse.subjects]); // Spread operator to avoid mutation
-    } else {
-      setSubjects([]);
-    }
+    setSubjects(selectedCourse ? [...selectedCourse.subjects] : []);
   };
 
-  const handleGenerate = async () => {
+  // Handle navigation to Question Entry page
+  const handleGenerate = () => {
     if (!course) {
       alert("Please select a course.");
       return;
     }
-
     if (!customSubject.trim()) {
       alert("Please enter a custom subject.");
       return;
     }
-
-    try {
-      await generateQuestionPaper(course, customSubject.trim().toLowerCase());
-      setShowSubjects(true); // Show subjects after generating paper
-    } catch (error) {
-      console.error("❌ Error generating paper:", error);
-    }
+  
+    // Debugging: Log selected course
+    const selectedCourse = courses.find((c) => c.id === course);
+    console.log("Selected Course:", selectedCourse);
+  
+    // Get the full course name from the database
+    const fullCourseName = selectedCourse ? selectedCourse.fullName : "Unknown Course";
+  
+    // Ensure fullCourseName and subject are properly encoded
+    const redirectPath = `/enter-questions/${encodeURIComponent(fullCourseName)}/${encodeURIComponent(customSubject.trim())}`;
+    console.log("Navigating to:", redirectPath);
+  
+    navigate(redirectPath);
   };
+  
+  
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold">Generate Question Paper</h1>
+    <div className="flex flex-col w-full px-12 py-10">
+      <h1 className="text-3xl font-bold mb-6">Generate Question Paper</h1>
 
       {/* Course Selection Dropdown */}
-      <div className="mt-4">
+      <div className="mt-4 w-full max-w-3xl">
         <label className="block text-lg">Select Course:</label>
         <select
           value={course}
@@ -79,7 +80,7 @@ const GeneratePaper = () => {
 
       {/* Show Subjects of the Selected Course */}
       {subjects.length > 0 && (
-        <div className="mt-4">
+        <div className="mt-4 w-full max-w-3xl">
           <h3 className="text-lg font-semibold">Subjects for {course}:</h3>
           <ul className="list-disc pl-6 mt-2">
             {subjects.map((subject, index) => (
@@ -92,7 +93,7 @@ const GeneratePaper = () => {
       )}
 
       {/* Custom Subject Input */}
-      <div className="mt-4">
+      <div className="mt-4 w-full max-w-3xl">
         <label className="block text-lg">Enter Custom Subject:</label>
         <input
           type="text"
@@ -106,7 +107,7 @@ const GeneratePaper = () => {
       {/* Generate Paper Button */}
       <button
         onClick={handleGenerate}
-        className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
+        className="mt-6 bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 transition w-full max-w-3xl"
       >
         Generate Paper
       </button>

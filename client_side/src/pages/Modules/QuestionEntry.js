@@ -1,134 +1,158 @@
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { submitQuestion } from "../../services/paperService.js";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Bold from "@tiptap/extension-bold";
+import Italic from "@tiptap/extension-italic";
+import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
+import Image from "@tiptap/extension-image";
+import { FaBold, FaItalic, FaUnderline, FaAlignLeft, FaAlignCenter, FaAlignRight } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 const QuestionEntry = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { course, subjects } = location.state || {};
+  const { courseId, subject } = useParams();
+  useEffect(() => {
+    console.log("Received courseId:", courseId);
+    console.log("Received subject:", subject);
+  }, [courseId, subject]);
+  const TOTAL_QUESTIONS = 20;
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(1);
 
-  const [selectedSubject, setSelectedSubject] = useState(subjects[0]);
-  const [questions, setQuestions] = useState({});
-  const [currentQuestion, setCurrentQuestion] = useState("");
-  const [options, setOptions] = useState(["", "", "", ""]);
-  const [correctOption, setCorrectOption] = useState(null);
+  // Decode the full course name and subject from the URL
+  const formattedCourse = courseId ? decodeURIComponent(courseId) : "Unknown Course";
+  const formattedSubject = subject ? decodeURIComponent(subject).replace(/-/g, " ") : "Custom Subject";
 
-  const handleSubmitQuestion = async () => {
-    if (!currentQuestion.trim()) {
-      alert("Please enter a question.");
-      return;
-    }
-    if (correctOption === null) {
-      alert("Please select a correct answer.");
-      return;
-    }
+  const [questionText, setQuestionText] = useState("");
+  const [options, setOptions] = useState([
+    { type: "Text", value: "" },
+    { type: "Text", value: "" },
+    { type: "Text", value: "" },
+    { type: "Text", value: "" },
+  ]);
 
-    const questionData = {
-      course,
-      subject: selectedSubject,
-      questionText: currentQuestion,
-      options,
-      correctAnswer: options[correctOption],
-    };
-
-    try {
-      await submitQuestion(questionData); // ✅ Function name changed
-      alert("Question saved successfully!");
-
-      setQuestions((prev) => ({
-        ...prev,
-        [selectedSubject]: [...(prev[selectedSubject] || []), questionData],
-      }));
-
-      setCurrentQuestion("");
-      setOptions(["", "", "", ""]);
-      setCorrectOption(null);
-    } catch (error) {
-      console.error("❌ Error saving question:", error);
-    }
-  };
-
-  const handleSubjectChange = (newSubject) => {
-    setSelectedSubject(newSubject);
-  };
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Bold,
+      Italic,
+      Underline,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Image,
+    ],
+    content: questionText,
+    onUpdate: ({ editor }) => {
+      setQuestionText(editor.getHTML());
+    },
+  });
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold">Question Entry for {course}</h1>
+    <div className="flex flex-col items-center w-full max-w-3xl mx-auto px-8 py-6">
+      {/* Course & Subject Header */}
+      <h2 className="text-2xl font-bold text-center">Enter Questions for</h2>
+      <h3 className="text-lg font-semibold text-gray-700 text-center">
+        {formattedCourse} with {formattedSubject}
+      </h3>
+      <p className="text-sm text-gray-500 text-center">
+        {currentQuestionIndex} / {TOTAL_QUESTIONS} Questions
+      </p>
 
-      {/* Subject Selection */}
-      <div className="mt-4 flex space-x-4">
-        {subjects.map((subject) => (
-          <button
-            key={subject}
-            onClick={() => handleSubjectChange(subject)}
-            className={`px-4 py-2 rounded-md ${
-              selectedSubject === subject
-                ? "bg-blue-500 text-white"
-                : "bg-gray-300"
-            }`}
-          >
-            {subject}
-          </button>
+      {/* Toolbar */}
+      <div className="flex space-x-2 mb-2 border border-black p-2 rounded bg-gray-100">
+        <button onClick={() => editor.chain().focus().toggleBold().run()} className="px-3 py-2 border border-black rounded"><FaBold /></button>
+        <button onClick={() => editor.chain().focus().toggleItalic().run()} className="px-3 py-2 border border-black rounded"><FaItalic /></button>
+        <button onClick={() => editor.chain().focus().toggleUnderline().run()} className="px-3 py-2 border border-black rounded"><FaUnderline /></button>
+        <button onClick={() => editor.chain().focus().setTextAlign("left").run()} className="px-3 py-2 border border-black rounded"><FaAlignLeft /></button>
+        <button onClick={() => editor.chain().focus().setTextAlign("center").run()} className="px-3 py-2 border border-black rounded"><FaAlignCenter /></button>
+        <button onClick={() => editor.chain().focus().setTextAlign("right").run()} className="px-3 py-2 border border-black rounded"><FaAlignRight /></button>
+      </div>
+
+      {/* Question Editor */}
+      <div className="w-full max-w-3xl border border-black rounded p-2">
+        <EditorContent editor={editor} />
+      </div>
+
+      {/* Options A, B, C, D */}
+      <div className="mt-6 w-full">
+        <label className="block font-bold">Options:</label>
+        {["A", "B", "C", "D"].map((optionLabel, index) => (
+          <div key={index} className="flex items-center gap-3 mt-2">
+            <span className="font-bold">{optionLabel}.</span>
+
+            {/* Dropdown to select Text or Image */}
+            <select
+              className="border border-black p-1 rounded w-24 text-sm"
+              value={options[index].type}
+              onChange={(e) => {
+                const updatedOptions = [...options];
+                updatedOptions[index].type = e.target.value;
+                updatedOptions[index].value = e.target.value === "Text" ? "" : null;
+                setOptions(updatedOptions);
+              }}
+            >
+              <option value="Text">Text</option>
+              <option value="Image">Image</option>
+            </select>
+
+            {/* If Text is selected, show input box */}
+            {options[index].type === "Text" && (
+              <input
+                type="text"
+                className="border border-black p-2 w-full rounded"
+                placeholder={`Enter Option ${optionLabel}`}
+                value={options[index].value}
+                onChange={(e) => {
+                  const updatedOptions = [...options];
+                  updatedOptions[index].value = e.target.value;
+                  setOptions(updatedOptions);
+                }}
+              />
+            )}
+
+            {/* If Image is selected, show upload button */}
+            {options[index].type === "Image" && (
+              <input
+                type="file"
+                accept="image/*"
+                className="border border-black p-2 rounded"
+                onChange={(e) => {
+                  const updatedOptions = [...options];
+                  updatedOptions[index].value = URL.createObjectURL(e.target.files[0]);
+                  setOptions(updatedOptions);
+                }}
+              />
+            )}
+          </div>
         ))}
       </div>
 
-      <h2 className="text-xl font-semibold mt-4">Subject: {selectedSubject}</h2>
-
-      {/* Question Input */}
+      {/* Correct Answer */}
       <div className="mt-4">
-        <label className="block text-lg">Enter Question:</label>
-        <textarea
-          value={currentQuestion}
-          onChange={(e) => setCurrentQuestion(e.target.value)}
-          className="border p-2 rounded w-full mt-2"
-        />
+        <label className="block font-bold">Correct Option:</label>
+        <div className="flex gap-4">
+          {["A", "B", "C", "D"].map((option, index) => (
+            <label key={index} className="flex items-center gap-1">
+              <input type="radio" name="correctOption" value={option} />
+              {option}
+            </label>
+          ))}
+        </div>
       </div>
 
-      {/* Options Input */}
-      {options.map((option, idx) => (
-        <div key={idx} className="mt-2 flex items-center space-x-2">
-          <input
-            type="text"
-            value={option}
-            onChange={(e) =>
-              setOptions(
-                options.map((opt, i) => (i === idx ? e.target.value : opt))
-              )
-            }
-            className="border p-2 rounded w-full"
-            placeholder={`Option ${String.fromCharCode(65 + idx)}`}
-          />
-          <input
-            type="radio"
-            name="correctOption"
-            checked={correctOption === idx}
-            onChange={() => setCorrectOption(idx)}
-          />
-        </div>
-      ))}
-
-      {/* Buttons for Saving & Navigation */}
-      <div className="mt-4 flex space-x-4">
+      {/* Buttons */}
+      <div className="flex gap-4 mt-6">
         <button
-          onClick={handleSubmitQuestion} // ✅ Function name changed
-          className="bg-green-500 text-white px-4 py-2 rounded"
+          className="px-4 py-2 bg-gray-300 text-black rounded"
+          onClick={() => setCurrentQuestionIndex((prev) => Math.max(1, prev - 1))}
         >
-          Save Question
+          Previous Question
         </button>
-
-        {questions[selectedSubject] && (
-          <button
-            onClick={() =>
-              navigate("/question-preview", {
-                state: { course, subject: selectedSubject, questions: questions[selectedSubject] },
-              })
-            }
-            className="bg-yellow-500 text-white px-4 py-2 rounded"
-          >
-            Preview {selectedSubject}
-          </button>
-        )}
+        <button
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+          onClick={() => setCurrentQuestionIndex((prev) => Math.min(TOTAL_QUESTIONS, prev + 1))}
+        >
+          Next Question
+        </button>
+        <button className="px-4 py-2 bg-green-500 text-white rounded">Save Question</button>
       </div>
     </div>
   );

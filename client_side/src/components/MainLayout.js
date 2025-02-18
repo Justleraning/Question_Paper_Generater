@@ -6,7 +6,7 @@ const MainLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <div className="flex">
+    <div className="flex h-screen">
       {/* ✅ Sidebar (Remains Fixed) */}
       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 
@@ -15,12 +15,14 @@ const MainLayout = ({ children }) => {
         {/* ✅ Fixed Navbar */}
         <Navbar isSidebarOpen={isSidebarOpen} />
 
-        {/* ✅ Content - Push down below Navbar */}
+        {/* ✅ Content - Prevents covering under Navbar */}
         <div 
-          className="p-6 transition-all duration-300 ease-in-out"
+          className="transition-all duration-300 ease-in-out w-full px-12 py-12 flex flex-col items-start"
           style={{
-            marginLeft: isSidebarOpen ? "16rem" : "4rem", // Adjust Sidebar Width
-            marginTop: "4rem", // ✅ Push content below Navbar
+            marginLeft: isSidebarOpen ? "14rem" : "5rem",  // Sidebar push effect
+            transition: "margin-left 0.3s ease-in-out",
+            marginTop: "5rem",  // Push content slightly down to prevent covering
+            minHeight: "calc(100vh - 5rem)",  // Ensures full height remains
           }}
         >
           {children}
