@@ -1,0 +1,105 @@
+/* Global Styling */
+body {
+    font-family: 'Poppins', sans-serif; /* Premium font */
+    background: linear-gradient(120deg, #fdfbfb, #ebedee); /* Subtle gradient */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden; /* Prevent unwanted scrollbars */
+}
+
+/* Main Container */
+.main-container {
+    display: flex; /* Flex layout for separate containers */
+    gap: 40px; /* Add space between the two containers */
+    justify-content: center;
+    align-items: center;
+    width: 90%;
+    max-width: 1200px;
+    padding: 20px;
+    animation: fadeIn 1s ease-in-out; /* Fade-in animation */
+}
+
+/* Individual Containers */
+.marks-container {
+    text-align: center;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    max-width: 500px; /* Separate boxes for Create Questions and Create Paper */
+    padding: 40px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.marks-container:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* Typography */
+h1 {
+    font-size: 28px;
+    color: #333333;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+p {
+    font-size: 18px;
+    color: #666666;
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+/* Buttons */
+.action-btn {
+    padding: 15px 40px;
+    font-size: 18px;
+    font-weight: 500;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(120deg, #007bff, #0056b3);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+}
+
+.action-btn:hover {
+    background: linear-gradient(120deg, #0056b3, #003f7f);
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0, 123, 255, 0.5);
+}
+
+.action-btn:focus {
+    outline: none;
+    box-shadow: 0 0 12px rgba(0, 123, 255, 0.7);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .main-container {
+        flex-direction: column; /* Stack the two containers vertically */
+        gap: 20px;
+    }
+
+    .marks-container {
+        max-width: 90%;
+    }
+}

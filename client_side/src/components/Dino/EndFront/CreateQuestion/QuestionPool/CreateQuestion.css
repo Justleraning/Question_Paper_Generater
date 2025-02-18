@@ -1,0 +1,229 @@
+/* 🌟 Outer Container with Scroll */
+.outer-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 80vw;
+    padding: 20px;
+    background-color: #f9f9f9;
+    min-height: 100vh;
+    overflow-y: auto; /* Enables Scrollbar */
+}
+
+/* 🌟 Inner Main Container */
+.inner-container {
+    width: 80%;
+    max-width: 1200px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    overflow-y: auto; /* Enables Scroll if Needed */
+    max-height: 90vh;
+}
+
+/* 🌟 Page Title */
+.page-title {
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* 🌟 Individual Question Container */
+.question-container {
+    position: relative;
+    background: #fdfdfd;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+/* 🌟 Delete Question Button */
+.delete-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* 🌟 Labels */
+label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+}
+
+/* 🌟 Dropdowns */
+.dropdown {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* 🌟 Question Text Input */
+.question-input {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    resize: vertical;
+}
+
+/* 🌟 MCQ Options Container */
+.mcq-options {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 🌟 MCQ Individual Option */
+.mcq-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 🌟 MCQ Text Input */
+.mcq-text {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* 🌟 MCQ Option Type Dropdown */
+.option-type-dropdown {
+    width: 80px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: white;
+}
+
+/* 🌟 Image Upload */
+.upload-image-btn {
+    display: inline-block;
+    padding: 8px 15px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.upload-image-btn:hover {
+    background: #0056b3;
+}
+
+/* 🌟 Image Preview with Fixed Frame */
+.image-preview-frame {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #ccc;
+    padding: 5px;
+    border-radius: 10px;
+    width: 120px; /* Small Frame */
+    height: 120px; /* Fixed Height */
+    overflow: hidden; /* Ensures Image Fits */
+    background: #f3f3f3;
+    position: relative;
+}
+
+/* 🌟 Image Inside Preview Frame */
+.image-preview-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensures Image Scales Properly */
+    border-radius: 8px;
+}
+
+/* 🌟 Delete Image Button inside the Frame */
+.delete-image-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: red;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* 🌟 Scrollbar for Whole Page */
+html {
+    overflow-y: scroll;
+}
+
+/* 🌟 Add & Save Buttons */
+.add-btn,
+.save-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-top: 15px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.add-btn {
+    background-color: #007bff;
+    color: white;
+}
+
+.save-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+.add-btn:hover {
+    background-color: #0056b3;
+}
+
+.save-btn:hover {
+    background-color: #218838;
+}
+
+/* 🌟 Responsive Design */
+@media (max-width: 768px) {
+    .inner-container {
+        width: 100%;
+        padding: 15px;
+    }
+
+    .question-container {
+        padding: 10px;
+    }
+
+    .mcq-option {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dropdown {
+        font-size: 14px;
+    }
+}

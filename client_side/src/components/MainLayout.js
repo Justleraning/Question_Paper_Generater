@@ -3,17 +3,28 @@ import Sidebar from "./Sidebar.js";
 import Navbar from "./Navbar.js";
 
 const MainLayout = ({ children }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // ✅ Correctly manage sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-screen">
-      {/* ✅ Ensure Sidebar receives state */}
+    <div className="flex">
+      {/* ✅ Sidebar (Remains Fixed) */}
       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 
-      {/* ✅ Navbar and Content Adjust Dynamically */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? "ml-64" : "ml-16"}`}>
+      {/* ✅ Content Wrapper */}
+      <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out">
+        {/* ✅ Fixed Navbar */}
         <Navbar isSidebarOpen={isSidebarOpen} />
-        <div className="p-6">{children}</div>
+
+        {/* ✅ Content - Push down below Navbar */}
+        <div 
+          className="p-6 transition-all duration-300 ease-in-out"
+          style={{
+            marginLeft: isSidebarOpen ? "16rem" : "4rem", // Adjust Sidebar Width
+            marginTop: "4rem", // ✅ Push content below Navbar
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
