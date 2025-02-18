@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const paperSchema = mongoose.Schema({
   paperId: { type: String, required: true, unique: true },
   course: { type: String, required: true },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" , required: true },
   status: { type: String, enum: ["Pending", "Rejected", "Approved"], default: "Pending" },
   rejectionReason: { type: String, default: "" },
   approvalRequested: { type: Boolean, default: false },
