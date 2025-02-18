@@ -10,4 +10,4 @@ this was created using MERN stack
 
 ### Question Paper Generator
 
-this a website for generating question for teacher and higher authority to check there 
+this a website for generating question for teacher and higher authority to check there work.
