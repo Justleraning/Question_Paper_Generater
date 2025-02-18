@@ -9,3 +9,5 @@ In the server side for testing purposes dummy data is to be loaded into the data
 this was created using MERN stack 
 
 ### Question Paper Generator
+
+this a website for generating question for teacher and higher authority to check there 
