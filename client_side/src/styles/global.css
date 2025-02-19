@@ -25,3 +25,10 @@ body {
 .card {
   @apply bg-white p-4 rounded-lg shadow-md;
 }
+
+/* Force full-width for the content area */
+.content-container {
+  width: 100% !important;
+  max-width: 90% !important;
+  margin: 0 auto !important;
+}
