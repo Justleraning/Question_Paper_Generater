@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api/papers";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 console.log("🔍 Backend API URL (PaperService):", API_URL); // Debugging
 
@@ -29,16 +29,26 @@ const handleAuthError = (error) => {
     window.location.href = "/login"; // Force logout
   }
   console.error("❌ API Error:", error.response?.data || error.message);
-  throw error;
+  return null;
 };
 
-// ✅ API Calls
-export const submitQuestion = async (questionData) => {
+// ✅ Restore Missing Functions
+
+export const getFinalPreview = async () => {
   try {
-    const response = await axios.post(`${API_URL}/questions`, questionData, { headers: authHeaders() });
+    const response = await axios.get(`${API_URL}/final-preview`, { headers: authHeaders() });
     return response.data;
   } catch (error) {
-    handleAuthError(error);
+    return handleAuthError(error);
+  }
+};
+
+export const fetchGeneralQuestions = async (stream) => {
+  try {
+    const response = await axios.get(`${API_URL}/general-questions/${stream}`, { headers: authHeaders() });
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
   }
 };
 
@@ -47,7 +57,16 @@ export const getMyPapers = async () => {
     const response = await axios.get(`${API_URL}/my-papers`, { headers: authHeaders() });
     return response.data;
   } catch (error) {
-    handleAuthError(error);
+    return handleAuthError(error);
+  }
+};
+
+export const deletePaper = async (paperId) => {
+  try {
+    const response = await axios.delete(`${API_URL}/${paperId}`, { headers: authHeaders() });
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
   }
 };
 
@@ -56,178 +75,95 @@ export const getApprovalPapers = async () => {
     const response = await axios.get(`${API_URL}/view`, { headers: authHeaders() });
     return response.data;
   } catch (error) {
-    handleAuthError(error);
+    return handleAuthError(error);
   }
 };
 
-// ✅ Fetch available courses
+export const approvePaper = async (paperId) => {
+  try {
+    const response = await axios.patch(`${API_URL}/${paperId}/approve`, {}, { headers: authHeaders() });
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
+  }
+};
+
+export const rejectPaper = async (paperId, reason) => {
+  try {
+    const response = await axios.patch(`${API_URL}/${paperId}/reject`, { rejectionReason: reason }, { headers: authHeaders() });
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
+  }
+};
+
+export const getStatusOfPapers = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/status`, { headers: authHeaders() });
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
+  }
+};
+
+export const getRejectedPapers = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/rejected`, { headers: authHeaders() });
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
+  }
+};
+
+// ✅ Existing Functions (Kept)
 export const getAvailableCourses = async () => {
   try {
-    const response = await axios.get(`${API_URL}/courses`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
+    const response = await axios.get(`${API_URL}/courses`, { headers: authHeaders() });
+
+    // Debugging Logs
+    console.log("✅ API Response - Available Courses:", response.data);
+
+    if (!Array.isArray(response.data)) {
+      throw new Error("Invalid API response format: Expected an array.");
+    }
+
     return response.data;
   } catch (error) {
     console.error("❌ Error fetching courses:", error.response?.data || error.message);
-    throw error;
+    return []; // Ensure it returns an empty array instead of crashing
   }
 };
 
-// ✅ Fetch final preview of paper
-export const getFinalPreview = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/final-preview`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error fetching final preview:", error.response?.data || error.message);
-    throw error;
-  }
-};
 
-// ✅ Fetch general questions based on stream
-export const fetchGeneralQuestions = async (stream) => {
-  try {
-    const response = await axios.get(`${API_URL}/general-questions/${stream}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error fetching general questions:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// ✅ Approve a paper (Admin)
-export const approvePaper = async (paperId) => {
-  try {
-    const response = await axios.patch(`${API_URL}/${paperId}/approve`, {}, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error approving paper:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// ✅ Reject a paper (Admin)
-export const rejectPaper = async (paperId, reason) => {
-  try {
-    const response = await axios.patch(`${API_URL}/${paperId}/reject`, { rejectionReason: reason }, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error rejecting paper:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// ✅ Fetch rejected papers (Teacher)
-export const getRejectedPapers = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/rejected`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error fetching rejected papers:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// ✅ Fetch paper status (SuperAdmin Panel)
-export const getStatusOfPapers = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/status`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error fetching paper status:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// ✅ Delete a paper (Teacher)
-export const deletePaper = async (paperId) => {
-  try {
-    const response = await axios.delete(`${API_URL}/${paperId}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error deleting paper:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// ✅ Fetch all questions from question pool
-export const getQuestionPool = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/question-pool`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error fetching question pool:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// ✅ Delete a question (Admin)
-export const deleteQuestion = async (questionId) => {
-  try {
-    const response = await axios.delete(`${API_URL}/question/${questionId}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error deleting question:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// ✅ Download paper as PDF
-export const downloadPaper = async (paperId) => {
-  try {
-    const response = await axios.get(`${API_URL}/${paperId}/download`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      responseType: "blob",
-    });
-
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `Paper_${paperId}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  } catch (error) {
-    console.error("❌ Error downloading paper:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// ✅ Generate a question paper with course and custom subject
 export const generateQuestionPaper = async (courseId, customSubject) => {
   try {
     const response = await axios.post(
       `${API_URL}/generate-paper`,
-      { courseId, customSubject }, // Send both course and custom subject
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      }
+      { courseId, customSubject },
+      { headers: authHeaders() }
     );
     return response.data;
   } catch (error) {
-    console.error("❌ Error generating question paper:", error.response?.data || error.message);
-    throw error;
+    return handleAuthError(error);
   }
 };
-export const saveQuestions = async (course, subject, questions) => {
-  await axios.post("/api/questions", { course, subject, questions });
+
+export const getCourseById = async (courseId) => {
+  try {
+    const response = await axios.get(`${API_URL}/courses/${courseId}`, { headers: authHeaders() });
+    return response.data || null;
+  } catch (error) {
+    console.error("❌ Error fetching course:", error.response?.data || error.message);
+    return null;
+  }
 };
 
+export const saveQuestions = async (course, subject, questions) => {
+  try {
+    const response = await axios.post(`${API_URL}/questions`, { course, subject, questions }, { headers: authHeaders() });
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error saving questions:", error.response?.data || error.message);
+    return null;
+  }
+};

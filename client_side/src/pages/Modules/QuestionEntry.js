@@ -10,18 +10,11 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 const QuestionEntry = () => {
-  const { courseId, subject } = useParams();
-  useEffect(() => {
-    console.log("Received courseId:", courseId);
-    console.log("Received subject:", subject);
-  }, [courseId, subject]);
+  const { courseName, subjectName } = useParams(); // Extract parameters properly
   const TOTAL_QUESTIONS = 20;
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(1);
-
-  // Decode the full course name and subject from the URL
-  const formattedCourse = courseId ? decodeURIComponent(courseId) : "Unknown Course";
-  const formattedSubject = subject ? decodeURIComponent(subject).replace(/-/g, " ") : "Custom Subject";
-
+  const [fullCourseName, setFullCourseName] = useState("Loading Course...");
+  const [formattedSubject, setFormattedSubject] = useState("Loading Subject...");
   const [questionText, setQuestionText] = useState("");
   const [options, setOptions] = useState([
     { type: "Text", value: "" },
@@ -29,6 +22,30 @@ const QuestionEntry = () => {
     { type: "Text", value: "" },
     { type: "Text", value: "" },
   ]);
+
+  // ✅ Debugging: Log received params
+  useEffect(() => {
+    console.log("🔍 Received courseName:", courseName);
+    console.log("🔍 Received subjectName:", subjectName);
+  }, [courseName, subjectName]);
+
+  // ✅ Ensure Course Name Displays Correctly
+  useEffect(() => {
+    if (courseName) {
+      setFullCourseName(decodeURIComponent(courseName)); // Decode course name properly
+    } else {
+      setFullCourseName("Unknown Course");
+    }
+  }, [courseName]);
+
+  // ✅ Ensure Subject Name Displays Correctly
+  useEffect(() => {
+    if (subjectName) {
+      setFormattedSubject(decodeURIComponent(subjectName).replace(/-/g, " "));
+    } else {
+      setFormattedSubject("Custom Subject");
+    }
+  }, [subjectName]);
 
   const editor = useEditor({
     extensions: [
@@ -40,17 +57,17 @@ const QuestionEntry = () => {
       Image,
     ],
     content: questionText,
-    onUpdate: ({ editor }) => {
-      setQuestionText(editor.getHTML());
-    },
+    onUpdate: ({ editor }) => setQuestionText(editor.getHTML()),
   });
+
+  if (!editor) return null;
 
   return (
     <div className="flex flex-col items-center w-full max-w-3xl mx-auto px-8 py-6">
-      {/* Course & Subject Header */}
+      {/* ✅ Course & Subject Header */}
       <h2 className="text-2xl font-bold text-center">Enter Questions for</h2>
       <h3 className="text-lg font-semibold text-gray-700 text-center">
-        {formattedCourse} with {formattedSubject}
+        {fullCourseName} - {formattedSubject}
       </h3>
       <p className="text-sm text-gray-500 text-center">
         {currentQuestionIndex} / {TOTAL_QUESTIONS} Questions
