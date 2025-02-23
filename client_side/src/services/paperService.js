@@ -16,7 +16,7 @@ const getToken = () => {
 
 // ✅ Headers Helper Function
 const authHeaders = () => {
-  const token = getToken();
+  const token = sessionStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
@@ -24,8 +24,8 @@ const authHeaders = () => {
 const handleAuthError = (error) => {
   if (error.response?.status === 401) {
     console.warn("⚠️ Unauthorized request. Logging out...");
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     window.location.href = "/login"; // Force logout
   }
   console.error("❌ API Error:", error.response?.data || error.message);
@@ -158,12 +158,60 @@ export const getCourseById = async (courseId) => {
   }
 };
 
-export const saveQuestions = async (course, subject, questions) => {
+export const saveQuestion = async (courseName, subjectName, question) => {
   try {
-    const response = await axios.post(`${API_URL}/questions`, { course, subject, questions }, { headers: authHeaders() });
+    console.log("📤 Sending request to save question:", JSON.stringify(question, null, 2));
+
+    // ✅ Fix the "options" structure before sending it
+    const formattedOptions = question.options.map((opt) => ({
+      type: opt.type || "Text",
+      value: opt.value?.trim() || "", // Ensure "value" is always a string
+    }));
+
+    const payload = {
+      courseName,
+      subject: subjectName,
+      question: question.question,
+      options: formattedOptions, // Ensure options are formatted properly
+      correctOption: question.correctOption,
+      index: question.index,
+    };
+
+    console.log("📦 Final Payload Sent:", JSON.stringify(payload, null, 2));
+
+    const response = await axios.post(`${API_URL}/questions`, payload, {
+      headers: authHeaders(),
+    });
+
+    console.log("✅ Backend Response:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error saving questions:", error.response?.data || error.message);
+    console.error("❌ Error saving question:", error.response?.data || error.message);
     return null;
+  }
+};
+
+
+
+
+
+export const getQuestionByIndex = async (courseName, subjectName, index) => {
+  try {
+    const response = await axios.get(`${API_URL}/questions/get`, {
+      headers: authHeaders(),
+      params: { courseName, subject: subjectName, index }, // ✅ Ensure index is sent
+    });
+    
+    console.log("📥 Backend response for fetched question:", response.data);
+
+    if (!response.data || response.data.question === undefined) {
+      console.warn("⚠️ No question found at index. Returning empty form.");
+      return { question: "", options: [], correctOption: null };
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error fetching question by index:", error.response?.data || error.message);
+    return { question: "", options: [], correctOption: null }; // ✅ Return empty if no question found
   }
 };

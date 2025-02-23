@@ -1,12 +1,17 @@
 const mongoose = require("mongoose");
 
 const questionSchema = mongoose.Schema({
-  course: { type: String, required: true },
-  subject: { type: String, required: true, enum: ["Logical Reasoning", "Quantitative Aptitude", "English", "Custom"] },
-  questionText: { type: String, required: true },
-  options: { type: [String], required: true },
-  correctAnswer: { type: String, required: true },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  courseName: { type: String, required: true }, 
+  subject: { type: String, required: true },
+  question: { type: String, required: true }, 
+  options: [
+    {
+      type: { type: String, required: true },
+      value: { type: String, required: true },
+    },
+  ],
+  correctOption: { type: String, required: true }, 
+  index: { type: Number, required: true }, 
 }, { timestamps: true });
 
 module.exports = mongoose.model("Question", questionSchema);

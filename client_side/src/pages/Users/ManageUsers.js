@@ -7,6 +7,7 @@ const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState({ username: "", fullName: "" });
+  const [errorMessage, setErrorMessage] = useState("");
 
   // ✅ Fetch Users
   const fetchUsers = useCallback(async () => {
@@ -49,10 +50,31 @@ const ManageUsers = () => {
     }
   };
 
+  // ✅ Validate Input
+ // ✅ Validate Input
+const validateInput = () => {
+  const usernameRegex = /^[a-zA-Z][a-zA-Z0-9@#$%^&*()_+!~]*$/; // Must start with a letter, can contain numbers & special symbols after
+  const fullNameRegex = /^[a-zA-Z\s]+$/; // Only alphabets and spaces
+
+  if (!usernameRegex.test(newUser.username)) {
+    setErrorMessage("❌ Username must start with a letter and cannot contain spaces.");
+    return false;
+  }
+
+  if (!fullNameRegex.test(newUser.fullName)) {
+    setErrorMessage("❌ Full name can only contain alphabets and spaces.");
+    return false;
+  }
+
+  setErrorMessage(""); // Clear error message if valid
+  return true;
+};
+
+
   // ✅ Handle Adding a User
   const handleAddUser = async () => {
-    if (!newUser.username.trim() || !newUser.fullName.trim()) {
-      alert("Please fill in all fields!");
+    if (!validateInput()) {
+      setTimeout(() => setErrorMessage(""), 4000); // Hide error after 4 seconds
       return;
     }
 
@@ -76,7 +98,8 @@ const ManageUsers = () => {
       setNewUser({ username: "", fullName: "" });
     } catch (error) {
       console.error("❌ Error adding user:", error.response?.data || error.message);
-      alert(error.response?.data?.message || "Error adding user.");
+      setErrorMessage(error.response?.data?.message || "Error adding user.");
+      setTimeout(() => setErrorMessage(""), 4000);
     }
   };
 
@@ -121,6 +144,13 @@ const ManageUsers = () => {
         <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded shadow-lg w-96">
             <h2 className="text-xl font-bold mb-4">Add New User</h2>
+
+            {/* ✅ Error Message INSIDE MODAL */}
+            {errorMessage && (
+              <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">
+                {errorMessage}
+              </div>
+            )}
 
             <label className="block">Full Name:</label>
             <input

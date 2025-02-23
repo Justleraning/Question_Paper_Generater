@@ -130,7 +130,7 @@ export const AuthProvider = ({ children }) => {
 
   // ✅ Handle Normal Logout (Button Click)
   const logout = () => {
-    console.log("👋 Normal logout triggered!");
+    console.log("👋logout triggered!");
 
     resetLogoutState(); // ✅ Reset modal & countdown state properly
 
