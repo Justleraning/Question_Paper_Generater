@@ -7,6 +7,7 @@ function CreateQuestion() {
     {
       id: Date.now(),
       bloomType: "",
+      unit: "",
       questionType: "",
       text: "",
       options: ["", "", "", ""], // Default 4 options
@@ -20,6 +21,11 @@ function CreateQuestion() {
   // Handle Bloom Type Change
   const handleBloomTypeChange = (id, value) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, bloomType: value } : q)));
+  };
+
+  // ✅ Handle Unit Change
+  const handleUnitChange = (id, value) => {
+    setQuestions(questions.map((q) => (q.id === id ? { ...q, unit: value } : q)));
   };
 
   // Handle Question Type Change (Show MCQ options if selected)
@@ -134,18 +140,37 @@ function CreateQuestion() {
         {questions.map((q) => (
           <div key={q.id} className="question-container">
             <button className="delete-btn" onClick={() => deleteQuestion(q.id)}>✖</button>
+              
+            {/* 🌟 Bloom Type & Unit Dropdowns Side by Side */}
+          <div className="dropdown-group-container">
+              {/* ✅ Bloom Type Dropdown */}
+              <div className="dropdown-group">
+                  <label>Bloom Type:</label>
+                  <select className="dropdown" value={q.bloomType} onChange={(e) => handleBloomTypeChange(q.id, e.target.value)}>
+                      <option value="">Select Bloom Type</option>
+                      <option value="Remember">Remember</option>
+                      <option value="Understand">Understand</option>
+                      <option value="Apply">Apply</option>
+                      <option value="Analyze">Analyze</option>
+                      <option value="Evaluate">Evaluate</option>
+                      <option value="Create">Create</option>
+                  </select>
+              </div>
 
-            {/* Bloom Type Dropdown */}
-            <label>Bloom Type:</label>
-            <select className="dropdown" value={q.bloomType} onChange={(e) => handleBloomTypeChange(q.id, e.target.value)}>
-              <option value="">Select Bloom Type</option>
-              <option value="Remember">Remember</option>
-              <option value="Understand">Understand</option>
-              <option value="Apply">Apply</option>
-              <option value="Analyze">Analyze</option>
-              <option value="Evaluate">Evaluate</option>
-              <option value="Create">Create</option>
-            </select>
+              {/* ✅ Unit Dropdown */}
+              <div className="dropdown-group">
+                  <label>Unit:</label>
+                  <select className="dropdown" value={q.unit} onChange={(e) => handleUnitChange(q.id, e.target.value)}>
+                      <option value="">Select Unit</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                  </select>
+              </div>
+          </div>    
+ 
 
             {/* Question Type Dropdown */}
             <label>Question Type:</label>

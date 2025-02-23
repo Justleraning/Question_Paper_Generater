@@ -61,16 +61,50 @@ label {
     font-weight: bold;
     display: block;
     margin-top: 10px;
+
 }
 
-/* 🌟 Dropdowns */
+/* ✅ Ensure Dropdowns are Aligned Side by Side */
+.dropdown-group-container {
+    display: flex;
+    flex-direction: row; /* Ensures horizontal alignment */
+    justify-content: space-between; /* Even spacing */
+    align-items: center; /* Align items vertically */
+    gap: 20px; /* Adds space between dropdowns */
+    width: 85%; /* Uses full width of the parent */
+}
+
+/* ✅ Adjust Dropdown Group for Equal Width */
+.dropdown-group {
+    flex: 1;
+    min-width: 250px; /* Ensures dropdowns have enough space */
+    max-width: 350px; /* Prevents excessive stretching */
+}
+
+/* ✅ Keep Existing Styles */
+label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
 .dropdown {
     width: 100%;
-    padding: 8px;
-    margin-top: 5px;
+    padding: 10px 15px;
     border: 1px solid #ccc;
-    border-radius: 5px;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s ease;
 }
+
+.dropdown-group:nth-child(2) { 
+    margin-left: -15px; /* Adjust this value to move left */
+}
+
+.dropdown:focus {
+    border: 1px solid #007bff;
+}
+
 
 /* 🌟 Question Text Input */
 .question-input {
@@ -226,4 +260,6 @@ html {
     .dropdown {
         font-size: 14px;
     }
+
+    
 }
