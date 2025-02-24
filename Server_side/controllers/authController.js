@@ -11,17 +11,23 @@ const login = async (req, res) => {
     console.log(`🔍 Login Attempt: Username(${username})`);
 
     const user = await User.findOne({ username });
-
     if (!user) {
+      console.warn("❌ User not found:", username);
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
+    console.log("✅ User Found:", user);
+
     const passwordMatch = await bcrypt.compare(password, user.password);
+    console.log("🔄 Comparing passwords:", password, user.password);
+
     if (!passwordMatch) {
+      console.warn("❌ Password does not match");
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
     const token = generateToken(user._id, user.role);
+    console.log("✅ Token Generated:", token);
 
     res.status(200).json({
       _id: user._id,
@@ -31,6 +37,7 @@ const login = async (req, res) => {
       token: token,
     });
   } catch (error) {
+    console.error("❌ Server Error during login:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 };

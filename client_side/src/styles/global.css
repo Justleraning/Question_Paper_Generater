@@ -4,8 +4,11 @@
 @tailwind utilities;
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Arial', sans-serif;
   @apply bg-gray-100;
+  margin: 0;
+  padding: 0;
+  background-color: #f9fafb;
 }
 
 /* Custom Button Style */

@@ -37,7 +37,7 @@ const Dashboard = () => {
 
           <button 
             className="p-4 w-52 text-lg bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition"
-            onClick={() => navigate("/module4")}>
+            onClick={() => navigate("/index")}>
             Open Elective
           </button>
         </div>

@@ -2,6 +2,7 @@ import "../App.css"; // ✅ Corrected import path
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../Contexts/AuthContext.js"; // ✅ Fixed path
 import MainLayout from "../components/MainLayout.js"; // ✅ Fixed path
+import { QPProvider } from "../Contexts/QPContext.js"
 
 // ✅ Corrected Paths for Your Components
 import SelectMarks from "../components/Dino/EndFront/SelectedMarks.js";
@@ -10,6 +11,13 @@ import ExamDetails from "../components/Dino/EndFront/CreatePaper/ExamDetails.js"
 import QuestionPool from "../components/Dino/EndFront/CreateQuestion/QuestionPool/QuestionPool.js";
 import CreateQuestion from "../components/Dino/EndFront/CreateQuestion/QuestionPool/CreateQuestion.js";
 import EditQuestion from "../components/Dino/EndFront/CreateQuestion/QuestionPool/EditQuestion.js";
+
+// ✅ Imported New Components from `App.js`
+import IndexPage from "../pages_Isaac/IndexPage.js";
+import QuestionEntryPage from "../pages_Isaac/QuestionEntryPage.js";
+import PreviewPage from "../pages_Isaac/PreviewPage.js";
+import FinalPaperPage from "../pages_Isaac/FinalPaperPage.js";
+import AnswerKeyPage from "../pages_Isaac/AnswerKeyPage.js";
 
 // ✅ Pages from the Second Codebase
 import LandingPage from "../pages/LandingPage.js";
@@ -81,6 +89,13 @@ const AppRoutes = () => {
         <Route path="/super-admin-panel" element={<PrivateRoute allowedRoles={["SuperAdmin"]}><SuperAdminPanel /></PrivateRoute>} />
         <Route path="/view-all-users" element={<PrivateRoute allowedRoles={["SuperAdmin"]}><ViewAllUsers /></PrivateRoute>} />
         <Route path="/system-settings" element={<PrivateRoute allowedRoles={["SuperAdmin"]}><SystemSettings /></PrivateRoute>} />
+
+        {/* ✅ Isaac File Routes */}
+        <Route path="/index" element={<PrivateRoute allowedRoles={["Teacher"]}><IndexPage /></PrivateRoute>} />
+        <Route path="/questions" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionEntryPage /></PrivateRoute>} />
+        <Route path="/preview" element={<PrivateRoute allowedRoles={["Teacher"]}><PreviewPage /></PrivateRoute>} />
+        <Route path="/final-paper" element={<PrivateRoute allowedRoles={["Teacher"]}><FinalPaperPage /></PrivateRoute>} />
+        <Route path="/answer-key" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKeyPage /></PrivateRoute>} />
 
         {/* ✅ Your Existing Routes */}
         <Route path="/selected-marks" element={<PrivateRoute allowedRoles={["Teacher"]}><SelectMarks /></PrivateRoute>} />
