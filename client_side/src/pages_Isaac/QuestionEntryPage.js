@@ -3,6 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { useQPContext } from "../Contexts/QPContext.js";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import TextAlign from "@tiptap/extension-text-align";
+import Bold from "@tiptap/extension-bold";
+import Italic from "@tiptap/extension-italic";
+import { 
+  FaBold, FaItalic, FaUnderline, 
+  FaAlignLeft, FaAlignCenter, FaAlignRight
+} from "react-icons/fa";
+
 
 
 const QuestionEntryPage = () => {
@@ -67,14 +75,21 @@ const subjectId = subjectDetails?.id; // ✅ Extract subjectId from subjectDetai
 }, [currentUnit]);
 
 const [questionText, setQuestionText] = useState(""); // ✅ Define questionText state
-
 const editor = useEditor({
-  extensions: [StarterKit],
-  content: questionText, // ✅ Set initial content
+  extensions: [
+    StarterKit,
+    Bold,
+    Italic,
+    TextAlign.configure({
+      types: ["paragraph","heading"],
+    }),
+  ],
+  content: questionText, 
   onUpdate: ({ editor }) => {
-    setQuestionText(editor.getHTML()); // ✅ Now it's correctly defined!
+    setQuestionText(editor.getHTML()); 
   },
 });
+
 
   const [correctOption, setCorrectOption] = useState("");
   const [options, setOptions] = useState({
@@ -147,7 +162,7 @@ const handleSaveQuestion = async () => {
   console.log("🛠 Debugging Request Before Sending:", JSON.stringify(newQuestion, null, 2));
 
   try {
-    const response = await fetch("http://localhost:5000/api/questions", {
+    const response = await fetch("http://localhost:5000/api/questions-isaac", {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
@@ -251,6 +266,16 @@ return (
         
         {/* ✅ Fixed Editor Size to Prevent Expanding Overlap */}
         <label className="block text-sm font-medium mb-2">Question Text</label>
+       
+       {/* ✅ Toolbar Section */}
+<div className="p-3 border-b flex justify-center space-x-2 bg-gray-200">
+<button onClick={() => editor.chain().focus().toggleBold().run()} className="px-3 py-2 border"><FaBold /></button>
+          <button onClick={() => editor.chain().focus().toggleItalic().run()} className="px-3 py-2 border"><FaItalic /></button>
+          <button onClick={() => editor.chain().focus().setTextAlign("left").run()} className="px-3 py-2 border"><FaAlignLeft /></button>
+          <button onClick={() => editor.chain().focus().setTextAlign("center").run()} className="px-3 py-2 border"><FaAlignCenter /></button>
+          <button onClick={() => editor.chain().focus().setTextAlign("right").run()} className="px-3 py-2 border"><FaAlignRight /></button>
+</div>
+
         <EditorContent 
           editor={editor} 
           className="border rounded-lg w-full p-2 max-h-32 overflow-y-auto mb-4"

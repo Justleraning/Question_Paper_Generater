@@ -1,57 +1,50 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
-const Question = require("../models/Question_Isaac"); // Import the model
+const Question = require("../models/Question_Isaac");
 
-// @route   POST /api/questions
-// @desc    Create a new question
-// @access  Public
 router.post("/", async (req, res) => {
   try {
     const { unitId, text, options, correctOption, isImage } = req.body;
 
-    // ✅ Improved Validation
     if (
       !unitId ||
-      !mongoose.Types.ObjectId.isValid(unitId) ||  // ✅ Ensure unitId is a valid MongoDB ObjectId
-      !text || text.trim() === "" ||               // ✅ Ensure text is not empty
-      !options || !Array.isArray(options) ||       // ✅ Ensure options is an array
-      options.length !== 4 ||                      // ✅ Ensure there are exactly 4 options
-      options.some(opt => typeof opt !== "string" || opt.trim() === "") || // ✅ Ensure all options are non-empty strings
-      !correctOption || typeof correctOption !== "string" || correctOption.trim() === "" || // ✅ Ensure correctOption is a valid string
-      !options.includes(correctOption)  // ✅ Ensure correctOption matches one of the options
+      !mongoose.Types.ObjectId.isValid(unitId) ||
+      !text ||
+      text.trim() === "" ||
+      !options ||
+      !Array.isArray(options) ||
+      options.length !== 4 ||
+      options.some(opt => typeof opt !== "string" || opt.trim() === "") ||
+      !correctOption ||
+      typeof correctOption !== "string" ||
+      correctOption.trim() === "" ||
+      !["A", "B", "C", "D"].includes(correctOption)
     ) {
-      console.error("❌ Validation Failed! Request Data:", {
-        unitId, text, options, correctOption, isImage
-      });
-      return res.status(400).json({ error: "⚠️ All fields are required and must be valid." });
+      return res.status(400).json({ error: "Invalid input data." });
     }
 
-    // ✅ If validation passes, save question
     const newQuestion = new Question({
       unitId,
       text,
-      options,
+      options: options.map(opt => opt.trim()),
       correctOption,
-      isImage,
+      isImage: options.some(opt => opt.startsWith("http")),
     });
 
     await newQuestion.save();
-    res.status(201).json({ message: "✅ Question saved successfully!", newQuestion });
-
+    res.status(201).json({ message: "Question saved successfully!", newQuestion });
   } catch (error) {
-    res.status(500).json({ error: "❌ Failed to save question", details: error.message });
+    res.status(500).json({ error: "Failed to save question", details: error.message });
   }
 });
 
-// @route   GET /api/questions/:unitId
-// @desc    Get all questions for a specific unit
-// @access  Public
 router.get("/:unitId", async (req, res) => {
   try {
     const { unitId } = req.params;
 
-    if (!unitId) {
-      return res.status(400).json({ error: "Unit ID is required." });
+    if (!mongoose.Types.ObjectId.isValid(unitId)) {
+      return res.status(400).json({ error: "Invalid unit ID." });
     }
 
     const questions = await Question.find({ unitId });
@@ -61,17 +54,29 @@ router.get("/:unitId", async (req, res) => {
   }
 });
 
-// @route   PUT /api/questions/:id
-// @desc    Update a question by ID
-// @access  Public
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { text, options, correctOption, isImage } = req.body;
 
+    if (
+      !text ||
+      text.trim() === "" ||
+      !options ||
+      !Array.isArray(options) ||
+      options.length !== 4 ||
+      options.some(opt => typeof opt !== "string" || opt.trim() === "") ||
+      !correctOption ||
+      typeof correctOption !== "string" ||
+      correctOption.trim() === "" ||
+      !["A", "B", "C", "D"].includes(correctOption)
+    ) {
+      return res.status(400).json({ error: "Invalid input data." });
+    }
+
     const updatedQuestion = await Question.findByIdAndUpdate(
       id,
-      { text, options, correctOption, isImage },
+      { text, options: options.map(opt => opt.trim()), correctOption, isImage },
       { new: true }
     );
 
@@ -85,12 +90,14 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// @route   DELETE /api/questions/:id
-// @desc    Delete a question by ID
-// @access  Public
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid question ID." });
+    }
+
     const deletedQuestion = await Question.findByIdAndDelete(id);
 
     if (!deletedQuestion) {

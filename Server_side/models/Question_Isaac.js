@@ -11,15 +11,23 @@ const questionSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-  options: [
-    {
-      type: String,
-      required: true,
+  options: {
+    type: [String],  // Array of Strings
+    required: true,
+    validate: {
+      validator: (arr) => arr.length === 4, // Ensure exactly 4 options
+      message: "Options must contain exactly 4 elements.",
     },
-  ],
+  },
   correctOption: {
     type: String,
     required: true,
+    validate: {
+      validator: function (v) {
+        return ["A", "B", "C", "D"].includes(v); // Ensure valid option labels
+      },
+      message: "Correct option must be one of A, B, C, or D.",
+    },
   },
   isImage: {
     type: Boolean,

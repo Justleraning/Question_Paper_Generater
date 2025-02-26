@@ -7,7 +7,7 @@ const createQuestion = async (req, res) => {
   try {
       const { unitId, text, options, correctOption, isImage } = req.body;
 
-      console.log("📩 Received question data:", req.body); // ✅ Debugging log
+      console.log("📩 Received question data:", unitId, text, options, correctOption, isImage  ); // ✅ Debugging log
 
       if (!unitId || !text || !options || !correctOption) {
           return res.status(400).json({ message: "All fields are required" });
