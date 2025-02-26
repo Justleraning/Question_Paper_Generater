@@ -1,32 +1,29 @@
-const Question = require("../models/Question");
+
+const QuestionIsaac = require("../models/Question_Isaac");
 
 // @desc    Create a new question
 // @route   POST /api/questions
 // @access  Public
 const createQuestion = async (req, res) => {
   try {
-      const { unitId, text, options, correctOption, isImage } = req.body;
+    const { subjectId, text, options, correctOption } = req.body;
 
-      console.log("📩 Received question data:", unitId, text, options, correctOption, isImage  ); // ✅ Debugging log
+    if (!subjectId || !text || !options || !correctOption) {
+      return res.status(400).json({ message: "Missing required fields!" });
+    }
 
-      if (!unitId || !text || !options || !correctOption) {
-          return res.status(400).json({ message: "All fields are required" });
-      }
+    const newQuestion = await QuestionIsaac.create({
+      subjectId,
+      text,
+      options,
+      correctOption,
+      isImage: options.some(opt => opt.startsWith("http")),
+    });
 
-      const question = await Question.create({
-          unitId,
-          text,
-          options,
-          correctOption,
-          isImage,
-      });
-
-      console.log("✅ Saved question:", question); // ✅ Debugging log
-
-      res.status(201).json({ newQuestion: question });
+    res.status(201).json({ message: "✅ Question saved!", newQuestion });
   } catch (error) {
-      console.error("❌ Error saving question:", error);
-      res.status(500).json({ message: "Error saving question", error: error.message });
+    console.error("❌ Error saving question:", error);
+    res.status(500).json({ message: "Failed to save question", error: error.message });
   }
 };
 
@@ -39,7 +36,7 @@ const getQuestionsByUnit = async (req, res) => {
     const { unitId } = req.params;
 
     // Retrieve all questions for a specific unit
-    const questions = await Question.find({ unitId });
+    const questions = await QuestionIsaac.find({ unitId });
 
     if (!questions) {
       return res.status(404).json({ message: "No questions found for this unit" });
@@ -60,7 +57,7 @@ const updateQuestion = async (req, res) => {
     const { text, options, correctOption, isImage } = req.body;
 
     // Find and update the question
-    const updatedQuestion = await Question.findByIdAndUpdate(
+    const updatedQuestion = await QuestionIsaac.findByIdAndUpdate(
       id,
       { text, options, correctOption, isImage },
       { new: true }
@@ -84,7 +81,7 @@ const deleteQuestion = async (req, res) => {
     const { id } = req.params;
 
     // Find and delete the question
-    const deletedQuestion = await Question.findByIdAndDelete(id);
+    const deletedQuestion = await QuestionIsaac.findByIdAndDelete(id);
 
     if (!deletedQuestion) {
       return res.status(404).json({ message: "Question not found" });

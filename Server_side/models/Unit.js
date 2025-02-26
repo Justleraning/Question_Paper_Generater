@@ -6,19 +6,17 @@ const unitSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-  description: {
-    type: String,
-    trim: true,
-  },
   subjectId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Subject", // Reference to Subject model
+    ref: "Subject",
     required: true,
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+}, { timestamps: true });
 
-module.exports = mongoose.model("Unit", unitSchema);
+// ✅ Ensure `_id` is returned properly and no separate `unitId` is created
+unitSchema.set("toJSON", { virtuals: true });
+unitSchema.set("toObject", { virtuals: true });
+
+const Unit = mongoose.models.Unit || mongoose.model("Unit", unitSchema);
+
+module.exports = Unit;

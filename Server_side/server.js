@@ -50,7 +50,7 @@ const randomizationRoutes = require("./routes/randomizationRoutes");
 // ✅ Ensure API routes are used AFTER DB connection
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/questions", questionRoutes); // Existing Questions Route
+app.use("/api/questions", questionRoutes); //  Manav Questions Route
 app.use("/api/questions-isaac", questionRoutesIsaac); // ✅ Isaac's Question Route
 app.use("/api/papers", paperRoutes); // Fixed route naming for consistency
 app.use("/api/courses", courseRoutes); // ✅ Courses Route

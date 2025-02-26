@@ -25,14 +25,23 @@ const subjectId = subjectDetails?.id; // ✅ Extract subjectId from subjectDetai
   const totalQuestions = marks === 20 ? 40 : 60;
   const questionsPerUnit = Math.floor(totalQuestions / numUnits);
   const currentQuestions = questions?.[currentUnit - 1] || [];
+  const subjectName = subjectDetails?.name || "Default Subject";
+const courseTitle = subjectDetails?.course || "Untitled Course";
 
   useEffect(() => {
     let isMounted = true;
+
+    // ✅ Do not fetch unitId if no question has been entered yet
+    if (questions.length === 0) {
+        console.log("🚫 Skipping fetchUnitId because no questions have been entered yet.");
+        return;
+    }
+
     setIsFetchingUnitId(true);
 
     const fetchUnitId = async () => {
         try {
-            console.log(`🔄 Fetching unit ID for Unit ${currentUnit}...`);
+            console.log(`🔄 Fetching unit ID for Unit ${currentUnit}...`, subjectId);
 
             const response = await fetch("http://localhost:5000/api/units");
 
@@ -44,25 +53,30 @@ const subjectId = subjectDetails?.id; // ✅ Extract subjectId from subjectDetai
             console.log("📜 Fetched Units Data:", data);
 
             if (data.units && data.units.length > 0) {
-                console.log(`🔍 Searching for Unit ${currentUnit} in API response...`,subjectId);
-                
-                const fetchedUnit = data.units.find(u => u.name === `Unit ${currentUnit}`);
+                console.log(`🔍 Searching for Unit ${currentUnit} with subjectId:`, subjectId);
 
-                if (fetchedUnit && isMounted) {
-                    setUnitId(fetchedUnit.unitId || fetchedUnit._id);
-                    console.log(`✅ Successfully set Unit ID: ${fetchedUnit.unitId || fetchedUnit._id}`);
+                // ✅ Ensure we check both the name and subjectId
+                const fetchedUnit = data.units.find(
+                    u => u.name === `Unit ${currentUnit}` && u.subjectId === subjectId
+                );
+
+                if (fetchedUnit) {
+                    setUnitId(fetchedUnit._id || fetchedUnit.unitId);
+                    console.log(`✅ Successfully set Unit ID: ${fetchedUnit._id || fetchedUnit.unitId}`);
                 } else {
                     console.warn(`⚠️ No matching unit found for "Unit ${currentUnit}"`);
+                    setUnitId(null);
                 }
             } else {
                 console.warn("⚠️ No units found in API response.");
+                setUnitId(null);
             }
         } catch (error) {
             console.error("❌ Error fetching unitId:", error);
+            setUnitId(null);
         } finally {
             if (isMounted) {
                 setIsFetchingUnitId(false);
-                console.log("✅ Fetching complete. isFetchingUnitId:", false);
             }
         }
     };
@@ -72,7 +86,8 @@ const subjectId = subjectDetails?.id; // ✅ Extract subjectId from subjectDetai
     return () => {
         isMounted = false;
     };
-}, [currentUnit]);
+}, [currentUnit, questions.length]); // ✅ Only fetch unitId if questions exist
+
 
 const [questionText, setQuestionText] = useState(""); // ✅ Define questionText state
 const editor = useEditor({
@@ -103,70 +118,71 @@ const editor = useEditor({
 
 // ✅ Ensure subjectId is passed when creating a unit
 const handleSaveQuestion = async () => {
-  console.log("🔍 Checking unitId before saving:", unitId);
+  console.log("🔍 Checking subjectId before saving:", subjectId);
 
-  if (isFetchingUnitId) {
-      alert("⏳ Please wait, loading unit ID...");
-      return;
+  if (!subjectId) {
+    console.error("❌ Validation Failed: subjectId is missing!");
+    alert("⚠️ Subject ID is missing. Please try again.");
+    return;
   }
 
-  let newUnitId = unitId;
-
-  // ✅ Get the token from sessionStorage instead of localStorage
+  // ✅ Get authentication token
   const token = sessionStorage.getItem("token");
 
   if (!token) {
-      alert("❌ Authentication failed: No token found in session.");
-      return;
-  }
-
-  // ✅ Clean and Validate Input Fields
-  const cleanedQuestionText = editor.getText().trim(); // Removes extra HTML formatting
-
-  if (!newUnitId || typeof newUnitId !== "string" || newUnitId.trim() === "") {
-    console.error("❌ Validation Failed: Invalid or missing unitId!", newUnitId);
-    alert("⚠️ Validation Error: Unit ID is missing or invalid.");
+    alert("❌ Authentication failed: No token found in session.");
     return;
   }
 
-  if (!cleanedQuestionText || cleanedQuestionText.trim() === "") {
-    console.error("❌ Validation Failed: Missing question text!", cleanedQuestionText);
+  // ✅ Clean and validate input fields
+  const cleanedQuestionText = editor.getText()?.trim() || "";
+  if (!cleanedQuestionText) {
     alert("⚠️ Please enter a valid question.");
     return;
   }
+  const formattedOptions = [
+    options.A.value?.trim() || "",
+    options.B.value?.trim() || "",
+    options.C.value?.trim() || "",
+    options.D.value?.trim() || "",
+];
 
-  const formattedOptions = Object.values(options).map(opt => opt.value.trim());
-
-  if (!formattedOptions || !Array.isArray(formattedOptions) || formattedOptions.length !== 4 || formattedOptions.some(opt => opt.trim() === "")) {
-    console.error("❌ Validation Failed: Options must be 4 valid strings!", formattedOptions);
-    alert("⚠️ Please provide exactly 4 valid options.");
-    return;
+  if (!Array.isArray(formattedOptions) || formattedOptions.length !== 4 || formattedOptions.some(opt => opt === "")) {
+      alert("⚠️ Please provide exactly 4 valid options.");
+      return;
   }
-
-  if (!correctOption || !["A", "B", "C", "D"].includes(correctOption)) {
-    console.error("❌ Validation Failed: Invalid correct option!", correctOption);
+  
+  if (!["A", "B", "C", "D"].includes(correctOption)) {
     alert("⚠️ Please select a valid correct option (A, B, C, or D).");
     return;
   }
 
   // ✅ Construct the question data correctly
   const newQuestion = {
-    unitId: newUnitId.trim(),
-    text: cleanedQuestionText.trim(),
-    options: formattedOptions.map(opt => opt.trim()),
+    subjectId,
+    text: cleanedQuestionText,
+    options: [
+      options.A.value?.trim() || "",
+      options.B.value?.trim() || "",
+      options.C.value?.trim() || "",
+      options.D.value?.trim() || "",
+    ], // ✅ Ensure options is an array
     correctOption: correctOption.trim(),
     isImage: formattedOptions.some(opt => opt.startsWith("http")),
+    index: currentQuestionIndex + 1, // ✅ Ensure this exists
+    subject: subjectName || "Default Subject", // ✅ Ensure this is defined
+    courseName: courseTitle || "Untitled Course" // ✅ Ensure this is defined
   };
+  
 
-  // ✅ Debugging Before Sending Request
-  console.log("🛠 Debugging Request Before Sending:", JSON.stringify(newQuestion, null, 2));
+  console.log("📤 Sending Question to API:", JSON.stringify(newQuestion, null, 2));
 
   try {
     const response = await fetch("http://localhost:5000/api/questions-isaac", {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}` // ✅ Ensure token is present
+        "Authorization": `Bearer ${token}`,
       },
       body: JSON.stringify(newQuestion),
     });
@@ -196,9 +212,6 @@ const handleSaveQuestion = async () => {
     alert(`❌ Failed to save question: ${error.message}`);
   }
 };
-
-
-
 
   // Navigation handlers
   const handleNextQuestion = () => {
