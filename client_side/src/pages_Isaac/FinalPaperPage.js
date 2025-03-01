@@ -330,20 +330,38 @@ const fetchQuestions = async () => {
         {finalPaper.length > 0 ? (
           <div
             ref={paperRef}
-            className="w-full max-w-3xl border p-6 bg-white text-center mb-6 shadow-md"
+            className="w-full max-w-3xl border p-6 bg-white mb-6 shadow-md"
           >
-            <img src={logo} alt="University Logo" className="w-20 h-20 mx-auto mb-2" />
-            <h2 className="text-lg font-medium">St Joseph's University, Bengaluru-27</h2>
-            <h3 className="font-semibold">B.C.A Examination Paper</h3>
-            <p className="text-md font-bold">
-              Subject Name: {subjectDetails?.name || "__________"}
-            </p>
-            <p className="text-md font-bold">
-              Code: {subjectDetails?.code || "__________"}
-            </p>
-            <p className="text-md font-bold text-right">Max Marks: {marks || '__________'}</p>
-            <hr className="my-4" />
-  
+            {/* Header section with larger logo and no registration box */}
+            <div className="flex items-center justify-center mb-3">
+              {/* Larger logo on the left */}
+              <div className="w-20 h-20 mr-4">
+                <img src={logo} alt="University Logo" className="w-full h-full" />
+              </div>
+              
+              {/* University name and details in center */}
+              <div className="text-center">
+                <h2 className="text-sm font-bold">ST. JOSEPH'S UNIVERSITY, BENGALURU - 27</h2>
+                <h3 className="text-sm font-bold">Course - BCA</h3>
+                <h3 className="text-sm font-bold uppercase mt-1">SEMESTER EXAMINATION </h3>
+                <h4 className="text-sm font-bold mt-1">
+                  {subjectDetails?.code || "CA 3222"}: {subjectDetails?.name || "C# AND DOT NET FRAMEWORK"}
+                </h4>
+                <p className="text-xs italic mt-1">( For current batch students only )</p>
+              </div>
+            </div>
+
+            {/* Time and marks section - centered and reduced */}
+            <div className="flex justify-between items-center mt-3 mb-2 text-center">
+              <p className="text-xs font-medium w-1/4">Time: 1 Hours</p>
+              <p className="text-xs font-medium w-1/2">This paper contains MCQ Questions</p>
+              <p className="text-xs font-medium w-1/4">Max Marks: {marks || '50'}</p>
+            </div>
+
+            {/* Part A section heading - centered */}
+            <p className="mb-3 font-medium text-center text-sm">Answer all questions</p>
+          
+            {/* Questions section - unchanged from original */}
             {finalPaper.map((question, index) => (
               <div key={index} className="mb-6 text-left">
                 <div className="flex justify-between items-start">
@@ -371,7 +389,7 @@ const fetchQuestions = async () => {
                     />
                   )}
                 </div>
-  
+
                 {/* Options display with proper handling for both array and object formats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 ml-6">
                   {Array.isArray(question.options) ? (
