@@ -21,7 +21,7 @@ const MainLayout = ({ children }) => {
           style={{
             marginLeft: isSidebarOpen ? "14rem" : "5rem",  // Sidebar push effect
             transition: "margin-left 0.3s ease-in-out",
-            marginTop: "5rem",  // Push content slightly down to prevent covering
+            marginTop: "1rem",  // Push content slightly down to prevent covering
             minHeight: "calc(100vh - 5rem)",  // Ensures full height remains
           }}
         >
