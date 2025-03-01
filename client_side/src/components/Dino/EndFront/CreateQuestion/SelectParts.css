@@ -1,3 +1,5 @@
+/* SelectParts.css with din2 prefix */
+
 /* Global Styling */
 body {
     font-family: 'Poppins', sans-serif;
@@ -12,7 +14,7 @@ body {
 }
 
 /* Main Container */
-.main-container {
+.din2-main-container {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -20,11 +22,11 @@ body {
     width: 90%;
     max-width: 1200px;
     padding: 20px;
-    animation: fadeIn 1s ease-in-out; /* Fade-in animation */
+    animation: din2FadeIn 1s ease-in-out; /* Fade-in animation */
 }
 
 /* Individual Containers */
-.container {
+.din2-container {
     text-align: center;
     background: #ffffff;
     border-radius: 20px;
@@ -38,20 +40,20 @@ body {
     justify-content: space-between;
 }
 
-.container:hover {
+.din2-container:hover {
     transform: translateY(-10px);
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
 }
 
 /* Typography */
-h1 {
+.din2-heading {
     font-size: 28px;
     color: #333333;
     margin-bottom: 15px;
     font-weight: 600;
 }
 
-p {
+.din2-description {
     font-size: 18px;
     color: #666666;
     margin-bottom: 25px;
@@ -59,7 +61,7 @@ p {
 }
 
 /* Dropdown Input */
-.dropdown {
+.din2-dropdown {
     appearance: none;
     background: #ffffff;
     color: #333333;
@@ -76,14 +78,14 @@ p {
     transition: all 0.3s ease;
 }
 
-.dropdown:hover,
-.dropdown:focus {
+.din2-dropdown:hover,
+.din2-dropdown:focus {
     border: 1px solid #007bff;
     box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
 }
 
 /* Buttons */
-.action-btn {
+.din2-action-btn {
     padding: 15px 40px;
     font-size: 18px;
     font-weight: 500;
@@ -99,19 +101,19 @@ p {
     margin: 15px 0;
 }
 
-.action-btn:hover {
+.din2-action-btn:hover {
     background: linear-gradient(120deg, #0056b3, #003f7f);
     transform: scale(1.05);
     box-shadow: 0 6px 15px rgba(0, 123, 255, 0.5);
 }
 
-.action-btn:focus {
+.din2-action-btn:focus {
     outline: none;
     box-shadow: 0 0 12px rgba(0, 123, 255, 0.7);
 }
 
 /* Animations */
-@keyframes fadeIn {
+@keyframes din2FadeIn {
     from {
         opacity: 0;
         transform: translateY(20px);
@@ -124,20 +126,20 @@ p {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .main-container {
+    .din2-main-container {
         flex-direction: column;
         gap: 20px;
     }
 
-    .container {
+    .din2-container {
         max-width: 90%;
     }
 
-    .dropdown {
+    .din2-dropdown {
         max-width: 100%;
     }
 
-    .action-btn {
+    .din2-action-btn {
         width: 100%;
     }
 }

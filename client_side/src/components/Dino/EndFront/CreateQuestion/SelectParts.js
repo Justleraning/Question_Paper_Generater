@@ -33,14 +33,14 @@ function SelectParts() {
   };
 
   return (
-    <div className="main-container">
+    <div className="din2-main-container">
       {/* Subject Selection Container */}
-      <div className="container">
-        <h1>Select Subject</h1>
-        <p>Choose a subject to add questions:</p>
+      <div className="din2-container">
+        <h1 className="din2-heading">Select Subject</h1>
+        <p className="din2-description">Choose a subject to add questions:</p>
         <input
           list="subjectList"
-          className="dropdown"
+          className="din2-dropdown"
           placeholder="Type or select a subject"
           onChange={handleSubjectChange}
         />
@@ -54,23 +54,23 @@ function SelectParts() {
       </div>
 
       {/* Part Selection Container */}
-      <div className="container">
-        <h1>Create Questions</h1>
-        <p>Select a part to add questions:</p>
+      <div className="din2-container">
+        <h1 className="din2-heading">Create Questions</h1>
+        <p className="din2-description">Select a part to add questions:</p>
         <button
-          className="action-btn"
+          className="din2-action-btn"
           onClick={() => handlePartClick("Part A")}
         >
           Part A
         </button>
         <button
-          className="action-btn"
+          className="din2-action-btn"
           onClick={() => handlePartClick("Part B")}
         >
           Part B
         </button>
         <button
-          className="action-btn"
+          className="din2-action-btn"
           onClick={() => handlePartClick("Part C")}
         >
           Part C

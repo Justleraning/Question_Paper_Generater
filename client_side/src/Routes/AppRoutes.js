@@ -4,22 +4,24 @@ import { useAuth } from "../Contexts/AuthContext.js"; // ✅ Fixed path
 import MainLayout from "../components/MainLayout.js"; // ✅ Fixed path
 import { QPProvider } from "../Contexts/QPContext.js"
 
-// ✅ Corrected Paths for Your Components
+// ✅ Dino Routes
 import SelectMarks from "../components/Dino/EndFront/SelectedMarks.js";
 import SelectParts from "../components/Dino/EndFront/CreateQuestion/SelectParts.js";
 import ExamDetails from "../components/Dino/EndFront/CreatePaper/ExamDetails.js";
 import QuestionPool from "../components/Dino/EndFront/CreateQuestion/QuestionPool/QuestionPool.js";
 import CreateQuestion from "../components/Dino/EndFront/CreateQuestion/QuestionPool/CreateQuestion.js";
 import EditQuestion from "../components/Dino/EndFront/CreateQuestion/QuestionPool/EditQuestion.js";
+import ExamPattern from  "../components/Dino/EndFront/CreatePaper/ExamPattern.js";
+import CreatePapers from "../components/Dino/EndFront/CreatePaper/CreatePapers.js";
 
-// ✅ Imported New Components from `App.js`
+// ✅ Isaac Routes
 import IndexPage from "../pages_Isaac/IndexPage.js";
 import QuestionEntryPage from "../pages_Isaac/QuestionEntryPage.js";
 import PreviewPage from "../pages_Isaac/PreviewPage.js";
 import FinalPaperPage from "../pages_Isaac/FinalPaperPage.js";
 import AnswerKeyPage from "../pages_Isaac/AnswerKeyPage.js";
 
-// ✅ Pages from the Second Codebase
+// ✅ Manav Routes and Dashboard routes 
 import LandingPage from "../pages/LandingPage.js";
 import Login from "../pages/Login.js";
 import Dashboard from "../pages/Dashboard.js";
@@ -97,11 +99,15 @@ const AppRoutes = () => {
         <Route path="/final-paper" element={<PrivateRoute allowedRoles={["Teacher"]}><FinalPaperPage /></PrivateRoute>} />
         <Route path="/answer-key" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKeyPage /></PrivateRoute>} />
 
-        {/* ✅ Your Existing Routes */}
+        {/* ✅ Dino Existing Routes */}
         <Route path="/selected-marks" element={<PrivateRoute allowedRoles={["Teacher"]}><SelectMarks /></PrivateRoute>} />
         <Route path="/input-questions" element={<PrivateRoute allowedRoles={["Teacher"]}><SelectParts /></PrivateRoute>} />
         <Route path="/create-question" element={<PrivateRoute allowedRoles={["Teacher"]}><CreateQuestion /></PrivateRoute>} />
         <Route path="/edit-question" element={<PrivateRoute allowedRoles={["Teacher"]}><EditQuestion /></PrivateRoute>} />
+        <Route path="/create-papers" element={<PrivateRoute allowedRoles={["Teacher"]}><CreatePapers /></PrivateRoute>} />
+        <Route path="/exam-details" element={<PrivateRoute allowedRoles={["Teacher"]}><ExamDetails /></PrivateRoute>} />
+        <Route path="/exam-pattern" element={<PrivateRoute allowedRoles={["Teacher"]}><ExamPattern /></PrivateRoute>} />
+        <Route path="/question-pool" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPool /></PrivateRoute>} />
 
         {/* ✅ Redirect Unknown Routes */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

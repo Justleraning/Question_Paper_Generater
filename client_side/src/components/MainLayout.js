@@ -6,26 +6,27 @@ const MainLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-screen">
-      {/* ✅ Sidebar (Remains Fixed) */}
+    <div className="flex h-screen overflow-hidden">
+      {/* ✅ Sidebar (fixed left) */}
       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 
-      {/* ✅ Content Wrapper */}
+      {/* ✅ Main Area (Navbar + Page Content) */}
       <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out">
-        {/* ✅ Fixed Navbar */}
-        <Navbar isSidebarOpen={isSidebarOpen} />
 
-        {/* ✅ Content - Prevents covering under Navbar */}
-        <div 
-          className="transition-all duration-300 ease-in-out w-full px-12 py-12 flex flex-col items-start"
+        {/* ✅ Navbar (with toggle button inside) */}
+        <Navbar isSidebarOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(prev => !prev)} />
+
+        {/* ✅ Content Area (centred with breathing room under navbar) */}
+        <div
+          className="flex-1 overflow-auto flex justify-center"
           style={{
-            marginLeft: isSidebarOpen ? "14rem" : "5rem",  // Sidebar push effect
+            marginTop: "4rem", // Navbar height
+            paddingTop: "1rem", // Some space under navbar
+            marginLeft: isSidebarOpen ? "16rem" : "4rem", // Space for sidebar
             transition: "margin-left 0.3s ease-in-out",
-            marginTop: "5rem",  // Push content slightly down to prevent covering
-            minHeight: "calc(100vh - 5rem)",  // Ensures full height remains
           }}
         >
-          {children}
+          <div className="w-full max-w-5xl">{children}</div> {/* Centres content */}
         </div>
       </div>
     </div>

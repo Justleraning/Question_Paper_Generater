@@ -195,7 +195,7 @@ const handleSaveQuestion = async () => {
     const data = await response.json();
     console.log("✅ Successfully saved question:", data.newQuestion);
 
-    alert("✅ Question saved successfully!");
+    
 
     // ✅ Reset fields after saving
     setQuestionText("");

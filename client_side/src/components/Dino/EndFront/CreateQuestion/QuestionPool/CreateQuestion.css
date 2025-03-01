@@ -1,5 +1,7 @@
-/* 🌟 Outer Container with Scroll */
-.outer-container {
+/* CreateQuestion.css with din4 prefix */
+
+/* Outer Container with Scroll */
+.din4-outer-container {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -11,8 +13,8 @@
     overflow-y: auto; /* Enables Scrollbar */
 }
 
-/* 🌟 Inner Main Container */
-.inner-container {
+/* Inner Main Container */
+.din4-inner-container {
     width: 80%;
     max-width: 1200px;
     background: white;
@@ -23,16 +25,16 @@
     max-height: 90vh;
 }
 
-/* 🌟 Page Title */
-.page-title {
+/* Page Title */
+.din4-page-title {
     text-align: center;
     font-size: 24px;
     margin-bottom: 20px;
     color: #333;
 }
 
-/* 🌟 Individual Question Container */
-.question-container {
+/* Individual Question Container */
+.din4-question-container {
     position: relative;
     background: #fdfdfd;
     border: 1px solid #ddd;
@@ -41,8 +43,8 @@
     margin-bottom: 15px;
 }
 
-/* 🌟 Delete Question Button */
-.delete-btn {
+/* Delete Question Button */
+.din4-delete-btn {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -56,16 +58,16 @@
     font-size: 14px;
 }
 
-/* 🌟 Labels */
-label {
+/* Labels */
+.din4-label {
     font-weight: bold;
     display: block;
     margin-top: 10px;
-
+    margin-bottom: 5px;
 }
 
-/* ✅ Ensure Dropdowns are Aligned Side by Side */
-.dropdown-group-container {
+/* Ensure Dropdowns are Aligned Side by Side */
+.din4-dropdown-group-container {
     display: flex;
     flex-direction: row; /* Ensures horizontal alignment */
     justify-content: space-between; /* Even spacing */
@@ -74,21 +76,15 @@ label {
     width: 85%; /* Uses full width of the parent */
 }
 
-/* ✅ Adjust Dropdown Group for Equal Width */
-.dropdown-group {
+/* Adjust Dropdown Group for Equal Width */
+.din4-dropdown-group {
     flex: 1;
     min-width: 250px; /* Ensures dropdowns have enough space */
     max-width: 350px; /* Prevents excessive stretching */
 }
 
-/* ✅ Keep Existing Styles */
-label {
-    font-weight: bold;
-    display: block;
-    margin-bottom: 5px;
-}
-
-.dropdown {
+/* Dropdown Styles */
+.din4-dropdown {
     width: 100%;
     padding: 10px 15px;
     border: 1px solid #ccc;
@@ -97,17 +93,16 @@ label {
     transition: all 0.3s ease;
 }
 
-.dropdown-group:nth-child(2) { 
+.din4-dropdown-group:nth-child(2) { 
     margin-left: -15px; /* Adjust this value to move left */
 }
 
-.dropdown:focus {
+.din4-dropdown:focus {
     border: 1px solid #007bff;
 }
 
-
-/* 🌟 Question Text Input */
-.question-input {
+/* Question Text Input */
+.din4-question-input {
     width: 100%;
     min-height: 80px;
     padding: 8px;
@@ -115,33 +110,34 @@ label {
     border: 1px solid #ccc;
     border-radius: 5px;
     resize: vertical;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
-/* 🌟 MCQ Options Container */
-.mcq-options {
+/* MCQ Options Container */
+.din4-mcq-options {
     margin-top: 10px;
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-/* 🌟 MCQ Individual Option */
-.mcq-option {
+/* MCQ Individual Option */
+.din4-mcq-option {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-/* 🌟 MCQ Text Input */
-.mcq-text {
+/* MCQ Text Input */
+.din4-mcq-text {
     flex: 1;
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 5px;
 }
 
-/* 🌟 MCQ Option Type Dropdown */
-.option-type-dropdown {
+/* MCQ Option Type Dropdown */
+.din4-option-type-dropdown {
     width: 80px;
     padding: 6px;
     border: 1px solid #ccc;
@@ -149,8 +145,8 @@ label {
     background: white;
 }
 
-/* 🌟 Image Upload */
-.upload-image-btn {
+/* Image Upload */
+.din4-upload-image-btn {
     display: inline-block;
     padding: 8px 15px;
     background: #007bff;
@@ -163,12 +159,12 @@ label {
     text-align: center;
 }
 
-.upload-image-btn:hover {
+.din4-upload-image-btn:hover {
     background: #0056b3;
 }
 
-/* 🌟 Image Preview with Fixed Frame */
-.image-preview-frame {
+/* Image Preview with Fixed Frame */
+.din4-image-preview-frame {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -182,16 +178,16 @@ label {
     position: relative;
 }
 
-/* 🌟 Image Inside Preview Frame */
-.image-preview-frame img {
+/* Image Inside Preview Frame */
+.din4-image-preview-frame img {
     width: 100%;
     height: 100%;
     object-fit: cover; /* Ensures Image Scales Properly */
     border-radius: 8px;
 }
 
-/* 🌟 Delete Image Button inside the Frame */
-.delete-image-btn {
+/* Delete Image Button inside the Frame */
+.din4-delete-image-btn {
     position: absolute;
     top: 5px;
     right: 5px;
@@ -204,14 +200,9 @@ label {
     font-size: 12px;
 }
 
-/* 🌟 Scrollbar for Whole Page */
-html {
-    overflow-y: scroll;
-}
-
-/* 🌟 Add & Save Buttons */
-.add-btn,
-.save-btn {
+/* Add & Save Buttons */
+.din4-add-btn,
+.din4-save-btn {
     display: block;
     width: 100%;
     padding: 10px;
@@ -223,43 +214,41 @@ html {
     font-weight: bold;
 }
 
-.add-btn {
+.din4-add-btn {
     background-color: #007bff;
     color: white;
 }
 
-.save-btn {
+.din4-save-btn {
     background-color: #28a745;
     color: white;
 }
 
-.add-btn:hover {
+.din4-add-btn:hover {
     background-color: #0056b3;
 }
 
-.save-btn:hover {
+.din4-save-btn:hover {
     background-color: #218838;
 }
 
-/* 🌟 Responsive Design */
+/* Responsive Design */
 @media (max-width: 768px) {
-    .inner-container {
+    .din4-inner-container {
         width: 100%;
         padding: 15px;
     }
 
-    .question-container {
+    .din4-question-container {
         padding: 10px;
     }
 
-    .mcq-option {
+    .din4-mcq-option {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .dropdown {
+    .din4-dropdown {
         font-size: 14px;
     }
-
-    
 }
