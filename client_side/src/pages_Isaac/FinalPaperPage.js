@@ -464,10 +464,10 @@ const FinalPaperPage = () => {
                   Download PDF
                 </button>
                 <button
-                  onClick={() => alert('Paper Sent for Approval Successfully!')}
+                  onClick={() => alert('Question Paper Saved Successfully 🥳')}
                   className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600"
                 >
-                  Send for Approval
+                  SAVE QUESTION PAPER 🧾
                 </button>
               </div>
             </div>

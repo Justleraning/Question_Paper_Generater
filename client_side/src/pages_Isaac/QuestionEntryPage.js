@@ -541,7 +541,6 @@ const QuestionEntryPage = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold">{subjectName}</h1>
-            <p className="text-indigo-200">{courseTitle}</p>
           </div>
           <div className="mt-2 md:mt-0 flex items-center space-x-2">
             <span className="text-sm font-medium bg-indigo-800 py-1 px-3 rounded-full">
@@ -563,7 +562,7 @@ const QuestionEntryPage = () => {
                 Unit {currentUnit} of {numUnits}
               </h2>
               <p className="text-gray-600 mt-1">
-                Question {currentQuestionIndex + 1} {currentQuestions.length > 0 ? `of ${currentQuestions.length + (isCurrentQuestionSaved ? 0 : 1)}` : ''}
+                Question {currentQuestionIndex + 1} 
               </p>
             </div>
             
@@ -747,7 +746,7 @@ const QuestionEntryPage = () => {
               ) : questionText.trim() !== "" ? (
                 <div className="flex items-center text-amber-600 bg-amber-50 px-4 py-2 rounded-lg">
                   <FaExclamationTriangle className="mr-2" />
-                  <span className="font-medium">Question has unsaved changes</span>
+                  <span className="font-medium">Please Save the question to proceed</span>
                 </div>
               ) : null}
             </div>
