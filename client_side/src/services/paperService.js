@@ -215,3 +215,32 @@ export const getQuestionByIndex = async (courseName, subjectName, index) => {
     return { question: "", options: [], correctOption: null }; // ✅ Return empty if no question found
   }
 };
+
+/**
+ * Fetches all questions for a specific subject
+ * @param {string} courseName - The name of the course
+ * @param {string} subjectName - The name of the subject
+ * @returns {Promise<Array>} - Array of question objects
+ */
+export const getQuestionsBySubject = async (courseName, subjectName) => {
+  try {
+    console.log(`📡 Fetching all questions for ${courseName} - ${subjectName}`);
+    
+    const response = await axios.get(`${API_URL}/questions/subject`, {
+      headers: authHeaders(),
+      params: { courseName, subject: subjectName }
+    });
+    
+    console.log("📥 Backend response for subject questions:", response.data);
+    
+    if (!response.data || !Array.isArray(response.data.questions)) {
+      console.warn("⚠️ Invalid response format or no questions found for subject");
+      return [];
+    }
+    
+    return response.data.questions;
+  } catch (error) {
+    console.error("❌ Error in getQuestionsBySubject:", error.response?.data || error.message);
+    return []; // Return empty array on error
+  }
+};

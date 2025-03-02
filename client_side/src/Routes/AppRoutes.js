@@ -76,6 +76,7 @@ const AppRoutes = () => {
         <Route path="/final-preview" element={<PrivateRoute allowedRoles={["Teacher"]}><FinalPreview /></PrivateRoute>} />
         <Route path="/question-preview" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPreview /></PrivateRoute>} />
         <Route path="/paper-status" element={<PrivateRoute allowedRoles={["Teacher"]}><PaperStatus /></PrivateRoute>} />
+        <Route path="/preview/:subjectKey" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPreview /></PrivateRoute>} />
         <Route path="/rejected-papers" element={<PrivateRoute allowedRoles={["Teacher"]}><RejectedPapers /></PrivateRoute>} />
         <Route path="/mypapers" element={<PrivateRoute allowedRoles={["Teacher"]}><MyPapers /></PrivateRoute>} />
 
