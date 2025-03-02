@@ -1,0 +1,543 @@
+/* Din8CreatePapers.css */
+
+/* Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Arial', sans-serif;
+}
+
+body {
+  background-color: #f5f5f5;
+  padding: 20px;
+}
+
+.din8-app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Main title */
+.din8-main-title {
+  font-size: 28px;
+  text-align: center;
+  margin: 20px 0;
+  color: #333;
+}
+
+/* Generator controls */
+.din8-generator-controls {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.din8-generate-btn {
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.din8-generate-btn:hover {
+  background-color: #1557b0;
+}
+
+/* Paper Container Styles */
+.din8-paper-container {
+  margin: 0 auto 30px;
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* A4 Paper Styles */
+.din8-a4-paper {
+  background-color: white;
+  width: 210mm; /* A4 width */
+  margin: 0 auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* A4 Page Styles */
+.din8-a4-page {
+  padding: 20mm 15mm; /* Standard A4 margins */
+  position: relative;
+  min-height: 297mm; /* A4 height */
+  page-break-after: always;
+}
+
+/* Continuation page styles */
+.din8-continuation-page {
+  display: block; /* Only visible when needed */
+}
+
+.din8-continuation-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Header Flex Container for Logo and Text */
+.din8-header-flex {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 25px;
+  margin-left: 0%;
+  margin-right: 130px;
+}
+
+/* University Logo */
+.din8-university-logo {
+  width: 120px; /* Bigger logo */
+  height: auto;
+  margin-right: 15px;
+}
+
+/* Header Text Container */
+.din8-header-text {
+  flex: 1;
+  text-align: center;
+}
+
+/* University Header Styles */
+.din8-university-header {
+  margin-bottom: 20px;
+}
+
+.din8-university-name {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.din8-course-details {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.din8-paper-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin: 5px 0 10px;
+  text-transform: uppercase;
+}
+
+/* Registration Box Styles */
+.din8-registration-box {
+  position: absolute;
+  top: 10mm;
+  right: 3mm;
+  border: 1px solid #000;
+  padding: 8px;
+  font-size: 12px;
+  width: 200px;
+}
+
+/* Exam Info Styles */
+.din8-exam-info {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0 15px;
+  font-size: 14px;
+}
+
+/* Page Footer */
+.din8-page-footer {
+  position: absolute;
+  bottom: 10mm;
+  right: 15mm;
+  font-size: 12px;
+  color: #666;
+}
+
+/* Part Styles */
+.din8-part-title {
+  font-weight: bold;
+  margin: 30px 0 5px;
+  font-size: 14px;
+  text-align: center;   
+}
+
+.din8-part-instructions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Question list styles */
+.din8-question-list {
+  margin-bottom: 30px;
+}
+
+/* Question styles */
+.din8-question {
+  position: relative;
+  margin-bottom: 15px;
+  padding-right: 70px;
+  text-align: left; /* Space for replace button */
+}
+
+.din8-question-number {
+  margin-right: 5px;
+  font-weight: normal;
+}
+
+.din8-question-text {
+  font-weight: normal;
+}
+
+/* Replace Button Styles */
+.din8-replace-btn {
+  background-color: #f1f1f1;
+  border: 1px solid #ddd;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  position: absolute;
+  right: 5px;
+  top: 0;
+  color: #555;
+}
+
+.din8-replace-btn:hover {
+  background-color: #e5e5e5;
+}
+
+/* Paper Actions Styles */
+.din8-paper-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.din8-action-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.1s;
+}
+
+.din8-action-btn:active {
+  transform: translateY(1px);
+}
+
+.din8-save-btn {
+  background-color: #ffc107;
+  color: #000;
+}
+
+.din8-save-btn:hover {
+  background-color: #e0a800;
+}
+
+.din8-download-btn {
+  background-color: #6c757d;
+  color: white;
+}
+
+.din8-download-btn:hover {
+  background-color: #5a6268;
+}
+
+.din8-approve-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.din8-approve-btn:hover {
+  background-color: #218838;
+}
+
+/* Body class for printing mode */
+body.din8-printing {
+  background-color: white;
+  padding: 0;
+  margin: 0;
+}
+
+/* Print styles - optimizes the paper for printing */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  
+  html, body {
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 0;
+    background-color: white;
+  }
+  
+  .din8-main-title, .din8-generator-controls, .din8-paper-actions, .din8-replace-btn {
+    display: none !important;
+  }
+  
+  .din8-paper-container {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    background-color: white !important;
+    width: 100% !important;
+  }
+  
+  .din8-a4-paper {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  
+  .din8-a4-page {
+    min-height: 297mm !important;
+    box-sizing: border-box !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+  }
+  
+  /* Second and subsequent pages have minimal header */
+  .din8-continuation-page {
+    page-break-before: always !important;
+  }
+  
+  /* Ensure questions don't break across pages */
+  .din8-question {
+    page-break-inside: avoid !important;
+    padding-right: 0 !important;
+  }
+  
+  /* Make sure part headers don't separate from their questions */
+  .din8-part-title, .din8-part-instructions {
+    page-break-after: avoid !important;
+  }
+  
+  /* Registration box appears only on first page */
+  .din8-continuation-page .din8-registration-box {
+    display: none !important;
+  }
+  
+  /* Ensure last element doesn't get cut off */
+  .din8-question:last-child {
+    margin-bottom: 60px !important;
+  }
+  
+  /* Force page breaks at appropriate section boundaries if content overflows */
+  .din8-part-title {
+    page-break-before: auto !important;
+  }
+  
+  /* Make sure the footer appears on every page */
+  .din8-page-footer {
+    position: fixed !important;
+    bottom: 10mm !important;
+    right: 15mm !important;
+  }
+}
+
+/* Responsive styles */
+@media screen and (max-width: 830px) {
+  .din8-a4-paper {
+    width: 100%;
+  }
+  
+  .din8-a4-page {
+    padding: 15mm 10mm;
+  }
+  
+  .din8-registration-box {
+    position: relative;
+    top: 0;
+    right: 0;
+    width: 100%;
+    margin: 10px 0;
+  }
+  
+  .din8-header-flex {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .din8-university-logo {
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+  
+  .din8-paper-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .din8-action-btn {
+    width: 100%;
+  }
+}
+
+/* PDF Export specific styles */
+.din8-pdf-container {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 210mm;
+  background: white;
+  overflow: visible;
+}
+
+.din8-pdf-page {
+  background-color: white;
+  position: relative;
+  padding: 20mm 15mm;
+  box-sizing: border-box;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Hide all replace buttons */
+.din8-pdf-container .din8-replace-btn {
+  display: none !important;
+}
+
+/* Fix question padding */
+.din8-pdf-container .din8-question {
+  padding-right: 0 !important;
+  page-break-inside: avoid !important;
+}
+
+/* Hide action buttons */
+.din8-pdf-container .din8-paper-actions {
+  display: none !important;
+}
+
+/* Ensure proper spacing in PDF */
+.din8-pdf-container .din8-part-title {
+  font-weight: bold;
+  margin: 30px 0 5px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.din8-pdf-container .din8-part-instructions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.din8-pdf-container .din8-question-list {
+  margin-bottom: 30px;
+}
+
+/* Ensure header elements are properly styled */
+.din8-pdf-container .din8-university-header {
+  margin-bottom: 20px;
+}
+
+.din8-pdf-container .din8-header-flex {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 25px;
+}
+
+.din8-pdf-container .din8-university-logo {
+  width: 100px;
+  height: auto;
+  margin-right: 15px;
+}
+
+.din8-pdf-container .din8-header-text {
+  flex: 1;
+  text-align: center;
+}
+
+.din8-pdf-container .din8-university-name {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.din8-pdf-container .din8-course-details {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.din8-pdf-container .din8-paper-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin: 5px 0 10px;
+  text-transform: uppercase;
+}
+
+/* Registration box positioning */
+.din8-pdf-container .din8-registration-box {
+  position: absolute;
+  top: 20mm;
+  right: 15mm;
+  border: 1px solid #000;
+  padding: 8px;
+  font-size: 12px;
+  width: 200px;
+}
+
+/* Page breaks for PDF */
+.din8-pdf-container .din8-part-title {
+  page-break-after: avoid !important;
+}
+
+.din8-pdf-container .din8-part-instructions {
+  page-break-after: avoid !important;
+}
+
+/* Continuation page styles */
+.din8-pdf-container .din8-continuation-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+/* Loading indicator for PDF generation */
+.din8-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  font-family: Arial, sans-serif;
+}
+
+.din8-loading-spinner {
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

@@ -5,9 +5,9 @@ const LandingPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="w-screen h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+    <div className="w-screen min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-4 py-12">
       {/* Welcome Text */}
-      <h1 className="text-5xl font-bold mb-4 text-center text-white drop-shadow-lg">
+      <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center text-white drop-shadow-lg">
         Welcome to Question Paper Generator
       </h1>
 

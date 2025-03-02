@@ -23,7 +23,7 @@ function CreateQuestion() {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, bloomType: value } : q)));
   };
 
-  // ✅ Handle Unit Change
+  // Handle Unit Change
   const handleUnitChange = (id, value) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, unit: value } : q)));
   };
@@ -133,85 +133,84 @@ function CreateQuestion() {
   };
 
   return (
-    <div className="outer-container">
-      <div className="inner-container">
-        <h1 className="page-title">Create Questions</h1>
+    <div className="din4-outer-container">
+      <div className="din4-inner-container">
+        <h1 className="din4-page-title">Create Questions</h1>
 
         {questions.map((q) => (
-          <div key={q.id} className="question-container">
-            <button className="delete-btn" onClick={() => deleteQuestion(q.id)}>✖</button>
+          <div key={q.id} className="din4-question-container">
+            <button className="din4-delete-btn" onClick={() => deleteQuestion(q.id)}>✖</button>
               
-            {/* 🌟 Bloom Type & Unit Dropdowns Side by Side */}
-          <div className="dropdown-group-container">
-              {/* ✅ Bloom Type Dropdown */}
-              <div className="dropdown-group">
-                  <label>Bloom Type:</label>
-                  <select className="dropdown" value={q.bloomType} onChange={(e) => handleBloomTypeChange(q.id, e.target.value)}>
-                      <option value="">Select Bloom Type</option>
-                      <option value="Remember">Remember</option>
-                      <option value="Understand">Understand</option>
-                      <option value="Apply">Apply</option>
-                      <option value="Analyze">Analyze</option>
-                      <option value="Evaluate">Evaluate</option>
-                      <option value="Create">Create</option>
-                  </select>
+            {/* Bloom Type & Unit Dropdowns Side by Side */}
+            <div className="din4-dropdown-group-container">
+              {/* Bloom Type Dropdown */}
+              <div className="din4-dropdown-group">
+                <label className="din4-label">Bloom Type:</label>
+                <select className="din4-dropdown" value={q.bloomType} onChange={(e) => handleBloomTypeChange(q.id, e.target.value)}>
+                  <option value="">Select Bloom Type</option>
+                  <option value="Remember">Remember</option>
+                  <option value="Understand">Understand</option>
+                  <option value="Apply">Apply</option>
+                  <option value="Analyze">Analyze</option>
+                  <option value="Evaluate">Evaluate</option>
+                  <option value="Create">Create</option>
+                </select>
               </div>
 
-              {/* ✅ Unit Dropdown */}
-              <div className="dropdown-group">
-                  <label>Unit:</label>
-                  <select className="dropdown" value={q.unit} onChange={(e) => handleUnitChange(q.id, e.target.value)}>
-                      <option value="">Select Unit</option>
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="3">3</option>
-                      <option value="4">4</option>
-                      <option value="5">5</option>
-                  </select>
+              {/* Unit Dropdown */}
+              <div className="din4-dropdown-group">
+                <label className="din4-label">Unit:</label>
+                <select className="din4-dropdown" value={q.unit} onChange={(e) => handleUnitChange(q.id, e.target.value)}>
+                  <option value="">Select Unit</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
               </div>
-          </div>    
- 
+            </div>    
 
             {/* Question Type Dropdown */}
-            <label>Question Type:</label>
-            <select className="dropdown" value={q.questionType} onChange={(e) => handleQuestionTypeChange(q.id, e.target.value)}>
+            <label className="din4-label">Question Type:</label>
+            <select className="din4-dropdown" value={q.questionType} onChange={(e) => handleQuestionTypeChange(q.id, e.target.value)}>
               <option value="">Select Question Type</option>
               <option value="Descriptive">Descriptive</option>
               <option value="MCQ">MCQ</option>
             </select>
 
             {/* Question Input */}
-            <textarea className="question-input" placeholder="Type your Question" value={q.text} onChange={(e) => handleQuestionChange(q.id, e.target.value)} />
+            <textarea className="din4-question-input" placeholder="Type your Question" value={q.text} onChange={(e) => handleQuestionChange(q.id, e.target.value)} />
 
             {/* Upload Image for Question */}
-            <label>Upload Image for Question:</label>
+            <label className="din4-label">Upload Image for Question:</label>
             <input type="file" accept="image/*" onChange={(e) => handleImageUpload(q.id, e.target.files[0], "question")} />
             {q.images.questionImage && (
-              <div className="image-preview-frame">
+              <div className="din4-image-preview-frame">
                 <img src={URL.createObjectURL(q.images.questionImage)} alt="Uploaded" />
-                <button className="delete-image-btn" onClick={() => handleDeleteImage(q.id, "question")}>✖</button>
+                <button className="din4-delete-image-btn" onClick={() => handleDeleteImage(q.id, "question")}>✖</button>
               </div>
             )}
 
             {/* MCQ Options */}
             {q.questionType === "MCQ" && (
-              <div className="mcq-options">
-                <label>MCQ Options:</label>
+              <div className="din4-mcq-options">
+                <label className="din4-label">MCQ Options:</label>
                 {q.options.map((option, index) => (
-                  <div key={index} className="mcq-option">
-                    <select onChange={(e) => handleOptionTypeChange(q.id, index, e.target.value)} className="option-type-dropdown">
+                  <div key={index} className="din4-mcq-option">
+                    <select onChange={(e) => handleOptionTypeChange(q.id, index, e.target.value)} className="din4-option-type-dropdown">
                       <option value="text">Text</option>
                       <option value="image">Image</option>
                     </select>
                     {q.optionTypes[index] === "text" ? (
-                      <input type="text" placeholder={'Type your Option'} value={option} onChange={(e) => handleOptionChange(q.id, index, e.target.value)} />
+                      <input type="text" className="din4-mcq-text" placeholder={'Type your Option'} value={option} onChange={(e) => handleOptionChange(q.id, index, e.target.value)} />
                     ) : (
                       <>
                         <input type="file" accept="image/*" onChange={(e) => handleImageUpload(q.id, e.target.files[0], "option", index)} />
                         {q.images.optionImages[index] && (
-                          <div className="image-preview-frame">
+                          <div className="din4-image-preview-frame">
                             <img src={URL.createObjectURL(q.images.optionImages[index])} alt="Uploaded" />
-                            <button className="delete-image-btn" onClick={() => handleDeleteImage(q.id, "option", index)}>✖</button>
+                            <button className="din4-delete-image-btn" onClick={() => handleDeleteImage(q.id, "option", index)}>✖</button>
                           </div>
                         )}
                       </>
@@ -223,13 +222,11 @@ function CreateQuestion() {
           </div>
         ))}
 
-        <button className="add-btn" onClick={addNewQuestion}>+ Add Question</button>
-        <button className="save-btn" onClick={handleSaveQuestions}>Save Questions</button>
+        <button className="din4-add-btn" onClick={addNewQuestion}>+ Add Question</button>
+        <button className="din4-save-btn" onClick={handleSaveQuestions}>Save Questions</button>
       </div>
     </div>
   );
 }
 
 export default CreateQuestion;
-
-

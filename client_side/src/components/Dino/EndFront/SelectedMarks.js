@@ -10,25 +10,25 @@ function SelectMarks() {
   };
 
   const handleCreatePaper = () => {
-    navigate("/create-paper");
+    navigate("/exam-details");
   };
 
   return (
-    <div className="main-container">
+    <div className="din1-main-container">
       {/* Left Container for "Create Questions" */}
-      <div className="marks-container">
-        <h1>Create Questions</h1>
-        <p>Add questions to the database for exams.</p>
-        <button className="action-btn" onClick={handleInputQuestions}>
+      <div className="din1-marks-container">
+        <h1 className="din1-heading">Create Questions</h1>
+        <p className="din1-description">Add questions to the database for exams.</p>
+        <button className="din1-action-btn" onClick={handleInputQuestions}>
           Input Questions
         </button>
       </div>
 
       {/* Right Container for "Create Paper" */}
-      <div className="marks-container">
-        <h1>Create Paper</h1>
-        <p>Generate a paper for exams using selected questions.</p>
-        <button className="action-btn" onClick={handleCreatePaper}>
+      <div className="din1-marks-container">
+        <h1 className="din1-heading">Create Paper</h1>
+        <p className="din1-description">Generate a paper for exams using selected questions.</p>
+        <button className="din1-action-btn" onClick={handleCreatePaper}>
           Create Paper
         </button>
       </div>

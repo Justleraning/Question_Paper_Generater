@@ -1,3 +1,4 @@
+// Sidebar.js
 import { useAuth } from "../Contexts/AuthContext.js";
 import { useNavigate } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi"; 
@@ -12,68 +13,101 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
   };
 
   return (
-    <>
-      {/* ✅ Sidebar */}
-      <div className={`h-screen bg-gray-800 text-white fixed top-0 left-0 transition-all duration-300 ease-in-out z-50 ${isSidebarOpen ? "w-64" : "w-16"} flex flex-col p-4`}>
+    <aside 
+      className={`h-screen bg-gray-800 text-white fixed top-0 left-0 transition-all duration-300 ease-in-out z-50 
+        ${isSidebarOpen ? "w-64" : "w-16"} flex flex-col overflow-hidden`}
+    >
+      <div className="flex items-center justify-between p-4">
+        {isSidebarOpen && <h2 className="text-xl font-bold truncate">QPG System</h2>}
         
-        {/* ✅ Sidebar Toggle Button in Sidebar */}
         <button 
-          className="text-white bg-gray-800 p-2 rounded-md mb-4"
+          className="text-white hover:bg-gray-700 p-2 rounded-md"
           onClick={toggleSidebar}
+          aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
         >
-          {isSidebarOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+          {isSidebarOpen ? <FiX size={20} /> : <FiMenu size={20} />}
         </button>
-
-        {isSidebarOpen && <h2 className="text-xl font-bold mb-6 text-center">Question Paper Generator</h2>}
-
-        <ul className="space-y-3">
-          <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md cursor-pointer" onClick={() => navigate("/dashboard")}>
-            <FaUser />
-            {isSidebarOpen && <span>Dashboard</span>}
-          </li>
+      </div>
+      
+      <nav className="flex-1 overflow-y-auto py-4">
+        <ul className="space-y-2 px-2">
+          <NavItem 
+            icon={<FaUser />} 
+            label="Dashboard" 
+            isOpen={isSidebarOpen} 
+            onClick={() => navigate("/dashboard")} 
+          />
 
           {authState.user?.role === "Teacher" && (
             <>
-              <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md cursor-pointer" onClick={() => navigate("/status-of-paper")}>
-                <FaTasks />
-                {isSidebarOpen && <span>Status of Paper</span>}
-              </li>
-              <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md cursor-pointer" onClick={() => navigate("/mypapers")}>
-                <FaFileAlt />
-                {isSidebarOpen && <span>My Papers</span>}
-              </li>
-              <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md cursor-pointer" onClick={() => navigate("/rejected-papers")}>
-                <FaFileAlt />
-                {isSidebarOpen && <span>Rejected Papers</span>}
-              </li>
+              <NavItem 
+                icon={<FaTasks />} 
+                label="Status of Paper" 
+                isOpen={isSidebarOpen} 
+                onClick={() => navigate("/status-of-paper")} 
+              />
+              <NavItem 
+                icon={<FaFileAlt />} 
+                label="My Papers" 
+                isOpen={isSidebarOpen} 
+                onClick={() => navigate("/mypapers")} 
+              />
+              <NavItem 
+                icon={<FaFileAlt />} 
+                label="Rejected Papers" 
+                isOpen={isSidebarOpen} 
+                onClick={() => navigate("/rejected-papers")} 
+              />
             </>
           )}
 
           {(authState.user?.role === "Admin" || authState.user?.role === "SuperAdmin") && (
             <>
-              <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md cursor-pointer" onClick={() => navigate("/manage-users")}>
-                 <FaUsers />
-                 {isSidebarOpen && <span>Add/Remove Users</span>}
-              </li>
-              <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md cursor-pointer" onClick={() => navigate("/view-reset-requests")}>
-                <FaKey />
-                {isSidebarOpen && <span>View Reset Requests</span>}
-              </li>
-              <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md cursor-pointer" onClick={() => navigate("/view-approval-papers")}>
-                <FaCheckCircle />
-                {isSidebarOpen && <span>View Approval Papers</span>}
-              </li>
+              <NavItem 
+                icon={<FaUsers />} 
+                label="Add/Remove Users" 
+                isOpen={isSidebarOpen} 
+                onClick={() => navigate("/manage-users")} 
+              />
+              <NavItem 
+                icon={<FaKey />} 
+                label="View Reset Requests" 
+                isOpen={isSidebarOpen} 
+                onClick={() => navigate("/view-reset-requests")} 
+              />
+              <NavItem 
+                icon={<FaCheckCircle />} 
+                label="View Approval Papers" 
+                isOpen={isSidebarOpen} 
+                onClick={() => navigate("/view-approval-papers")} 
+              />
             </>
           )}
-
-          <button className="mt-auto flex items-center space-x-2 bg-red-500 p-2 rounded-md hover:bg-red-600 transition-all duration-200 ease-in-out w-full justify-center" onClick={logout}>
-            <FaSignOutAlt />
-            {isSidebarOpen && <span>Logout</span>}
-          </button>
         </ul>
+      </nav>
+      
+      <div className="p-4">
+        <button 
+          className="flex items-center justify-center space-x-2 bg-red-500 p-2 rounded-md hover:bg-red-600 transition-all w-full"
+          onClick={logout}
+        >
+          <FaSignOutAlt />
+          {isSidebarOpen && <span>Logout</span>}
+        </button>
       </div>
-    </>
+    </aside>
   );
 };
+
+// Helper component for nav items
+const NavItem = ({ icon, label, isOpen, onClick }) => (
+  <li 
+    className="flex items-center space-x-2 hover:bg-gray-700 p-3 rounded-md cursor-pointer transition-colors"
+    onClick={onClick}
+  >
+    <span className="flex-shrink-0">{icon}</span>
+    {isOpen && <span className="whitespace-nowrap overflow-hidden">{label}</span>}
+  </li>
+);
 
 export default Sidebar;
