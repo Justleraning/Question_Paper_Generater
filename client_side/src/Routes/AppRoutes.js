@@ -14,6 +14,15 @@ import EditQuestion from "../components/Dino/EndFront/CreateQuestion/QuestionPoo
 import ExamPattern from  "../components/Dino/EndFront/CreatePaper/ExamPattern.js";
 import CreatePapers from "../components/Dino/EndFront/CreatePaper/CreatePapers.js";
 
+// ✅ Roshan Routes
+import MainPage from "../components/Roshan/MainPage.js";
+import CreatePapermidsem from "../components/Roshan/CreatePapermidsem.js";
+import ViewPaper from "../components/Roshan/ViewPaper.js";
+import SubjectSelection from "../components/Roshan/SubjectSelection.js";
+import UnitChoose from "../components/Roshan/UnitChoose.js";
+import QuestionEntrymidsem from "../components/Roshan/QuestionEntrymidsem.js";
+import PreviewPagemidsem from "../components/Roshan/PreviewPagemidsem.js";
+
 // ✅ Isaac Routes
 import IndexPage from "../pages_Isaac/IndexPage.js";
 import QuestionEntryPage from "../pages_Isaac/QuestionEntryPage.js";
@@ -98,6 +107,15 @@ const AppRoutes = () => {
         <Route path="/preview" element={<PrivateRoute allowedRoles={["Teacher"]}><PreviewPage /></PrivateRoute>} />
         <Route path="/final-paper" element={<PrivateRoute allowedRoles={["Teacher"]}><FinalPaperPage /></PrivateRoute>} />
         <Route path="/answer-key" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKeyPage /></PrivateRoute>} />
+
+        {/* ✅ Roshan Existing Routes */}
+        <Route path="/mainp" element={<PrivateRoute allowedRoles={["Teacher"]}><MainPage /></PrivateRoute>} />
+        <Route path="/subjectselection" element={<PrivateRoute allowedRoles={["Teacher"]}><SubjectSelection /></PrivateRoute>} />
+        <Route path="/unitchoose" element={<PrivateRoute allowedRoles={["Teacher"]}><UnitChoose /></PrivateRoute>} />
+        <Route path="/questionentrymidsem" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionEntrymidsem /></PrivateRoute>} />
+        <Route path="/previewpagemidsem" element={<PrivateRoute allowedRoles={["Teacher"]}><PreviewPagemidsem /></PrivateRoute>} />
+        <Route path="/createpapermidsem" element={<PrivateRoute allowedRoles={["Teacher"]}><CreatePapermidsem /></PrivateRoute>} />
+        <Route path="/view-paper/:id" element={<PrivateRoute allowedRoles={["Teacher"]}><ViewPaper /></PrivateRoute>} />
 
         {/* ✅ Dino Existing Routes */}
         <Route path="/selected-marks" element={<PrivateRoute allowedRoles={["Teacher"]}><SelectMarks /></PrivateRoute>} />

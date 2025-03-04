@@ -25,7 +25,7 @@ const Dashboard = () => {
 
           <button 
             className="p-4 w-52 text-lg bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
-            onClick={() => navigate("/module2")}>
+            onClick={() => navigate("/mainp")}>
             Mid-Semester
           </button>
 
