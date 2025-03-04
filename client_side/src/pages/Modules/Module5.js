@@ -19,7 +19,7 @@ const Module5 = () => {
           Create Paper
         </button>
         <button className="p-4 w-52 text-lg bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
-          onClick={() => navigate("/")}>
+          onClick={() => navigate("/general-questions")}>
           General Questions
         </button>
       </div>
