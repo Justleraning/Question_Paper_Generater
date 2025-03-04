@@ -1,7 +1,7 @@
 import "../App.css"; // ✅ Corrected import path
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../Contexts/AuthContext.js"; // ✅ Fixed path
-import MainLayout from "../components/MainLayout.js"; // ✅ Fixed path
+import { useAuth } from "../Contexts/AuthContext.js"; 
+import MainLayout from "../components/MainLayout.js"; 
 import { QPProvider } from "../Contexts/QPContext.js"
 
 // ✅ Dino Routes
@@ -75,7 +75,7 @@ const AppRoutes = () => {
         <Route path="/general-questions" element={<PrivateRoute allowedRoles={["Teacher"]}><GeneralQuestions /></PrivateRoute>} />
         <Route path="/create-paper" element={<PrivateRoute allowedRoles={["Teacher"]}><CreatePaper /></PrivateRoute>} />
         <Route path="/enter-questions/:courseName/:subjectName" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionEntry /></PrivateRoute>} />
-        <Route path="/final-preview" element={<PrivateRoute allowedRoles={["Teacher"]}><FinalPreview /></PrivateRoute>} />
+        <Route path="/all" element={<PrivateRoute allowedRoles={["Teacher"]}><FinalPreview /></PrivateRoute>} />
         <Route path="/question-preview" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPreview /></PrivateRoute>} />
         <Route path="/paper-status" element={<PrivateRoute allowedRoles={["Teacher"]}><PaperStatus /></PrivateRoute>} />
         <Route path="/preview/:subjectKey" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPreview /></PrivateRoute>} />

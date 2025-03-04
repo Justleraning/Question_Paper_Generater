@@ -32,25 +32,8 @@ const handleAuthError = (error) => {
   return null;
 };
 
-// ✅ Restore Missing Functions
 
-export const getFinalPreview = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/final-preview`, { headers: authHeaders() });
-    return response.data;
-  } catch (error) {
-    return handleAuthError(error);
-  }
-};
-
-export const fetchGeneralQuestions = async (stream) => {
-  try {
-    const response = await axios.get(`${API_URL}/general-questions/${stream}`, { headers: authHeaders() });
-    return response.data;
-  } catch (error) {
-    return handleAuthError(error);
-  }
-};
+//dashboard papers features
 
 export const getMyPapers = async () => {
   try {
@@ -115,7 +98,11 @@ export const getRejectedPapers = async () => {
   }
 };
 
-// ✅ Existing Functions (Kept)
+
+//dashboard papers features
+
+
+//courses
 export const getAvailableCourses = async () => {
   try {
     const response = await axios.get(`${API_URL}/courses`, { headers: authHeaders() });
@@ -158,6 +145,11 @@ export const getCourseById = async (courseId) => {
   }
 };
 
+//courses
+
+
+//questionentry
+
 export const saveQuestion = async (courseName, subjectName, question) => {
   try {
     console.log("📤 Sending request to save question:", JSON.stringify(question, null, 2));
@@ -174,7 +166,8 @@ export const saveQuestion = async (courseName, subjectName, question) => {
       question: question.question,
       options: formattedOptions, // Ensure options are formatted properly
       correctOption: question.correctOption,
-      index: question.index,
+      questionId: question.questionId || null,
+      index: question.index, // Keep index for backward compatibility
     };
 
     console.log("📦 Final Payload Sent:", JSON.stringify(payload, null, 2));
@@ -191,18 +184,37 @@ export const saveQuestion = async (courseName, subjectName, question) => {
   }
 };
 
+export const getQuestionById = async (questionId) => {
+  try {
+    const response = await axios.get(`${API_URL}/questions/get-by-id`, {
+      headers: authHeaders(),
+      params: { questionId }, // Only need questionId now
+    });
+    
+    console.log("📥 Backend response for fetched question:", response.data);
 
+    if (!response.data || response.data.question === undefined) {
+      console.warn("⚠️ No question found with this ID. Returning empty form.");
+      return { question: "", options: [], correctOption: null };
+    }
 
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error fetching question by ID:", error.response?.data || error.message);
+    return { question: "", options: [], correctOption: null }; // ✅ Return empty if no question found
+  }
+};
 
-
+// ✅ LEGACY: Keep for backward compatibility
 export const getQuestionByIndex = async (courseName, subjectName, index) => {
   try {
+    console.warn("⚠️ DEPRECATED: getQuestionByIndex is being phased out. Use getQuestionById instead.");
     const response = await axios.get(`${API_URL}/questions/get`, {
       headers: authHeaders(),
       params: { courseName, subject: subjectName, index }, // ✅ Ensure index is sent
     });
     
-    console.log("📥 Backend response for fetched question:", response.data);
+    console.log("📥 Backend response for fetched question by index:", response.data);
 
     if (!response.data || response.data.question === undefined) {
       console.warn("⚠️ No question found at index. Returning empty form.");
@@ -215,32 +227,106 @@ export const getQuestionByIndex = async (courseName, subjectName, index) => {
     return { question: "", options: [], correctOption: null }; // ✅ Return empty if no question found
   }
 };
+//questionentry
 
+//finalpreview
 /**
- * Fetches all questions for a specific subject
+ * Fetches all questions for all subjects in a course
  * @param {string} courseName - The name of the course
- * @param {string} subjectName - The name of the subject
+ * @param {string} subjectName - The name of the subject (optional)
  * @returns {Promise<Array>} - Array of question objects
  */
-export const getQuestionsBySubject = async (courseName, subjectName) => {
+export const getAllQuestions = async (courseName, subject) => {
   try {
-    console.log(`📡 Fetching all questions for ${courseName} - ${subjectName}`);
-    
-    const response = await axios.get(`${API_URL}/questions/subject`, {
-      headers: authHeaders(),
-      params: { courseName, subject: subjectName }
+    const response = await axios.get(`${API_URL}/questions/all`, {
+      params: { courseName, subject }
     });
-    
-    console.log("📥 Backend response for subject questions:", response.data);
-    
-    if (!response.data || !Array.isArray(response.data.questions)) {
-      console.warn("⚠️ Invalid response format or no questions found for subject");
-      return [];
-    }
-    
-    return response.data.questions;
+    return response.data;
   } catch (error) {
-    console.error("❌ Error in getQuestionsBySubject:", error.response?.data || error.message);
-    return []; // Return empty array on error
+    console.error('Error fetching questions:', error);
+    throw error;
+  }
+};
+
+// ✅ NEW FUNCTIONS (Converted from fetch to axios & matching existing patterns)
+
+/**
+ * Deletes all questions for a course after the paper is finalized
+ * @param {string} courseName - The name of the course
+ * @returns {Promise<Object>} - Response data from the API
+ */
+export const deleteAllQuestionsForCourse = async (courseName) => {
+  try {
+    console.log(`🗑️ Deleting all questions for course: ${courseName}`);
+    
+    const response = await axios.delete(
+      `${API_URL}/questions/delete/${encodeURIComponent(courseName)}`, 
+      { headers: authHeaders() }
+    );
+    
+    console.log("✅ Questions deleted successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error deleting questions:", error.response?.data || error.message);
+    return handleAuthError(error);
+  }
+};
+
+/**
+ * Saves the completed paper to user's account
+ * @param {Object} paperData - The complete paper data object
+ * @returns {Promise<Object>} - Response data from the API
+ */
+export const saveCompletedPaper = async (paperData) => {
+  try {
+    console.log("📤 Saving completed paper:", JSON.stringify(paperData, null, 2));
+    
+    const response = await axios.post(
+      `${API_URL}/save`, 
+      paperData, 
+      { headers: authHeaders() }
+    );
+    
+    console.log("✅ Paper saved successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error saving paper:", error.response?.data || error.message);
+    return handleAuthError(error);
+  }
+};
+
+/**
+ * Generates and saves the answer key for a paper
+ * @param {Object} answerKeyData - The answer key data object
+ * @returns {Promise<Object>} - Response data from the API
+ */
+export const saveAnswerKey = async (answerKeyData) => {
+  try {
+    console.log("📤 Saving answer key:", JSON.stringify(answerKeyData, null, 2));
+    
+    const response = await axios.post(
+      `${API_URL}/save-answer-key`, 
+      answerKeyData, 
+      { headers: authHeaders() }
+    );
+    
+    console.log("✅ Answer key saved successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error saving answer key:", error.response?.data || error.message);
+    return handleAuthError(error);
+  }
+};
+
+//finalpreview
+
+//genreal question feature
+
+export const fetchGeneralQuestions = async (stream) => {
+  try {
+    const response = await axios.get(`${API_URL}/general-questions/${stream}`, { headers: authHeaders() });
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
   }
 };

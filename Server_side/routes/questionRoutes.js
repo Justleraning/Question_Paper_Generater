@@ -1,5 +1,5 @@
 const express = require("express");
-const { saveQuestion, fetchQuestionsByCourse, getQuestions, getQuestionByIndex } = require("../controllers/questionController");
+const { saveQuestion, fetchQuestionsByCourse, getQuestionById,getAllQuestions } = require("../controllers/questionController");
 const { protect } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
@@ -10,7 +10,8 @@ router.post("/", protect, saveQuestion);
 // ✅ Fetch questions by course (for General Questions Button)
 router.get("/", protect, fetchQuestionsByCourse);
 
-// ✅ Get a single question by index
-router.get("/get", protect, getQuestionByIndex);  
+// ✅ Get a single question by questionId
+router.get("/get-by-id", protect, getQuestionById);  
+router.get("/all", getAllQuestions);
 
 module.exports = router;

@@ -4,562 +4,734 @@ import Bold from "@tiptap/extension-bold";
 import Italic from "@tiptap/extension-italic";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
-import Image from "@tiptap/extension-image";
-import { 
-  FaBold, FaItalic, FaUnderline, 
-  FaAlignLeft, FaAlignCenter, FaAlignRight
-} from "react-icons/fa";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getQuestionByIndex, saveQuestion } from "../../services/paperService.js";
+import { getQuestionByIndex, saveQuestion, getQuestionById } from "../../services/paperService.js";
 
-const TOTAL_QUESTIONS = 20;
+// Import components
+import QuestionEditorToolbar from "./QuestionEditorToolbar.js";
+import SubjectProgressDisplay from "./SubjectProgressDisplay.js";
+import NavigationButtons from "./NavigationButtons.js";
+import ConfirmModal from "./ConfirmModal.js";
+import StatusMessages from "./StatusMessage.js";
+import QuestionOptionsForm from "./QuestionOptionsForm.js";
+import QuestionPreviewModal from "./QuestionPreview.js";
+import NextSubjectConfirmModal from "./NextSubjectConfirmModal.js";
+
+// Constants
+const SUBJECTS = ["LR", "QP", "ENG", "CUSTOM"];
+const SUBJECT_NAMES = {
+  LR: "Logical Reasoning",
+  QP: "Quantitative Problem Solving",
+  ENG: "English",
+  CUSTOM: ""
+};
+const createDefaultOptions = () => Array(4).fill(null).map(() => ({ type: "Text", value: "" }));
+const CSS_STYLES = `
+  .tiptap-editor .ProseMirror { min-height: 120px; width: 100%; outline: none; }
+  .editor-container { padding: 0 !important; overflow: hidden; }
+  .editor-content { width: 100% !important; padding: 16px !important; }
+  .subject-config-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+    background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; 
+    justify-content: center; z-index: 1000; }
+  .subject-config-modal { background-color: white; padding: 2rem; border-radius: 0.5rem; 
+    max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+`;
 
 const QuestionEntry = () => {
   const navigate = useNavigate();
   const { courseName, subjectName } = useParams();
-  const decodedCourseName = decodeURIComponent(courseName);
-  const decodedSubjectName = decodeURIComponent(subjectName);
-  const [showWarning, setShowWarning] = useState(false);
+  const decodedCourseName = decodeURIComponent(courseName || "");
+  const decodedSubjectName = decodeURIComponent(subjectName || "");
+  SUBJECT_NAMES.CUSTOM = decodedSubjectName;
   
-  const subjects = {
-    LR: "Logical Reasoning",
-    QP: "Quantitative Problem Solving",
-    ENG: "English",
-    CUSTOM: decodedSubjectName, // Dynamic custom subject name
+  // References
+  const editorRef = useRef(null);
+
+  // Main state object
+  const [state, setState] = useState({
+    // Config
+    markType: 40,
+    isConfigured: false,
+    questionCounts: { LR: 15, QP: 15, ENG: 15, CUSTOM: 15 },
+    
+    // Current question
+    currentSubjectIndex: 0,
+    currentQuestionIndex: 1,
+    questionText: "",
+    options: createDefaultOptions(),
+    correctOption: null,
+    isQuestionSaved: false,
+    
+    // Progress
+    subjectProgress: SUBJECTS.reduce((acc, subject) => {
+      acc[subject] = { completed: false, questions: {} };
+      return acc;
+    }, {}),
+    questionIds: SUBJECTS.reduce((acc, subject) => {
+      acc[subject] = {};
+      return acc;
+    }, {}),
+    
+    // UI
+    isLoading: false,
+    error: null,
+    notification: null,
+    isPreviewModalOpen: false,
+    isConfirmModalOpen: false,
+    isNextSubjectModalOpen: false,
+    isSubjectConfigModalOpen: true
+  });
+
+  // Destructure state
+  const {
+    markType, isConfigured, questionCounts,
+    currentSubjectIndex, currentQuestionIndex, questionText, options, correctOption, isQuestionSaved,
+    subjectProgress, questionIds,
+    isLoading, error, notification, 
+    isPreviewModalOpen, isConfirmModalOpen, isNextSubjectModalOpen, isSubjectConfigModalOpen
+  } = state;
+
+  // Current subject info
+  const currentSubject = SUBJECTS[currentSubjectIndex];
+  const currentSubjectName = SUBJECT_NAMES[currentSubject];
+
+  // Update specific state properties
+  const updateState = (updates) => setState(prev => ({ ...prev, ...updates }));
+  const setNotificationWithTimeout = (msg) => {
+    updateState({ notification: msg });
+    setTimeout(() => updateState({ notification: null }), 3000);
   };
 
-  const [selectedSubject, setSelectedSubject] = useState("LR");
-  const [progress, setProgress] = useState({
-    LR: { index: 1, questions: {} },
-    QP: { index: 1, questions: {} },
-    ENG: { index: 1, questions: {} },
-    CUSTOM: { index: 1, questions: {} },
-  });
+  // Reset fields
+  const resetFields = () => {
+    updateState({
+      questionText: "",
+      options: createDefaultOptions(),
+      correctOption: null,
+      isQuestionSaved: false
+    });
+    editor?.commands?.setContent?.("");
+  };
 
-  const [questionText, setQuestionText] = useState("");
-  const [options, setOptions] = useState([
-    { type: "Text", value: "" },
-    { type: "Text", value: "" },
-    { type: "Text", value: "" },
-    { type: "Text", value: "" },
-  ]);
-  const [correctOption, setCorrectOption] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-
+  // Editor setup
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        bold: false, 
-        italic: false
-      }),
-      Bold, 
-      Italic, 
-      Underline,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Image
+      StarterKit.configure({ bold: false, italic: false }),
+      Bold, Italic, Underline,
+      TextAlign.configure({ types: ["heading", "paragraph"] })
     ],
-    content: questionText,
-    onUpdate: ({ editor }) => setQuestionText(editor.getHTML()),
+    content: "",
+    onUpdate: ({ editor }) => updateState({
+      questionText: editor.getHTML(),
+      isQuestionSaved: false
+    })
   });
 
-  // Modified fetchQuestion function with better error handling
-  const fetchQuestion = async (index) => {
+  // Initialize
+  useEffect(() => {
+    if (editor) editorRef.current = editor;
+    
+    // Add CSS
+    const styleTag = document.createElement('style');
+    styleTag.innerHTML = CSS_STYLES;
+    document.head.appendChild(styleTag);
+    return () => document.head.removeChild(styleTag);
+  }, [editor]);
+
+  // Mark question as unsaved when edited
+  useEffect(() => updateState({ isQuestionSaved: false }), [questionText, options, correctOption]);
+
+  // Fetch and load question
+  const fetchQuestion = async (subject, index) => {
+    if (!editor) return;
+    
     try {
-      setIsLoading(true);
-      console.log(`📡 Fetching question for index ${index}`);
-
-      const data = await getQuestionByIndex(decodedCourseName, subjects[selectedSubject], index);
-
-      if (data && data.question && Array.isArray(data.options)) {
-        console.log("✅ Question fetched:", data);
-        setQuestionText(data.question);
-
-        // ✅ Handle Text & Image Options Correctly
-        const formattedOptions = data.options.map(opt => ({
-          type: opt.type,
-          value: opt.type === "Image" ? opt.value : opt.value || "",
-          fileName: opt.fileName || ""
-        }));
-
-        setOptions([...formattedOptions, ...new Array(4 - formattedOptions.length).fill({ type: "Text", value: "" })]);
-        setCorrectOption(data.correctOption || null);
-
-        if (editor) {
-          editor.commands.setContent(data.question);
-        }
+      updateState({ isLoading: true, error: null, isQuestionSaved: false });
+      
+      const subjectName = SUBJECT_NAMES[subject];
+      const questionId = questionIds[subject][index];
+      
+      let data = questionId 
+        ? await getQuestionById(questionId)
+        : await getQuestionByIndex(decodedCourseName, subjectName, index);
+      
+      if (data?.questionId && !questionId) {
+        const updatedIds = {...questionIds};
+        updatedIds[subject][index] = data.questionId;
+        updateState({ questionIds: updatedIds });
+      }
+  
+      if (data?.question) {
+        // Format options
+        let formattedOptions = Array.isArray(data.options) 
+          ? data.options.map(opt => ({ type: "Text", value: opt.value || "" }))
+          : [];
+  
+        // Fill with default options
+        const fullOptions = [
+          ...formattedOptions, 
+          ...Array(Math.max(0, 4 - formattedOptions.length)).fill(null).map(() => ({ type: "Text", value: "" }))
+        ];
         
-        // Add to progress state
-        setProgress(prev => ({
-          ...prev,
-          [selectedSubject]: {
-            ...prev[selectedSubject],
-            questions: {
-              ...prev[selectedSubject].questions,
-              [index]: { 
-                text: data.question, 
-                options: formattedOptions,
-                correctOption: data.correctOption
-              }
-            }
-          }
-        }));
+        // Ensure correctOption is a number and convert from 0-based to 1-based
+        const validCorrectOption = typeof data.correctOption === 'number' 
+          ? data.correctOption + 1 
+          : typeof data.correctOption === 'string' 
+            ? Number(data.correctOption) + 1 
+            : null;
+  
+        // Update state and cache
+        const updatedProgress = {...subjectProgress};
+        updatedProgress[subject].questions[index] = {
+          text: data.question, 
+          options: fullOptions,
+          correctOption: validCorrectOption,
+          questionId: data.questionId
+        };
+        
+        updateState({
+          questionText: data.question,
+          options: fullOptions,
+          correctOption: validCorrectOption,
+          isQuestionSaved: true,
+          subjectProgress: updatedProgress
+        });
+        
+        editor?.commands?.setContent?.(data.question);
       } else {
-        console.warn(`⚠️ No question found at index ${index}. Resetting fields.`);
         resetFields();
       }
     } catch (error) {
-      console.error("❌ Error fetching question:", error);
+      console.error(`[${subject}] Error fetching question:`, error);
+      updateState({ error: `Failed to load question.` });
       resetFields();
     } finally {
-      setIsLoading(false);
+      updateState({ isLoading: false });
     }
   };
 
-  // Improved handleSubjectChange - saves current state before switching
-  const handleSubjectChange = (subject) => {
-    // First save the current state for current subject
-    if (questionText.trim()) {
-      setProgress((prev) => ({
-        ...prev,
-        [selectedSubject]: {
-          ...prev[selectedSubject],
-          questions: {
-            ...prev[selectedSubject].questions,
-            [prev[selectedSubject].index]: { 
-              text: questionText, 
-              options,
-              correctOption
-            },
-          },
-        },
-      }));
-    }
-    
-    // Now change the subject
-    setSelectedSubject(subject);
-    
-    // Load question for the new subject
-    setTimeout(() => {
-      // If we have cached data for this subject's current index, use it
-      const currentIndex = progress[subject].index;
-      if (progress[subject].questions[currentIndex]) {
-        const savedQuestion = progress[subject].questions[currentIndex];
-        setQuestionText(savedQuestion.text || "");
-        setOptions(savedQuestion.options || [
-          { type: "Text", value: "" },
-          { type: "Text", value: "" },
-          { type: "Text", value: "" },
-          { type: "Text", value: "" },
-        ]);
-        setCorrectOption(savedQuestion.correctOption || null);
-        
-        if (editor) {
-          editor.commands.setContent(savedQuestion.text || "");
-        }
-      } else {
-        // Fetch from backend
-        fetchQuestion(currentIndex);
-      }
-    }, 100);
-  };
-
-  // Check if we have cached questions when subject changes
+  // Load question when subject or index changes
   useEffect(() => {
-    // If we have the question cached in progress state, use that
-    const currentIndex = progress[selectedSubject].index;
-    if (progress[selectedSubject].questions[currentIndex]) {
-      console.log(`✅ Loading cached question for ${selectedSubject} index ${currentIndex}`);
-      const savedQuestion = progress[selectedSubject].questions[currentIndex];
-      setQuestionText(savedQuestion.text || "");
-      setOptions(savedQuestion.options || [
-        { type: "Text", value: "" },
-        { type: "Text", value: "" },
-        { type: "Text", value: "" },
-        { type: "Text", value: "" },
-      ]);
-      setCorrectOption(savedQuestion.correctOption || null);
-      
-      if (editor) {
-        editor.commands.setContent(savedQuestion.text || "");
-      }
-    } else {
-      // Otherwise fetch from backend
-      fetchQuestion(currentIndex);
-    }
-  }, [selectedSubject]);
-
-  // Load question when index changes
-  useEffect(() => {
-    const currentIndex = progress[selectedSubject].index;
+    if (!editor || !isConfigured) return;
     
-    // First check if we already have this question in our local state
-    if (progress[selectedSubject].questions[currentIndex]) {
-      console.log(`✅ Loading cached question for index ${currentIndex}`);
-      const savedQuestion = progress[selectedSubject].questions[currentIndex];
-      setQuestionText(savedQuestion.text || "");
-      setOptions(savedQuestion.options || [
-        { type: "Text", value: "" },
-        { type: "Text", value: "" },
-        { type: "Text", value: "" },
-        { type: "Text", value: "" },
-      ]);
-      setCorrectOption(savedQuestion.correctOption || null);
-      
-      if (editor) {
-        editor.commands.setContent(savedQuestion.text || "");
-      }
+    const subject = currentSubject;
+    const index = currentQuestionIndex;
+    const cachedQuestion = subjectProgress[subject]?.questions[index];
+    
+    if (cachedQuestion) {
+      updateState({
+        questionText: cachedQuestion.text || "",
+        options: cachedQuestion.options || createDefaultOptions(),
+        correctOption: cachedQuestion.correctOption,
+        isQuestionSaved: true
+      });
+      editor.commands.setContent(cachedQuestion.text || "");
     } else {
-      // If not cached, fetch from backend
-      fetchQuestion(currentIndex);
+      fetchQuestion(subject, index);
     }
-  }, [progress[selectedSubject].index]);
+  }, [currentSubject, currentQuestionIndex, editor, isConfigured]);
 
-  const resetFields = () => {
-    setQuestionText("");
-    setOptions([
-      { type: "Text", value: "" },
-      { type: "Text", value: "" },
-      { type: "Text", value: "" },
-      { type: "Text", value: "" },
-    ]);
-    setCorrectOption(null);
-
-    if (editor) {
-      editor.commands.setContent("");
-    }
-  };
-
-  const saveQuestionToBackend = async () => {
+  // Save current question
+  const saveCurrentQuestion = async () => {
     try {
-      if (!questionText.trim()) {
-        console.warn("⚠️ Question text is empty. Skipping save.");
-        return;
+      const subject = currentSubject;
+      const index = currentQuestionIndex;
+      
+      // Validation
+      if (!questionText?.trim()) {
+        updateState({ error: "Question text cannot be empty" });
+        return false;
       }
-
-      const formattedOptions = (options || [])
-        .filter(opt => opt && typeof opt.value === "string")
-        .map(opt => ({
-          type: opt.type || "Text",
-          value: opt.value.trim(),
-          fileName: opt.fileName || ""
-        }))
-        .filter(opt => opt.value.length > 0);
-
-      if (formattedOptions.length < 2) {
-        console.warn("⚠️ At least two options are required.");
-        return;
+  
+      const formattedOptions = options.map(opt => ({
+        type: "Text",
+        value: (opt?.value || "").trim(),
+      }));
+  
+      if (formattedOptions.filter(opt => opt.value.length > 0).length < 2) {
+        updateState({ error: "At least two options are required" });
+        return false;
       }
-
-      if (!correctOption) {
-        console.warn("⚠️ Correct Option is missing.");
-        return;
+  
+      if (correctOption === null || correctOption === undefined) {
+        updateState({ error: "Please select a correct option" });
+        return false;
       }
-
+      
+      // Convert correctOption to number and validate
+      const validCorrectOption = Number(correctOption);
+      if (isNaN(validCorrectOption) || validCorrectOption < 1 || validCorrectOption > 4) {
+        updateState({ error: "Invalid correct option selected" });
+        return false;
+      }
+  
+      // Get questionId
+      const questionId = questionIds[subject][index];
+      
+      // Update cache
+      const updatedProgress = {...subjectProgress};
+      updatedProgress[subject].questions[index] = {
+        text: questionText, 
+        options: [...formattedOptions],
+        correctOption: validCorrectOption,
+        questionId: questionId
+      };
+      
+      // Check if subject is complete
+      updatedProgress[subject].completed = 
+        Object.keys(updatedProgress[subject].questions).length === questionCounts[subject];
+      
+      // Send to backend - ensure we're sending a number for correctOption
       const payload = {
         courseName: decodedCourseName,
-        subject: subjects[selectedSubject],
+        subject: SUBJECT_NAMES[subject],
         question: questionText,
         options: formattedOptions,
-        correctOption,
-        index: progress[selectedSubject].index,
+        correctOption: validCorrectOption - 1, // Convert to 0-based, ensure it's a number
+        index,
+        questionId,
       };
-
-      console.log("📤 Sending question to backend:", JSON.stringify(payload, null, 2));
-
-      const response = await saveQuestion(decodedCourseName, decodedSubjectName, payload);
-
-      console.log("✅ Backend Response:", response);
-
-      if (response && response.message) {
-        console.log("✅ Question saved successfully!");
+  
+      console.log("Saving question with payload:", payload);
+  
+      const result = await saveQuestion(decodedCourseName, decodedSubjectName, payload);
+      
+      // Save new questionId
+      if (result?.question?.questionId) {
+        const updatedIds = {...questionIds};
+        updatedIds[subject][index] = result.question.questionId;
+        updateState({ questionIds: updatedIds });
       }
-
+      
+      updateState({
+        subjectProgress: updatedProgress,
+        isQuestionSaved: true,
+        error: null
+      });
+      
+      setNotificationWithTimeout("Question saved successfully!");
+      return true;
     } catch (error) {
-      console.error("❌ Error saving question:", error.response?.data || error.message);
+      console.error("Save error:", error);
+      updateState({ error: `Failed to save: ${error.message || "Unknown error"}` });
+      return false;
     }
   };
 
-  // Improved handleNextQuestion - better saves state and navigates
+  // Navigation handlers
+  const handleSaveQuestion = async () => {
+    updateState({ error: null });
+    await saveCurrentQuestion();
+  };
+
   const handleNextQuestion = async () => {
-    await saveQuestionToBackend(); // Save current question to backend
+    // Validate
+    if (!questionText?.trim() || 
+        options.filter(opt => opt?.value?.trim().length > 0).length < 2 ||
+        correctOption === null) {
+      updateState({ notification: "Please complete all required fields." });
+      return;
+    }
     
-    // Update local progress state with current question data
-    setProgress((prev) => {
-      const nextIndex = prev[selectedSubject].index + 1;
-      return {
-        ...prev,
-        [selectedSubject]: {
-          ...prev[selectedSubject],
-          index: nextIndex,
-          questions: {
-            ...prev[selectedSubject].questions,
-            [prev[selectedSubject].index]: { 
-              text: questionText, 
-              options,
-              correctOption
-            },
-          },
-        },
-      };
+    // Save and advance
+    if (await saveCurrentQuestion()) {
+      if (currentQuestionIndex < questionCounts[currentSubject]) {
+        updateState({ currentQuestionIndex: currentQuestionIndex + 1 });
+      } else {
+        // End of subject
+        const updatedProgress = {...subjectProgress};
+        updatedProgress[currentSubject].completed = true;
+        
+        updateState({
+          notification: `Completed all questions for ${currentSubjectName}!`,
+          subjectProgress: updatedProgress,
+          isNextSubjectModalOpen: currentSubjectIndex < SUBJECTS.length - 1
+        });
+      }
+    }
+  };
+
+  const handlePrevQuestion = async () => {
+    if (currentQuestionIndex > 1) {
+      if (questionText?.trim() && correctOption !== null) await saveCurrentQuestion();
+      updateState({ currentQuestionIndex: currentQuestionIndex - 1, error: null });
+    }
+  };
+
+  const showNextSubjectConfirm = async () => {
+    // Validate and save
+    if (!questionText?.trim() || correctOption === null) {
+      updateState({ notification: "Please complete the current question first." });
+      return;
+    }
+    
+    if (await saveCurrentQuestion()) updateState({ isNextSubjectModalOpen: true });
+  };
+  
+  const handleNextSubject = async () => {
+    // Mark completed and move to next
+    const updatedProgress = {...subjectProgress};
+    updatedProgress[currentSubject].completed = true;
+    
+    if (currentSubjectIndex < SUBJECTS.length - 1) {
+      updateState({
+        error: null,
+        isNextSubjectModalOpen: false,
+        subjectProgress: updatedProgress,
+        currentSubjectIndex: currentSubjectIndex + 1,
+        currentQuestionIndex: 1
+      });
+      resetFields();
+      setNotificationWithTimeout(`Now entering ${SUBJECT_NAMES[SUBJECTS[currentSubjectIndex + 1]]}`);
+    } else {
+      updateState({
+        isNextSubjectModalOpen: false,
+        subjectProgress: updatedProgress,
+        notification: "All subjects completed! Preview the final paper."
+      });
+    }
+  };
+
+  // Option updates
+  const updateOption = (optionIndex, field, value) => {
+    const updatedOptions = [...options];
+    
+    if (!updatedOptions[optionIndex]) {
+      updatedOptions[optionIndex] = { type: "Text", value: "" };
+    }
+    
+    if (field === "value" || field === "type") {
+      updatedOptions[optionIndex][field] = value;
+    }
+    
+    updateState({ options: updatedOptions, isQuestionSaved: false });
+  };
+
+  // Preview and final actions
+  const handlePreviewSubject = async () => {
+    if (!isQuestionSaved && questionText?.trim()) await saveCurrentQuestion();
+    updateState({ isPreviewModalOpen: true, error: null });
+  };
+
+  const getCurrentSubjectQuestions = () => {
+    const questionsMap = subjectProgress[currentSubject]?.questions || {};
+    return Object.entries(questionsMap)
+      .filter(([_, q]) => q?.text)
+      .map(([index, q]) => ({ ...q, index: parseInt(index) }))
+      .sort((a, b) => a.index - b.index);
+  };
+
+  const handleShowFinalPreviewConfirm = async () => {
+    if (!isQuestionSaved && questionText?.trim()) {
+      if (await saveCurrentQuestion()) updateState({ isConfirmModalOpen: true });
+    } else {
+      updateState({ isConfirmModalOpen: true });
+    }
+  };
+  
+  const handleFinalPreviewConfirmed = async () => {
+    // Prepare all questions
+    const allQuestions = {};
+    SUBJECTS.forEach(subject => {
+      const questions = Object.entries(subjectProgress[subject]?.questions || {})
+        .filter(([_, q]) => q?.text)
+        .map(([idx, q]) => ({
+          index: parseInt(idx),
+          text: q.text,
+          options: q.options,
+          correctOption: q.correctOption,
+          questionId: q.questionId
+        }))
+        .sort(() => 0.5 - Math.random()) // Randomize
+        .slice(0, markType === 40 ? 15 : 20); // Limit
+      
+      allQuestions[subject] = questions;
     });
     
-    // Fetch or load the next question happens in the useEffect
-  };
-
-  // Improved handlePreviousQuestion - saves current state before navigating
-  const handlePreviousQuestion = async () => {
-    if (progress[selectedSubject].index > 1) {
-      // First save the current question
-      await saveQuestionToBackend();
-      
-      // Save current question state in progress
-      setProgress((prev) => ({
-        ...prev,
-        [selectedSubject]: {
-          ...prev[selectedSubject],
-          questions: {
-            ...prev[selectedSubject].questions,
-            [prev[selectedSubject].index]: { 
-              text: questionText, 
-              options,
-              correctOption
-            },
-          },
-          index: prev[selectedSubject].index - 1,
-        },
-      }));
-      
-      // The useEffect will handle loading the previous question
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-center w-full max-w-3xl mx-auto px-8 py-6 min-h-screen overflow-y-auto pb-32">
-
-      {/* ✅ Subject Selection Buttons */}
-      <div className="flex space-x-4 mb-4">
-        {["LR", "QP", "ENG", "CUSTOM"].map((sub) => (
-          <button
-            key={sub}
-            onClick={() => handleSubjectChange(sub)}
-            className={`px-4 py-2 rounded ${selectedSubject === sub ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-          >
-            {subjects[sub]}
-          </button>
-        ))}
-      </div>
-
-      {/* ✅ Show Currently Entering Subject */}
-      <h2 className="text-lg font-semibold">Currently Entering: {subjects[selectedSubject] || "Custom Subject"}</h2>
-
-      <h2 className="text-2xl font-bold text-center">Enter Questions for</h2>
-      <h3 className="text-lg font-semibold text-gray-700 text-center">
-        {decodedCourseName} - {decodedSubjectName}
-      </h3>
-
-      <p className="text-sm text-gray-500 text-center">{progress[selectedSubject].index} / {TOTAL_QUESTIONS} Questions</p>
-
-      {/* Toolbar */}
-      <div className="flex space-x-2 mb-2 border border-black p-2 rounded bg-gray-100">
-        <button onClick={() => editor.chain().focus().toggleBold().run()} className="px-3 py-2 border"><FaBold /></button>
-        <button onClick={() => editor.chain().focus().toggleItalic().run()} className="px-3 py-2 border"><FaItalic /></button>
-        <button onClick={() => editor.chain().focus().toggleUnderline().run()} className="px-3 py-2 border"><FaUnderline /></button>
-        <button onClick={() => editor.chain().focus().setTextAlign("left").run()} className="px-3 py-2 border"><FaAlignLeft /></button>
-        <button onClick={() => editor.chain().focus().setTextAlign("center").run()} className="px-3 py-2 border"><FaAlignCenter /></button>
-        <button onClick={() => editor.chain().focus().setTextAlign("right").run()} className="px-3 py-2 border"><FaAlignRight /></button>
-      </div>
-
-      {/* Question Editor */}
-      <div className="w-full max-w-3xl border border-black rounded p-2">
-        <EditorContent editor={editor} />
-      </div>
-
-      {/* Options A, B, C, D */}
-      <div className="mt-6 w-full">
-        <label className="block font-bold">Options:</label>
-        {["A", "B", "C", "D"].map((optionLabel, index) => (
-        <div key={index} className="flex items-center gap-3 mt-2">
-          <span className="font-bold">{optionLabel}.</span>
-
-          {/* Dropdown to select Text or Image */}
-          <select
-            className="border border-black p-1 rounded w-24 text-sm"
-            value={options[index]?.type || "Text"}
-            onChange={(e) => {
-              const updatedOptions = [...options];
-              const previousValue = updatedOptions[index]?.value || ""; // Preserve previous value
-              const previousFileName = updatedOptions[index]?.fileName || ""; // Preserve filename
-
-              updatedOptions[index] = { 
-                type: e.target.value, 
-                value: e.target.value === "Text" ? "" : previousValue, // Retain image URL
-                fileName: e.target.value === "Text" ? "" : previousFileName // Retain file name
-              };
-
-              setOptions(updatedOptions);
-            }}
-          >
-            <option value="Text">Text</option>
-            <option value="Image">Image</option>
-          </select>
-
-          {/* If Text is selected, show input box */}
-          {options[index]?.type === "Text" && (
-            <input
-              type="text"
-              className="border border-black p-2 w-full rounded"
-              placeholder={`Enter Option ${optionLabel}`}
-              value={options[index]?.value || ""}
-              onChange={(e) => {
-                const updatedOptions = [...options];
-                updatedOptions[index].value = e.target.value;
-                setOptions(updatedOptions);
-              }}
-            />
-          )}
-
-          {/* If Image is selected, show upload button */}
-          {options[index]?.type === "Image" && (
-            <div className="flex items-center gap-2">
-              {/* ✅ File input for selecting a new image */}
-              <input
-                type="file"
-                accept="image/*"
-                className="border border-black p-2 rounded"
-                onChange={(e) => {
-                  if (e.target.files.length > 0) {
-                    const file = e.target.files[0];
-                    const updatedOptions = [...options];
-
-                    // ✅ Store the image URL (blob for preview) and filename
-                    updatedOptions[index].value = URL.createObjectURL(file);
-                    updatedOptions[index].fileName = file.name;
-
-                    // ✅ Update state
-                    setOptions(updatedOptions);
-                  }
-                }}
-              />
-
-              {/* ✅ Show selected file name (next to Choose File button) */}
-              {options[index]?.fileName && <span className="text-sm">{options[index].fileName}</span>}
-
-              {/* ✅ Show image preview **only if a file is selected** */}
-              {options[index]?.value && (
-                <img 
-                  src={options[index].value} 
-                  alt="Uploaded preview" 
-                  className="h-10 w-10 object-cover rounded border border-gray-300" 
-                />
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-      </div>
-
-      {/* Correct Answer Selection */}
-      <div className="mt-4">
-        <label className="block font-bold">Correct Option:</label>
-        <div className="flex gap-4">
-          {["A", "B", "C", "D"].map((option, index) => (
-            <label key={index} className="flex items-center gap-1">
-              <input 
-                type="radio" 
-                name="correctOption" 
-                value={option} 
-                checked={correctOption === option} 
-                onChange={() => setCorrectOption(option)} 
-              />
-              {option}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Navigation Buttons */}
-      <div className="flex gap-4 mt-6">
-        <button 
-          className="px-4 py-2 bg-gray-300 text-black rounded" 
-          onClick={handlePreviousQuestion} 
-          disabled={progress[selectedSubject].index === 1}
-        >
-          Previous Question
-        </button>
-        <button 
-          className="px-4 py-2 bg-blue-500 text-white rounded" 
-          onClick={handleNextQuestion}
-        >
-          Next Question
-        </button>
-      </div>
-
-      {/* ✅ Warning Message (Shows for 3 seconds when clicked too early) */}
-      {showWarning && (
-        <div className="mb-2 px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded-lg text-center">
-          ⚠️ Please complete all subjects before previewing the final paper!
-        </div>
-      )}
-
-      <div className="flex gap-4 mt-4 justify-center">
-        {/* ✅ Preview Button (For Current Subject) */}
-        <button 
-  className="w-48 px-4 py-2 bg-green-500 text-white rounded text-center"
-  onClick={() => {
-    // Save the current state first 
-    if (questionText.trim()) {
-      setProgress((prev) => ({
-        ...prev,
-        [selectedSubject]: {
-          ...prev[selectedSubject],
-          questions: {
-            ...prev[selectedSubject].questions,
-            [prev[selectedSubject].index]: { 
-              text: questionText, 
-              options,
-              correctOption
-            },
-          },
-        },
-      }));
-    }
-    
-    // Save current course in localStorage as a fallback
-    localStorage.setItem("currentCourse", decodedCourseName);
-    
-    // Navigate to the preview with state
-    navigate(`/preview/${selectedSubject}`, {
+    // Navigate to preview
+    updateState({ isConfirmModalOpen: false });
+    navigate("/all", {
       state: {
         courseName: decodedCourseName,
-        customSubjectName: decodedSubjectName
+        customSubjectName: decodedSubjectName,
+        allQuestions,
+        subjects: SUBJECTS,
+        subjectNames: SUBJECT_NAMES,
+        questionCounts,
+        markType
       }
     });
-  }}
->
-  Preview {subjects[selectedSubject]} Questions
-</button>
+  };
 
-        {/* ✅ Show Final Preview Button Only When All Subjects Are Completed */}
-        {Object.values(progress).every(sub => Object.keys(sub.questions).length === TOTAL_QUESTIONS) ? (
-          <button 
-            className="w-48 px-4 py-2 bg-purple-500 text-white rounded text-center"
-            onClick={() => navigate("/final-preview")}
+  // Edit and delete
+  const handleEditFromPreview = (questionData, action = 'edit') => {
+    if (!questionData) return;
+    
+    if (action === 'delete') {
+      deleteQuestion(questionData.index);
+    } else {
+      updateState({
+        currentQuestionIndex: questionData.index,
+        questionText: questionData.text || "",
+        options: questionData.options || createDefaultOptions(),
+        correctOption: questionData.correctOption,
+        isQuestionSaved: true,
+        isPreviewModalOpen: false
+      });
+      
+      editor?.commands?.setContent?.(questionData.text || "");
+    }
+  };
+
+  const deleteQuestion = async (indexToDelete) => {
+    try {
+      const subject = currentSubject;
+      
+      // Delete and reindex
+      const updatedProgress = {...subjectProgress};
+      const updatedIds = {...questionIds};
+      
+      delete updatedProgress[subject].questions[indexToDelete];
+      delete updatedIds[subject][indexToDelete];
+      
+      // Get remaining questions
+      const remaining = Object.entries(updatedProgress[subject].questions)
+        .filter(([_, q]) => q?.text)
+        .map(([idx, q]) => ({index: parseInt(idx), ...q}))
+        .sort((a, b) => a.index - b.index);
+      
+      // Reindex
+      const reindexed = {};
+      const reindexedIds = {};
+      
+      remaining.forEach((q, i) => {
+        const newIndex = i + 1;
+        reindexed[newIndex] = {
+          text: q.text,
+          options: q.options,
+          correctOption: q.correctOption,
+          questionId: q.questionId
+        };
+        
+        if (q.questionId) reindexedIds[newIndex] = q.questionId;
+      });
+      
+      // Update state
+      updatedProgress[subject].questions = reindexed;
+      updatedIds[subject] = reindexedIds;
+      
+      // Adjust current index
+      const count = Object.keys(reindexed).length;
+      const newIndex = currentQuestionIndex > count && count > 0 ? count : currentQuestionIndex;
+      
+      updateState({
+        subjectProgress: updatedProgress,
+        questionIds: updatedIds,
+        currentQuestionIndex: newIndex,
+        error: null
+      });
+      
+      setNotificationWithTimeout("Question deleted and reindexed successfully.");
+      return true;
+    } catch (error) {
+      updateState({ error: `Failed to delete: ${error.message || "Unknown error"}` });
+      return false;
+    }
+  };
+
+  // Status checks
+  const areAllSubjectsComplete = () => SUBJECTS.every(subject => subjectProgress[subject].completed);
+  const isCurrentSubjectComplete = () => Object.keys(subjectProgress[currentSubject]?.questions || {}).length > 0;
+  const hasAnyQuestions = () => SUBJECTS.some(subject => 
+    Object.keys(subjectProgress[subject]?.questions || {}).length > 0
+  );
+  
+  // Configuration
+  const handleMarkTypeChange = (newValue) => {
+    const newType = parseInt(newValue);
+    if (newType === 40 || newType === 60) {
+      const maxQuestions = newType === 40 ? 15 : 20;
+      
+      // Update counts
+      const updatedCounts = {};
+      Object.keys(questionCounts).forEach(subject => {
+        updatedCounts[subject] = Math.min(questionCounts[subject], maxQuestions);
+      });
+      
+      updateState({ markType: newType, questionCounts: updatedCounts });
+    }
+  };
+  
+  const handleConfigSubmit = (e) => {
+    e.preventDefault();
+    updateState({
+      isConfigured: true,
+      isSubjectConfigModalOpen: false,
+      notification: `Starting with ${currentSubjectName}. ${markType} Marks Paper.`
+    });
+  };
+  
+  // Render configuration modal
+  const SubjectConfigModal = () => (
+    <div className="subject-config-overlay">
+      <div className="subject-config-modal">
+        <h2 className="text-xl font-bold mb-4">Configure Question Paper</h2>
+        
+        <div className="mb-6">
+          <p className="font-medium mb-2">Select Paper Type:</p>
+          <div className="flex gap-4">
+            {[40, 60].map(type => (
+              <label key={type} className="flex items-center">
+                <input 
+                  type="radio" 
+                  value={type} 
+                  checked={markType === type}
+                  onChange={() => handleMarkTypeChange(type)}
+                  className="mr-2"
+                />
+                {type} Marks ({type === 40 ? 15 : 20} questions per section)
+              </label>
+            ))}
+          </div>
+        </div>
+        
+        <form onSubmit={handleConfigSubmit}>
+          {SUBJECTS.map((subject) => (
+            <div key={subject} className="mb-4">
+              <label className="block font-medium mb-1">
+                {SUBJECT_NAMES[subject] || subject} Questions:
+              </label>
+              <input
+                type="number"
+                min="1"
+                max={markType === 40 ? 15 : 20}
+                value={questionCounts[subject]}
+                onChange={(e) => {
+                  const count = parseInt(e.target.value);
+                  if (!isNaN(count)) {
+                    const max = markType === 40 ? 15 : 20;
+                    const validCount = Math.min(Math.max(1, count), max);
+                    const updatedCounts = {...questionCounts, [subject]: validCount};
+                    updateState({ questionCounts: updatedCounts });
+                  }
+                }}
+                className="w-full px-3 py-2 border rounded"
+                required
+              />
+            </div>
+          ))}
+          
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white font-medium py-2 px-4 rounded hover:bg-blue-700 mt-6"
           >
-            Final Preview
+            Start Creating Questions
           </button>
-        ) : (
-          <button 
-            className="w-48 px-4 py-2 bg-gray-400 text-white rounded text-center cursor-not-allowed"
-            onClick={() => {
-              setShowWarning(true);
-              setTimeout(() => setShowWarning(false), 3000);
-            }}
-          >
-            Final Preview
-          </button>
-        )}
+        </form>
       </div>
+    </div>
+  );
+  
+  return (
+    <div className="flex flex-col items-center w-full max-w-3xl mx-auto px-4 md:px-8 py-6 min-h-screen overflow-y-auto pb-32">
+      {/* Modals */}
+      {isSubjectConfigModalOpen && <SubjectConfigModal />}
+      
+      <QuestionPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => updateState({ isPreviewModalOpen: false })}
+        subjectName={currentSubjectName}
+        questions={getCurrentSubjectQuestions()}
+        onEditQuestion={handleEditFromPreview}
+        showOptions={true}
+      />
+      
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onCancel={() => updateState({ isConfirmModalOpen: false })}
+        onConfirm={handleFinalPreviewConfirmed}
+        title="Confirmation"
+        message="Once you proceed to Final Preview, you cannot return. Continue?"
+      />
+      
+      <NextSubjectConfirmModal
+        isOpen={isNextSubjectModalOpen}
+        onCancel={() => updateState({ isNextSubjectModalOpen: false })}
+        onConfirm={handleNextSubject}
+        currentSubjectName={currentSubjectName}
+        nextSubjectName={currentSubjectIndex < SUBJECTS.length - 1 ? 
+          SUBJECT_NAMES[SUBJECTS[currentSubjectIndex + 1]] : ""}
+        completedQuestions={Object.keys(subjectProgress[currentSubject]?.questions || {}).length}
+        totalQuestions={questionCounts[currentSubject]}
+      />
+      
+      {/* Status messages */}
+      <StatusMessages 
+        notification={notification}
+        error={error}
+        isLoading={isLoading}
+      />
+      
+      {isConfigured && (
+        <>
+          {/* Paper information */}
+          <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded mb-4 w-full text-center">
+            {markType} Marks Paper ({questionCounts[currentSubject]} questions per section)
+          </div>
+          
+          {/* Progress */}
+          <SubjectProgressDisplay
+            SUBJECTS={SUBJECTS}
+            SUBJECT_NAMES={SUBJECT_NAMES}
+            currentSubjectIndex={currentSubjectIndex}
+            subjectProgress={subjectProgress}
+            currentQuestionIndex={currentQuestionIndex}
+            TOTAL_QUESTIONS={questionCounts[currentSubject]}
+            isCurrentSubjectComplete={isCurrentSubjectComplete}
+            questionCounts={questionCounts}
+          />
+
+          {/* Question header */}
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mt-2">Enter Questions for {currentSubjectName}</h2>
+            <h3 className="text-lg font-semibold text-gray-700">{decodedCourseName} - {decodedSubjectName}</h3>
+            <p className="text-sm text-gray-500 mt-1 mb-3">
+              Question {currentQuestionIndex} of {questionCounts[currentSubject]}
+            </p>
+          </div>
+
+          {/* Editor */}
+          <QuestionEditorToolbar editor={editor} />
+          <div className="w-full max-w-3xl mx-auto border border-black rounded editor-container">
+            <EditorContent editor={editor} className="editor-content tiptap-editor" />
+          </div>
+
+          {/* Options */}
+          <QuestionOptionsForm
+            options={options}
+            updateOption={updateOption}
+            correctOption={correctOption}
+            setCorrectOption={(option) => updateState({ correctOption: option })}
+            hideImageOption={true}
+          />
+          
+          {/* Navigation */}
+          <NavigationButtons
+            currentQuestionIndex={currentQuestionIndex}
+            handlePrevQuestion={handlePrevQuestion}
+            handleNextQuestion={handleNextQuestion}
+            handlePreviewSubject={handlePreviewSubject}
+            handleShowFinalPreviewConfirm={handleShowFinalPreviewConfirm}
+            showNextSubjectConfirm={showNextSubjectConfirm}
+            isCurrentSubjectComplete={isCurrentSubjectComplete}
+            areAllSubjectsComplete={areAllSubjectsComplete}
+            currentSubjectIndex={currentSubjectIndex}
+            SUBJECTS={SUBJECTS}
+            hasAnyQuestions={hasAnyQuestions}
+          />
+        </>
+      )}
     </div>
   );
 };
