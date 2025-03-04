@@ -78,7 +78,7 @@ const IndexPage = () => {
                 <FaUniversity className="text-2xl" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">New Question Paper</h1>
+                <h1 className="text-2xl font-bold">Open Elective MCQ Based</h1>
                 <p className="opacity-80 mt-1">Enter subject details to begin</p>
               </div>
             </div>
