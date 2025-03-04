@@ -505,11 +505,40 @@ const QuestionEntry = () => {
       <div className="flex gap-4 mt-4 justify-center">
         {/* ✅ Preview Button (For Current Subject) */}
         <button 
-          className="w-48 px-4 py-2 bg-green-500 text-white rounded text-center"
-          onClick={() => navigate(`/preview/${selectedSubject}`)}
-        >
-          Preview {subjects[selectedSubject]} Questions
-        </button>
+  className="w-48 px-4 py-2 bg-green-500 text-white rounded text-center"
+  onClick={() => {
+    // Save the current state first 
+    if (questionText.trim()) {
+      setProgress((prev) => ({
+        ...prev,
+        [selectedSubject]: {
+          ...prev[selectedSubject],
+          questions: {
+            ...prev[selectedSubject].questions,
+            [prev[selectedSubject].index]: { 
+              text: questionText, 
+              options,
+              correctOption
+            },
+          },
+        },
+      }));
+    }
+    
+    // Save current course in localStorage as a fallback
+    localStorage.setItem("currentCourse", decodedCourseName);
+    
+    // Navigate to the preview with state
+    navigate(`/preview/${selectedSubject}`, {
+      state: {
+        courseName: decodedCourseName,
+        customSubjectName: decodedSubjectName
+      }
+    });
+  }}
+>
+  Preview {subjects[selectedSubject]} Questions
+</button>
 
         {/* ✅ Show Final Preview Button Only When All Subjects Are Completed */}
         {Object.values(progress).every(sub => Object.keys(sub.questions).length === TOTAL_QUESTIONS) ? (
