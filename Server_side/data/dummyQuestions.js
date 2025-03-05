@@ -1,5 +1,6 @@
 const questions = [
   {
+    questionId: "q1", // Added questionId
     courseName: "Mathematics",
     subject: "Algebra",
     question: "What is 2 + 2?",
@@ -9,10 +10,11 @@ const questions = [
       { type: "string", value: "3" },
       { type: "string", value: "4" }, // Correct answer
     ],
-    correctOption: "4", // This should match one of the `value`s above
+    correctOption: 3, // Changed from String to Number (0-based index)
     index: 1,
   },
   {
+    questionId: "q2", // Added questionId
     courseName: "Science",
     subject: "Astronomy",
     question: "Which planet is known as the Red Planet?",
@@ -22,7 +24,7 @@ const questions = [
       { type: "string", value: "Jupiter" },
       { type: "string", value: "Venus" },
     ],
-    correctOption: "Mars",
+    correctOption: 1, // Changed from String to Number (0-based index)
     index: 2,
   },
 ];

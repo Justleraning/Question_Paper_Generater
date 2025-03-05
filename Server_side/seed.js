@@ -6,12 +6,12 @@ const connectDB = require("./config/db");
 const User = require("./models/User");
 const Question = require("./models/Question");
 const Paper = require("./models/Paper");
-const Course = require("./models/Course"); // Added Course model
+const Course = require("./models/Course");
 
 const users = require("./data/dummyUsers");
 const questions = require("./data/dummyQuestions");
 const papers = require("./data/dummyPapers");
-const courses = require("./data/CourseData"); // Added Courses data
+const courses = require("./data/CourseData");
 
 dotenv.config();
 connectDB();
@@ -21,9 +21,20 @@ const hashPasswords = async (users) => {
   return Promise.all(
     users.map(async (user) => ({
       ...user,
-      password: await bcrypt.hash(user.password, 10), // Hash passwords
+      password: await bcrypt.hash(user.password, 10),
     }))
   );
+};
+
+// Function to prepare questions with questionId
+const prepareQuestions = (questions) => {
+  return questions.map((question, index) => ({
+    ...question,
+    questionId: `q${index + 1}`, // Generate questionId like "q1", "q2", etc.
+    correctOption: typeof question.correctOption === 'string' 
+      ? question.options.findIndex(opt => opt.value === question.correctOption) 
+      : question.correctOption, // Convert string correctOption to its array index if needed
+  }));
 };
 
 const importData = async () => {
@@ -34,7 +45,7 @@ const importData = async () => {
     await User.deleteMany();
     await Question.deleteMany();
     await Paper.deleteMany();
-    await Course.deleteMany(); // Delete existing courses
+    await Course.deleteMany();
 
     console.log("🗑️ Existing data cleared.");
 
@@ -43,8 +54,9 @@ const importData = async () => {
     await User.insertMany(hashedUsers);
     console.log("✅ Users inserted with hashed passwords.");
 
-    // Insert Questions
-    await Question.insertMany(questions);
+    // Prepare and insert Questions
+    const preparedQuestions = prepareQuestions(questions);
+    await Question.insertMany(preparedQuestions);
     console.log("✅ Questions inserted.");
 
     // Insert Papers

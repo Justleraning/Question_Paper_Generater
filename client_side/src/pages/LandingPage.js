@@ -39,7 +39,7 @@ const LandingPage = () => {
         
         {/* University Name */}
         <h1 className="text-3xl md:text-5xl font-extrabold mb-2 text-center text-indigo-900 drop-shadow-md">
-          St. Joseph's University
+          St Joseph's University
         </h1>
         
         <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center text-indigo-900 drop-shadow-md">
@@ -63,7 +63,7 @@ const LandingPage = () => {
           transition={{ type: "spring", stiffness: 400 }}
           className="mt-2 bg-indigo-900 text-white px-10 py-4 rounded font-bold shadow-lg hover:bg-indigo-950 transition-all duration-300 text-lg"
         >
-          GO TO LOGIN
+          LOGIN
         </motion.button>
         
         {/* Footer */}
