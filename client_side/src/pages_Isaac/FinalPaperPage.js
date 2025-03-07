@@ -5,6 +5,7 @@ import randomizeQuestions from '../Utils/randomizeQuestions.js';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import logo from '../assets/image.png';
+import { saveCompletedPaper } from '../services/paperService.js';
 
 const stripHtmlTags = (input) => {
   if (!input) return "__________";
@@ -37,6 +38,10 @@ const FinalPaperPage = () => {
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const modalRef = useRef(null);
+  
+  // State for saving status
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
     console.log("Current state:", {
@@ -354,6 +359,69 @@ const FinalPaperPage = () => {
     }, 100);
   };
 
+  // Handle saving the paper
+  const handleSavePaper = async () => {
+    // Prevent double submission
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    setSaveError(null);
+    
+    try {
+      console.log("Starting paper save process...");
+      
+      // Validate input
+      if (!subjectDetails?.id) {
+        throw new Error("Subject details are missing. Please select a subject.");
+      }
+      
+      if (!finalPaper || finalPaper.length === 0) {
+        throw new Error("No questions available to save. Please add questions first.");
+      }
+      
+      // Prepare the paper data
+      const paperData = {
+        title: `${subjectDetails?.name || 'Untitled'} Question Paper`,
+        subject: subjectDetails?.id,
+        subjectName: subjectDetails?.name,
+        course: 'BCA', // You might want to make this dynamic
+        paperType: marks === 20 ? 'Mid Sem' : 'End Sem', // Based on your marks value
+        questions: finalPaper.map(q => ({
+          text: q.text,
+          options: q.options,
+          correctOption: q.correctOption,
+          marks: marks / finalPaper.length // Distribute marks equally
+        })),
+        totalMarks: marks,
+        status: 'Draft' // Initially save as draft
+      };
+      
+      console.log("Paper Data to Save:", paperData);
+      
+      // Call the API to save the paper
+      const savedPaper = await saveCompletedPaper(paperData);
+      
+      // Show success notification
+      console.log("Paper saved successfully:", savedPaper);
+      
+      // Navigate to My Papers page with state information
+      navigate('/my-papers', { 
+        state: { 
+          fromFinalPaper: true,
+          paperSaved: true,
+          paperId: savedPaper?._id || savedPaper?.id
+        } 
+      });
+      
+    } catch (error) {
+      console.error('❌ Error saving paper:', error);
+      setSaveError(error.message || 'Failed to save paper');
+      alert(`Error saving paper: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Main content with scrollable area */}
@@ -448,7 +516,6 @@ const FinalPaperPage = () => {
             {/* Buttons below the paper */}
             <div className="w-full max-w-3xl p-4 mb-8">
               <div className="flex flex-wrap justify-center gap-4">
-
                 <button
                   onClick={handleRandomize}
                   className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
@@ -468,12 +535,20 @@ const FinalPaperPage = () => {
                   Download PDF
                 </button>
                 <button
-                  onClick={() => alert('Question Paper Saved Successfully 🥳')}
-                  className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600"
+                  onClick={handleSavePaper}
+                  disabled={isSaving}
+                  className={`bg-red-500 text-white px-6 py-2 rounded-lg ${
+                    isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-600'
+                  }`}
                 >
-                  SAVE QUESTION PAPER 🧾
+                  {isSaving ? 'Saving...' : 'SAVE QUESTION PAPER 🧾'}
                 </button>
               </div>
+              
+              {/* Display error if any */}
+              {saveError && (
+                <p className="text-red-500 text-center mt-2">{saveError}</p>
+              )}
             </div>
           </>
         ) : (

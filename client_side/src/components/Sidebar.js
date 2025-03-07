@@ -1,12 +1,13 @@
 // Sidebar.js
 import { useAuth } from "../Contexts/AuthContext.js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi"; 
 import { FaUser, FaTasks, FaUsers, FaKey, FaFileAlt, FaSignOutAlt, FaCheckCircle } from "react-icons/fa"; 
 
 const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
   const { authState, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
@@ -14,99 +15,131 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
 
   return (
     <aside 
-      className={`h-screen bg-gray-800 text-white fixed top-0 left-0 transition-all duration-300 ease-in-out z-50 
-        ${isSidebarOpen ? "w-64" : "w-16"} flex flex-col overflow-hidden`}
+      className={`h-screen bg-gradient-to-b from-gray-800 to-gray-700 text-white fixed top-0 left-0 transition-all duration-300 ease-in-out z-50 shadow-xl
+        ${isSidebarOpen ? "w-72" : "w-20"} flex flex-col overflow-hidden`}
     >
-      <div className="flex items-center justify-between p-4">
-        {isSidebarOpen && <h2 className="text-xl font-bold truncate">QPG System</h2>}
-        
+      <div className="flex items-center justify-between p-6 border-b border-gray-600">
         <button 
-          className="text-white hover:bg-gray-700 p-2 rounded-md"
+          className="text-gray-300 hover:text-white hover:bg-gray-700 p-2 rounded-full transition-all duration-200"
           onClick={toggleSidebar}
           aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
         >
-          {isSidebarOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+          {isSidebarOpen ? <FiX size={22} /> : <FiMenu size={22} />}
         </button>
       </div>
       
-      <nav className="flex-1 overflow-y-auto py-4">
-        <ul className="space-y-2 px-2">
-          <NavItem 
-            icon={<FaUser />} 
-            label="Dashboard" 
-            isOpen={isSidebarOpen} 
-            onClick={() => navigate("/dashboard")} 
-          />
+      <div className="flex-1 overflow-y-auto py-6">
+        <nav>
+          <ul className="space-y-1 px-3">
+            <NavItem 
+              icon={<FaUser />} 
+              label="Dashboard" 
+              isOpen={isSidebarOpen} 
+              onClick={() => navigate("/dashboard")} 
+              isActive={location.pathname === "/dashboard"}
+            />
 
-          {authState.user?.role === "Teacher" && (
-            <>
-              <NavItem 
-                icon={<FaTasks />} 
-                label="Status of Paper" 
-                isOpen={isSidebarOpen} 
-                onClick={() => navigate("/status-of-paper")} 
-              />
-              <NavItem 
-                icon={<FaFileAlt />} 
-                label="My Papers" 
-                isOpen={isSidebarOpen} 
-                onClick={() => navigate("/mypapers")} 
-              />
-              <NavItem 
-                icon={<FaFileAlt />} 
-                label="Rejected Papers" 
-                isOpen={isSidebarOpen} 
-                onClick={() => navigate("/rejected-papers")} 
-              />
-            </>
-          )}
+            {authState.user?.role === "Teacher" && (
+              <>
+                <NavItemGroup label="Paper Management" isOpen={isSidebarOpen}>
+                  <NavItem 
+                    icon={<FaTasks />} 
+                    label="Status of Paper" 
+                    isOpen={isSidebarOpen} 
+                    onClick={() => navigate("/status-of-paper")} 
+                    isActive={location.pathname === "/status-of-paper"}
+                  />
+                  <NavItem 
+                    icon={<FaFileAlt />} 
+                    label="My Papers" 
+                    isOpen={isSidebarOpen} 
+                    onClick={() => navigate("/mypapers")} 
+                    isActive={location.pathname === "/mypapers"}
+                  />
+                  <NavItem 
+                    icon={<FaFileAlt />} 
+                    label="Rejected Papers" 
+                    isOpen={isSidebarOpen} 
+                    onClick={() => navigate("/rejected-papers")} 
+                    isActive={location.pathname === "/rejected-papers"}
+                  />
+                </NavItemGroup>
+              </>
+            )}
 
-          {(authState.user?.role === "Admin" || authState.user?.role === "SuperAdmin") && (
-            <>
-              <NavItem 
-                icon={<FaUsers />} 
-                label="Add/Remove Users" 
-                isOpen={isSidebarOpen} 
-                onClick={() => navigate("/manage-users")} 
-              />
-              <NavItem 
-                icon={<FaKey />} 
-                label="View Reset Requests" 
-                isOpen={isSidebarOpen} 
-                onClick={() => navigate("/view-reset-requests")} 
-              />
-              <NavItem 
-                icon={<FaCheckCircle />} 
-                label="View Approval Papers" 
-                isOpen={isSidebarOpen} 
-                onClick={() => navigate("/view-approval-papers")} 
-              />
-            </>
-          )}
-        </ul>
-      </nav>
+            {(authState.user?.role === "Admin" || authState.user?.role === "SuperAdmin") && (
+              <>
+                <NavItemGroup label="Administration" isOpen={isSidebarOpen}>
+                  <NavItem 
+                    icon={<FaUsers />} 
+                    label="Add/Remove Users" 
+                    isOpen={isSidebarOpen} 
+                    onClick={() => navigate("/manage-users")} 
+                    isActive={location.pathname === "/manage-users"}
+                  />
+                  <NavItem 
+                    icon={<FaKey />} 
+                    label="View Reset Requests" 
+                    isOpen={isSidebarOpen} 
+                    onClick={() => navigate("/view-reset-requests")} 
+                    isActive={location.pathname === "/view-reset-requests"}
+                  />
+                  <NavItem 
+                    icon={<FaCheckCircle />} 
+                    label="View Approval Papers" 
+                    isOpen={isSidebarOpen} 
+                    onClick={() => navigate("/view-approval-papers")} 
+                    isActive={location.pathname === "/view-approval-papers"}
+                  />
+                </NavItemGroup>
+              </>
+            )}
+          </ul>
+        </nav>
+      </div>
       
-      <div className="p-4">
+      <div className="p-4 border-t border-gray-600">
         <button 
-          className="flex items-center justify-center space-x-2 bg-red-500 p-2 rounded-md hover:bg-red-600 transition-all w-full"
+          className="flex items-center justify-center space-x-3 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 p-3 rounded-md transition-all w-full shadow-md"
           onClick={logout}
         >
-          <FaSignOutAlt />
-          {isSidebarOpen && <span>Logout</span>}
+          <FaSignOutAlt className="text-red-100" />
+          {isSidebarOpen && <span className="font-medium">Logout</span>}
         </button>
       </div>
     </aside>
   );
 };
 
-// Helper component for nav items
-const NavItem = ({ icon, label, isOpen, onClick }) => (
+// Helper component for nav item groups
+const NavItemGroup = ({ label, isOpen, children }) => {
+  if (!isOpen) return children;
+  
+  return (
+    <div className="mt-6 mb-2">
+      <h3 className="text-xs uppercase tracking-wider text-gray-400 font-semibold px-3 mb-2">{label}</h3>
+      <div className="space-y-1">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Enhanced nav item component
+const NavItem = ({ icon, label, isOpen, onClick, isActive }) => (
   <li 
-    className="flex items-center space-x-2 hover:bg-gray-700 p-3 rounded-md cursor-pointer transition-colors"
+    className={`flex items-center space-x-3 p-3 rounded-md cursor-pointer transition-all duration-200
+      ${isActive 
+        ? "bg-gradient-to-r from-blue-600/30 to-blue-500/20 text-blue-300 shadow-sm" 
+        : "hover:bg-gray-700/50 text-gray-300 hover:text-white"}`}
     onClick={onClick}
   >
-    <span className="flex-shrink-0">{icon}</span>
-    {isOpen && <span className="whitespace-nowrap overflow-hidden">{label}</span>}
+    <span className={`flex-shrink-0 ${isActive ? "text-blue-300" : ""}`}>{icon}</span>
+    {isOpen && (
+      <span className="whitespace-nowrap overflow-hidden font-medium">
+        {label}
+      </span>
+    )}
   </li>
 );
 
