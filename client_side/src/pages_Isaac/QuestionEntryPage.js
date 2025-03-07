@@ -108,20 +108,33 @@ const QuestionEntryPage = () => {
 }, [currentUnit, questions.length, subjectId]);
 
   const [questionText, setQuestionText] = useState("");
+  
+  // Fixed editor configuration
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        paragraph: {
+          HTMLAttributes: {
+            class: 'w-full',
+          },
+        },
+      }),
       Bold,
       Italic,
       TextAlign.configure({
-        types: ["paragraph","heading"],
+        types: ["paragraph", "heading"],
       }),
     ],
-    content: questionText, 
+    content: questionText || '', // Add a placeholder paragraph
     onUpdate: ({ editor }) => {
       setQuestionText(editor.getHTML()); 
       // Mark the question as unsaved when edited
       setIsCurrentQuestionSaved(false);
+    },
+    editorProps: {
+      attributes: {
+        class: 'w-full h-full outline-none',
+      },
     },
   });
 
@@ -134,13 +147,23 @@ const QuestionEntryPage = () => {
   });
 
   const handleToggleOptionType = (key) => {
+    // If user is trying to select image option
+    if (options[key].type === 'text') {
+      // Show alert message
+      alert("Image option temporarily disabled due to low storage");
+      // Don't change the option type - keep it as text
+      return;
+    }
+    
+    // Only allow changing from image to text (not from text to image)
     setOptions({
       ...options,
       [key]: {
-        type: options[key].type === "text" ? "image" : "text",
+        type: "text",
         value: options[key].value
       }
     });
+    
     // Mark the question as unsaved when options are changed
     setIsCurrentQuestionSaved(false);
   };
@@ -202,7 +225,7 @@ const QuestionEntryPage = () => {
     // Create a new question object
     const newQuestion = {
       subjectId,
-      text: cleanedQuestionText,
+      text: questionText, // Use the HTML content to preserve formatting
       options: [
         options.A.value?.trim() || "",
         options.B.value?.trim() || "",
@@ -286,7 +309,7 @@ const QuestionEntryPage = () => {
         
         setQuestionText(nextQuestion.text || "");
         if (editor) {
-          editor.commands.setContent(nextQuestion.text || "");
+          editor.commands.setContent(nextQuestion.text || '<p></p>');
         }
         setCorrectOption(nextQuestion.correctOption || "");
         
@@ -318,7 +341,7 @@ const QuestionEntryPage = () => {
         // Reset all fields for a new question
         setQuestionText("");
         if (editor) {
-          editor.commands.setContent("");
+          editor.commands.setContent('<p></p>');
         }
         setCorrectOption("");
         setOptions({
@@ -348,7 +371,7 @@ const QuestionEntryPage = () => {
       
       setQuestionText(prevQuestion.text || "");
       if (editor) {
-        editor.commands.setContent(prevQuestion.text || "");
+        editor.commands.setContent(prevQuestion.text || '<p></p>');
       }
       setCorrectOption(prevQuestion.correctOption || "");
       
@@ -394,7 +417,7 @@ const QuestionEntryPage = () => {
         // Reset question fields when switching units
         setQuestionText("");
         if (editor) {
-          editor.commands.setContent("");
+          editor.commands.setContent('<p></p>');
         }
         setCorrectOption("");
         setOptions({
@@ -419,7 +442,7 @@ const QuestionEntryPage = () => {
     // Load the question data into the form
     setQuestionText(questionToEdit.text || "");
     if (editor) {
-      editor.commands.setContent(questionToEdit.text || "");
+      editor.commands.setContent(questionToEdit.text || '<p></p>');
     }
     setCorrectOption(questionToEdit.correctOption || "");
     
@@ -508,7 +531,7 @@ const QuestionEntryPage = () => {
       if (currentQuestionIndex === questionToDelete) {
         setQuestionText("");
         if (editor) {
-          editor.commands.setContent("");
+          editor.commands.setContent('<p></p>');
         }
         setCorrectOption("");
         setOptions({
@@ -645,10 +668,13 @@ const QuestionEntryPage = () => {
                 </button>
               </div>
 
-              <EditorContent 
-                editor={editor} 
-                className="border border-t-0 border-gray-300 rounded-b-lg w-full p-4 min-h-40 max-h-80 overflow-y-auto bg-white focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500"
-              />
+              {/* Enhanced EditorContent with improved styling for full text area usage */}
+              <div className="border border-t-0 border-gray-300 rounded-b-lg p-0 min-h-[200px] max-h-80 overflow-y-auto bg-white">
+                <EditorContent 
+                  editor={editor} 
+                  className="w-full h-full min-h-[200px] focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 p-4"
+                />
+              </div>
             </div>
 
             {/* Options Section */}
@@ -750,7 +776,7 @@ const QuestionEntryPage = () => {
                 </div>
               ) : null}
             </div>
-            </div>
+          </div>
           
           {/* Action Buttons */}
           <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex flex-wrap items-center justify-between gap-3">

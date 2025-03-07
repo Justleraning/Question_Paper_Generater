@@ -4,6 +4,7 @@ import { saveAs } from 'file-saver';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 import { motion } from 'framer-motion';
 import { FaFileDownload, FaArrowLeft, FaSearch, FaCheckCircle, FaFilePdf, FaFileWord } from 'react-icons/fa';
+import { jsPDF } from 'jspdf';
 
 // Function to strip HTML tags
 const stripHtmlTags = (html) => {
@@ -114,8 +115,8 @@ const AnswerKeyPage = () => {
     });
   };
 
-  // Download Answer Key
-  const handleDownload = () => {
+  // Download Answer Key as DOCX
+  const handleDocxDownload = () => {
     if (correctAnswers.length === 0) {
       alert('No answer key available for download.');
       return;
@@ -128,10 +129,104 @@ const AnswerKeyPage = () => {
     });
   };
 
-  // Handles PDF export (placeholder - would need PDF library integration)
+  // Generate and download PDF
   const handlePdfExport = () => {
-    alert('PDF export functionality would be implemented here with an appropriate PDF library.');
-    // In a real implementation, you would use a library like pdfmake or jsPDF
+    if (correctAnswers.length === 0) {
+      alert('No answer key available for download.');
+      return;
+    }
+
+    // Create a new PDF document
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(22);
+    doc.setTextColor(0, 100, 0); // Dark green color
+    doc.text("ANSWER KEY", doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+    
+    // Add date
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on ${new Date().toLocaleDateString()}`, 
+             doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+    
+    let yPos = 40;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const contentWidth = pageWidth - 2 * margin;
+    
+    // Add header row
+    doc.setFillColor(46, 125, 50); // Green color
+    doc.setDrawColor(46, 125, 50);
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.rect(margin, yPos, contentWidth, 10, 'F');
+    doc.text("#", margin + 5, yPos + 7);
+    doc.text("Question", margin + 20, yPos + 7);
+    doc.text("Correct Answer", pageWidth - margin - 40, yPos + 7);
+    
+    yPos += 15;
+    
+    // Add answers
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    
+    filteredAnswers.forEach((answer, index) => {
+      // Check if we need a new page
+      if (yPos > pageHeight - 20) {
+        doc.addPage();
+        yPos = 20;
+        
+        // Add page number at the bottom
+        doc.setFontSize(8);
+        doc.text(`Page ${doc.internal.getNumberOfPages()}`, margin, pageHeight - 10);
+      }
+      
+      // Draw background for alternating rows
+      if (index % 2 === 0) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(margin, yPos - 5, contentWidth, 20, 'F');
+      }
+      
+      // Question number
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`${index + 1}`, margin + 5, yPos);
+      
+      // Question text (may need to split long text)
+      const questionText = stripHtmlTags(answer.question);
+      const splitQuestion = doc.splitTextToSize(questionText, contentWidth - 70);
+      doc.text(splitQuestion, margin + 20, yPos);
+      
+      // Make room for multiple lines if needed
+      const lineHeight = splitQuestion.length * 5;
+      
+      // Correct answer
+      doc.setTextColor(46, 125, 50);
+      doc.setFillColor(232, 245, 233);
+      doc.rect(pageWidth - margin - 45, yPos - 3, 40, 8, 'F');
+      doc.text(stripHtmlTags(answer.correctOption), pageWidth - margin - 40, yPos);
+      
+      yPos += Math.max(lineHeight, 15);
+    });
+    
+    // Add page number on the last page
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Page ${doc.internal.getNumberOfPages()}`, margin, pageHeight - 10);
+    
+    // Save the PDF
+    doc.save(`AnswerKey_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Handle download based on selected format
+  const handleDownload = () => {
+    if (exportFormat === 'pdf') {
+      handlePdfExport();
+    } else {
+      handleDocxDownload();
+    }
   };
 
   return (
@@ -192,7 +287,7 @@ const AnswerKeyPage = () => {
               </div>
               
               <button
-                onClick={exportFormat === 'pdf' ? handlePdfExport : handleDownload}
+                onClick={handleDownload}
                 disabled={correctAnswers.length === 0}
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
