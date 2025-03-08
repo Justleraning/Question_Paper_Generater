@@ -74,7 +74,7 @@ const importData = async () => {
     console.log("🎉 All data imported successfully!");
     process.exit();
   } catch (error) {
-    console.error(❌ Error seeding data: ${error.message});
+    console.error(`❌ Error seeding data: ${error.message}`);
     process.exit(1);
   }
 };
