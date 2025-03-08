@@ -16,9 +16,50 @@
 /* Header Section */
 .din3-header-container {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
+    flex-direction: column;
+    margin-bottom: 25px;
+}
+
+/* Subject Info Container */
+.din3-subject-info {
+    display: flex;
     gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+/* Filter Rows */
+.din3-filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: space-between;
+}
+
+/* Display Boxes for Subject Code and Name */
+.din3-display-box {
+    flex: 1;
+    min-width: 220px;
+}
+
+.din3-display-box label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 14px;
+}
+
+.din3-display-value {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: #ffffff;
+    color: #333333;
+    font-weight: 500;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
 }
 
 /* Dropdowns and Inputs */
@@ -32,30 +73,28 @@
     display: block;
     margin-bottom: 5px;
     color: #333;
+    font-size: 14px;
 }
 
 /* Styled Dropdowns */
 .din3-dropdown {
     width: 100%;
     padding: 10px;
-    border: 2px solid #ccc;
+    border: 1px solid #ccc;
     border-radius: 8px;
     font-size: 16px;
     transition: 0.3s;
-    background: #fff;
+    background: #fff url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%23007bff'/%3E%3C/svg%3E") no-repeat right 10px center;
+    background-size: 20px;
     appearance: none; /* Removes default dropdown arrow */
     cursor: pointer;
 }
 
-/* Custom Dropdown Arrow */
-.din3-dropdown-group {
-    position: relative;
-}
-
 /* Focus Effect */
 .din3-dropdown:focus {
-    border: 2px solid #007bff;
+    border-color: #007bff;
     box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+    outline: none;
 }
 
 /* Question Pool */
@@ -84,7 +123,7 @@
 }
 
 .din3-question:hover {
-    transform: scale(1.02);
+    transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -104,6 +143,7 @@
     font-size: 18px;
     color: #007bff;
     transition: 0.3s;
+    margin-left: 10px;
 }
 
 .din3-expand-btn:hover {
@@ -201,7 +241,7 @@
 }
 
 .din3-action-btn {
-    padding: 12px 18px;
+    padding: 12px 24px;
     font-size: 16px;
     border: none;
     border-radius: 8px;
@@ -220,15 +260,18 @@
 /* Question Info (Main Text + Meta) */
 .din3-question-info {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
     width: 100%;
+    gap: 10px;
 }
 
 /* Main Question Text */
 .din3-question-text {
     font-weight: bold;
     font-size: 16px;
+    flex: 1;
+    min-width: 300px;
 }
 
 /* Unit & Bloom Type Display */
@@ -238,7 +281,54 @@
     background: #e3f2fd;
     padding: 4px 8px;
     border-radius: 6px;
-    margin-left: 10px;
-    margin-right: 30px;
     font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Loading and Error States */
+.din3-loading, .din3-error {
+    text-align: center;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+}
+
+.din3-loading {
+    background-color: #e3f2fd;
+    color: #0056b3;
+}
+
+.din3-error {
+    background-color: #ffebee;
+    color: #d32f2f;
+}
+
+.din3-no-questions {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .din3-header-container,
+    .din3-subject-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .din3-display-box,
+    .din3-dropdown-group {
+        min-width: 100%;
+    }
+    
+    .din3-question-info {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .din3-question-meta {
+        align-self: flex-start;
+    }
 }

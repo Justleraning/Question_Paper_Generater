@@ -5,10 +5,18 @@ import randomizeQuestions from '../Utils/randomizeQuestions.js';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import logo from '../assets/image.png';
+import { saveCompletedPaper } from '../services/paperService.js';
 
 const stripHtmlTags = (input) => {
   if (!input) return "__________";
-  return input.replace(/<[^>]*>/g, "").trim();
+  
+  // First decode any HTML entities
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = input;
+  const decodedInput = textarea.value;
+  
+  // Then remove any HTML tags
+  return decodedInput.replace(/<[^>]*>/g, "").trim();
 };
 
 const isImageUrl = (url) => {
@@ -30,6 +38,10 @@ const FinalPaperPage = () => {
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const modalRef = useRef(null);
+  
+  // State for saving status
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
     console.log("Current state:", {
@@ -222,6 +234,19 @@ const FinalPaperPage = () => {
   const handleEditQuestion = (question, index) => {
     // Create a deep copy of the question to edit
     const questionCopy = JSON.parse(JSON.stringify(question));
+    
+    // Strip HTML tags from the question text for display in the form
+    questionCopy.text = stripHtmlTags(questionCopy.text);
+    
+    // Strip HTML tags from options
+    if (Array.isArray(questionCopy.options)) {
+      questionCopy.options = questionCopy.options.map(option => stripHtmlTags(option));
+    } else if (typeof questionCopy.options === 'object') {
+      Object.keys(questionCopy.options).forEach(key => {
+        questionCopy.options[key] = stripHtmlTags(questionCopy.options[key]);
+      });
+    }
+    
     setEditingQuestion(questionCopy);
     setEditingIndex(index);
     setShowEditModal(true);
@@ -232,14 +257,22 @@ const FinalPaperPage = () => {
     if (editingIndex === null || !editingQuestion) return;
     
     const updatedPaper = [...finalPaper];
-    updatedPaper[editingIndex] = editingQuestion;
+    
+    // Use the edited question while preserving the original structure
+    updatedPaper[editingIndex] = {
+      ...finalPaper[editingIndex],
+      text: editingQuestion.text, // Use the plain text version
+      options: editingQuestion.options,
+      correctOption: editingQuestion.correctOption
+    };
+    
     setFinalPaper(updatedPaper);
     
-    // Update answer key if question text or correct option changed
+    // Update answer key
     const updatedAnswers = [...correctAnswers];
     updatedAnswers[editingIndex] = {
-      question: stripHtmlTags(editingQuestion.text),
-      correctOption: stripHtmlTags(editingQuestion.correctOption),
+      question: editingQuestion.text,
+      correctOption: editingQuestion.correctOption,
     };
     setCorrectAnswers(updatedAnswers);
     
@@ -326,22 +359,66 @@ const FinalPaperPage = () => {
     }, 100);
   };
 
-  // Handle going back to previous action
-  const handlePrevious = () => {
-    // Check if there's history to go back to
-    if (window.history.length > 1) {
-      // Go back to previous page in history
-      window.history.back();
-    } else {
-      // Fallback to direct navigation if no history
-      navigate('/question-entry', { 
+  // Handle saving the paper
+  const handleSavePaper = async () => {
+    // Prevent double submission
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    setSaveError(null);
+    
+    try {
+      console.log("Starting paper save process...");
+      
+      // Validate input
+      if (!subjectDetails?.id) {
+        throw new Error("Subject details are missing. Please select a subject.");
+      }
+      
+      if (!finalPaper || finalPaper.length === 0) {
+        throw new Error("No questions available to save. Please add questions first.");
+      }
+      
+      // Prepare the paper data
+      const paperData = {
+        title: `${subjectDetails?.name || 'Untitled'} Question Paper`,
+        subject: subjectDetails?.id,
+        subjectName: subjectDetails?.name,
+        course: 'BCA', // You might want to make this dynamic
+        paperType: marks === 20 ? 'Mid Sem' : 'End Sem', // Based on your marks value
+        questions: finalPaper.map(q => ({
+          text: q.text,
+          options: q.options,
+          correctOption: q.correctOption,
+          marks: marks / finalPaper.length // Distribute marks equally
+        })),
+        totalMarks: marks,
+        status: 'Draft' // Initially save as draft
+      };
+      
+      console.log("Paper Data to Save:", paperData);
+      
+      // Call the API to save the paper
+      const savedPaper = await saveCompletedPaper(paperData);
+      
+      // Show success notification
+      console.log("Paper saved successfully:", savedPaper);
+      
+      // Navigate to My Papers page with state information
+      navigate('/my-papers', { 
         state: { 
-          finalPaper, 
-          correctAnswers,
           fromFinalPaper: true,
-          currentSubject: subjectDetails
+          paperSaved: true,
+          paperId: savedPaper?._id || savedPaper?.id
         } 
       });
+      
+    } catch (error) {
+      console.error('❌ Error saving paper:', error);
+      setSaveError(error.message || 'Failed to save paper');
+      alert(`Error saving paper: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -440,12 +517,6 @@ const FinalPaperPage = () => {
             <div className="w-full max-w-3xl p-4 mb-8">
               <div className="flex flex-wrap justify-center gap-4">
                 <button
-                  onClick={handlePrevious}
-                  className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
-                >
-                  Previous
-                </button>
-                <button
                   onClick={handleRandomize}
                   className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                 >
@@ -464,12 +535,20 @@ const FinalPaperPage = () => {
                   Download PDF
                 </button>
                 <button
-                  onClick={() => alert('Question Paper Saved Successfully 🥳')}
-                  className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600"
+                  onClick={handleSavePaper}
+                  disabled={isSaving}
+                  className={`bg-red-500 text-white px-6 py-2 rounded-lg ${
+                    isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-600'
+                  }`}
                 >
-                  SAVE QUESTION PAPER 🧾
+                  {isSaving ? 'Saving...' : 'SAVE QUESTION PAPER 🧾'}
                 </button>
               </div>
+              
+              {/* Display error if any */}
+              {saveError && (
+                <p className="text-red-500 text-center mt-2">{saveError}</p>
+              )}
             </div>
           </>
         ) : (

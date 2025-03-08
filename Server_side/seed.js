@@ -33,7 +33,7 @@ const hashPasswords = async (users) => {
 const prepareQuestions = (questions) => {
   return questions.map((question, index) => ({
     ...question,
-    questionId: q${index + 1}, // Generate questionId like "q1", "q2", etc.
+    questionId: `q${index + 1}`, // Generate questionId like "q1", "q2", etc.
     correctOption: typeof question.correctOption === 'string' 
       ? question.options.findIndex(opt => opt.value === question.correctOption) 
       : question.correctOption, // Convert string correctOption to its array index if needed
@@ -70,20 +70,6 @@ const importData = async () => {
     // Insert Courses
     await Course.insertMany(courses);
     console.log("✅ Courses inserted.");
-
-    // Insert EndSem Questions with error handling
-    try {
-      const insertedEndQuestions = await EndQuestion.insertMany(endquestion);
-      console.log(✅ End Sem Questions inserted. Total: ${insertedEndQuestions.length});
-    } catch (endSemError) {
-      console.error(❌ Error inserting End Sem Questions: ${endSemError.message});
-      // Log detailed errors if insertion fails
-      if (endSemError.errors) {
-        Object.keys(endSemError.errors).forEach(key => {
-          console.error(Validation Error for ${key}: ${endSemError.errors[key].message});
-        });
-      }
-    }
 
     console.log("🎉 All data imported successfully!");
     process.exit();

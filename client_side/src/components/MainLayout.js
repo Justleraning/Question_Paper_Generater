@@ -23,7 +23,9 @@ const MainLayout = ({ children }) => {
             marginTop: "4rem", // Navbar height
             paddingTop: "1rem", // Some space under navbar
             marginLeft: isSidebarOpen ? "16rem" : "4rem", // Space for sidebar
-            transition: "margin-left 0.3s ease-in-out",
+            marginRight: "0", // Ensure no right margin
+            width: "calc(100vw - (16rem))", // Adjust width based on sidebar width
+            transition: "margin-left 0.3s ease-in-out, width 0.3s ease-in-out",
           }}
         >
           <div className="w-full max-w-5xl">{children}</div> {/* Centres content */}
