@@ -295,7 +295,7 @@ const QuestionEntry = () => {
   
       console.log("Saving question with payload:", payload);
   
-      const result = await saveQuestion(decodedCourseName, decodedSubjectName, payload);
+      const result = await saveQuestion(decodedCourseName,SUBJECT_NAMES[subject] , payload);
       
       // Save new questionId
       if (result?.question?.questionId) {
