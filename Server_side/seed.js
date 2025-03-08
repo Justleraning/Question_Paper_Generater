@@ -7,11 +7,14 @@ const User = require("./models/User");
 const Question = require("./models/Question");
 const Paper = require("./models/Paper");
 const Course = require("./models/Course");
+const EndQuestion = require("./models/EndQuestion"); // Corrected path
 
 const users = require("./data/dummyUsers");
 const questions = require("./data/dummyQuestions");
 const papers = require("./data/dummyPapers");
 const courses = require("./data/CourseData");
+
+const endquestion = require('./data/EndSemQuestionData');
 
 dotenv.config();
 connectDB();
@@ -46,6 +49,7 @@ const importData = async () => {
     await Question.deleteMany();
     await Paper.deleteMany();
     await Course.deleteMany();
+    await EndQuestion.deleteMany(); // Clear EndSemQuestio
 
     console.log("🗑️ Existing data cleared.");
 
@@ -66,6 +70,20 @@ const importData = async () => {
     // Insert Courses
     await Course.insertMany(courses);
     console.log("✅ Courses inserted.");
+
+    // Insert EndSem Questions with error handling
+    try {
+      const insertedEndQuestions = await EndQuestion.insertMany(endquestion);
+      console.log(`✅ End Sem Questions inserted. Total: ${insertedEndQuestions.length}`);
+    } catch (endSemError) {
+      console.error(`❌ Error inserting End Sem Questions: ${endSemError.message}`);
+      // Log detailed errors if insertion fails
+      if (endSemError.errors) {
+        Object.keys(endSemError.errors).forEach(key => {
+          console.error(`Validation Error for ${key}: ${endSemError.errors[key].message}`);
+        });
+      }
+    }
 
     console.log("🎉 All data imported successfully!");
     process.exit();

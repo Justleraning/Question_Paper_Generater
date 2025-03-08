@@ -4,8 +4,8 @@ import "./SelectParts.css";
 
 function SelectParts() {
   const navigate = useNavigate();
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [selectedPart, setSelectedPart] = useState("");
+  const [selectedSubjectCode, setSelectedSubjectCode] = useState("");
+  const [selectedSubjectName, setSelectedSubjectName] = useState("");
 
   const subjectOptions = [
     { code: "CA 3222", name: "C# AND DOT NET FRAMEWORK" },
@@ -15,21 +15,26 @@ function SelectParts() {
 
   const handleSubjectChange = (e) => {
     const selectedCode = e.target.value;
-    const selectedSubject = subjectOptions.find(
+    setSelectedSubjectCode(selectedCode);
+    
+    // Find the corresponding subject name
+    const subject = subjectOptions.find(
       (subject) => subject.code === selectedCode
     );
-    setSelectedSubject(selectedSubject ? selectedSubject.name : "");
+    setSelectedSubjectName(subject ? subject.name : "");
   };
 
   const handlePartClick = (part) => {
-    if (!selectedSubject) {
+    if (!selectedSubjectCode) {
       alert("Please select a subject first.");
       return;
     }
-    setSelectedPart(part);
     
-    // Example navigation logic
-    navigate("/question-pool");
+    // Extract just the letter from "Part X"
+    const partLetter = part.replace("Part ", "");
+    
+    // Pass the selected subject code and part to the next page
+    navigate(`/question-pool?subjectCode=${encodeURIComponent(selectedSubjectCode)}&part=${partLetter}`);
   };
 
   return (
@@ -38,19 +43,25 @@ function SelectParts() {
       <div className="din2-container">
         <h1 className="din2-heading">Select Subject</h1>
         <p className="din2-description">Choose a subject to add questions:</p>
-        <input
-          list="subjectList"
+        <select
           className="din2-dropdown"
-          placeholder="Type or select a subject"
           onChange={handleSubjectChange}
-        />
-        <datalist id="subjectList">
+          value={selectedSubjectCode}
+        >
+          <option value="" disabled selected>Select Subject Code</option>
           {subjectOptions.map((subject, index) => (
             <option key={index} value={subject.code}>
-              {subject.code} - {subject.name}
+              {subject.code}
             </option>
           ))}
-        </datalist>
+        </select>
+        
+        {/* Display selected subject name */}
+        {selectedSubjectName && (
+          <div className="din2-selected-subject">
+            <p><span className="din2-subject-label">Selected Subject:</span> <span className="din2-subject-name">{selectedSubjectName}</span></p>
+          </div>
+        )}
       </div>
 
       {/* Part Selection Container */}

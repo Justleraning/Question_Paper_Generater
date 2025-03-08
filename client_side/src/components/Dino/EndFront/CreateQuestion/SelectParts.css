@@ -63,25 +63,64 @@ body {
 /* Dropdown Input */
 .din2-dropdown {
     appearance: none;
-    background: #ffffff;
+    background: #ffffff url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%23007bff'/%3E%3C/svg%3E") no-repeat right 15px center;
+    background-size: 20px;
     color: #333333;
     border: 1px solid #ccc;
-    padding: 10px 20px;
+    padding: 12px 15px;
     font-size: 16px;
-    border-radius: 8px;
+    font-weight: 500;
+    border-radius: 6px;
     width: 100%;
     max-width: 400px;
     margin: 10px auto;
     box-sizing: border-box;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     outline: none;
     transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .din2-dropdown:hover,
 .din2-dropdown:focus {
-    border: 1px solid #007bff;
-    box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+}
+
+/* Style for dropdown options */
+.din2-dropdown option {
+    padding: 12px;
+    font-size: 16px;
+}
+
+/* Subject Name Display Box */
+.din2-selected-subject {
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 12px 15px;
+    margin: 15px auto;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+    transition: all 0.3s ease;
+    animation: din2FadeIn 0.5s ease-in-out;
+    text-align: center;
+}
+
+.din2-selected-subject p {
+    margin: 0;
+    color: #333;
+    font-size: 16px;
+    font-weight: normal;
+}
+
+.din2-subject-label {
+    font-weight: bold;
+}
+
+.din2-subject-name {
+    font-weight: normal;
 }
 
 /* Buttons */
@@ -136,6 +175,10 @@ body {
     }
 
     .din2-dropdown {
+        max-width: 100%;
+    }
+
+    .din2-selected-subject {
         max-width: 100%;
     }
 
