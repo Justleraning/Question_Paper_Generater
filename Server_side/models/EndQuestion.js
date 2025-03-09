@@ -25,7 +25,7 @@ const EndQuestionSchema = new mongoose.Schema({
   // Bloom's Taxonomy Level
   bloomLevel: {
     type: String,
-    enum: ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'],
+    enum: ['Remember L1', 'Understand L1', 'Apply L2', 'Analyze L2', 'Evaluate L3', 'Create L3'],
     required: true
   },
   
