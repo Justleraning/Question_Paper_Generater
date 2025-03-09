@@ -220,8 +220,7 @@ function CreateQuestion() {
         savedQuestions.push(response.data.question);
       }
       
-      // Show success message
-      alert(`Successfully saved ${savedQuestions.length} question(s)!`);
+    
       
       // Navigate back to question pool
       navigate(`/question-pool?subjectCode=${encodeURIComponent(subjectCode)}&part=${defaultPart}`, { 
