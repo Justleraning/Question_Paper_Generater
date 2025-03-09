@@ -17,7 +17,7 @@ function EditQuestion() {
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
 
   // Constants
-  const bloomOptions = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"];
+  const bloomOptions = ["Remember L1", "Understand L1", "Apply L2", "Analyze L2 L2", "Evaluate L3", "Create L3"];
   const unitOptions = ["1", "2", "3", "4", "5"];
   const subjectOptions = [
     { code: "CA 3222", name: "C# AND DOT NET FRAMEWORK" },
@@ -29,17 +29,17 @@ function EditQuestion() {
   const dummyQuestions = {
     "CA 3222": {
       A: [
-        { id: 1, bloom: "Remember", question: "What is AWS?", unit: "1" },
-        { id: 2, bloom: "Analyze", question: "Explain features of C#.", unit: "2" },
-        { id: 3, bloom: "Understand", question: "Explain polymorphism in C#.", unit: "3" },
-        { id: 4, bloom: "Apply", question: "Write a C# program for a calculator.", unit: "4" },
-        { id: 5, bloom: "Evaluate", question: "Discuss the advantages of C#.", unit: "5" },
+        { id: 1, bloom: "Remember L1", question: "What is AWS?", unit: "1" },
+        { id: 2, bloom: "Analyze L2 L2", question: "Explain features of C#.", unit: "2" },
+        { id: 3, bloom: "Understand L1", question: "Explain polymorphism in C#.", unit: "3" },
+        { id: 4, bloom: "Apply L2", question: "Write a C# program for a calculator.", unit: "4" },
+        { id: 5, bloom: "Evaluate L3", question: "Discuss the advantages of C#.", unit: "5" },
         {
-          id: 6, bloom: "Remember", question: "What is OOP?", unit: "1", type: "mcq",
+          id: 6, bloom: "Remember L1", question: "What is OOP?", unit: "1", type: "mcq",
           options: ["Object-Oriented Process", "Object-Oriented Programming", "Object Programming", "Object orienting Programming"]
         },
         {
-          id: 7, bloom: "Understand", question: "Identify this logo.", unit: "2", type: "mcq-image",
+          id: 7, bloom: "Understand L1", question: "Identify this logo.", unit: "2", type: "mcq-image",
           options: [
             { text: "", image: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" },
             { text: "", image: "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" },
@@ -47,28 +47,28 @@ function EditQuestion() {
             { text: "", image: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" }
           ]
         },
-        { id: 8, bloom: "Apply", question: "Write a program for Factorial using recursion.", unit: "3", image: "https://upload.wikimedia.org/wikipedia/commons/a/a6/Recursion_example_factorial.png" },
-        { id: 9, bloom: "Create", question: "Identify this programming language.", unit: "4", image: "https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" }
+        { id: 8, bloom: "Apply L2", question: "Write a program for Factorial using recursion.", unit: "3", image: "https://upload.wikimedia.org/wikipedia/commons/a/a6/Recursion_example_factorial.png" },
+        { id: 9, bloom: "Create L3", question: "Identify this programming language.", unit: "4", image: "https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" }
       ],
       B: [
-        { id: 10, bloom: "Remember", question: "What is Cloud Computing?", unit: "1" },
-        { id: 11, bloom: "Apply", question: "Create a simple inheritance example in C#.", unit: "2" }
+        { id: 10, bloom: "Remember L1", question: "What is Cloud Computing?", unit: "1" },
+        { id: 11, bloom: "Apply L2", question: "Create a simple inheritance example in C#.", unit: "2" }
       ],
       C: [
-        { id: 12, bloom: "Evaluate", question: "Compare C# with Java.", unit: "5" },
-        { id: 13, bloom: "Create", question: "Design a database schema for an e-commerce application.", unit: "4" }
+        { id: 12, bloom: "Evaluate L3", question: "Compare C# with Java.", unit: "5" },
+        { id: 13, bloom: "Create L3", question: "Design a database schema for an e-commerce application.", unit: "4" }
       ]
     },
     "CA 3233": {
       A: [
-        { id: 14, bloom: "Remember", question: "What is JVM?", unit: "1" },
-        { id: 15, bloom: "Apply", question: "Write a Java program to demonstrate polymorphism.", unit: "3" }
+        { id: 14, bloom: "Remember L1", question: "What is JVM?", unit: "1" },
+        { id: 15, bloom: "Apply L2", question: "Write a Java program to demonstrate polymorphism.", unit: "3" }
       ]
     },
     "CA 3244": {
       A: [
-        { id: 16, bloom: "Understand", question: "Explain list comprehension in Python.", unit: "2" },
-        { id: 17, bloom: "Create", question: "Create a Python program for data visualization.", unit: "5" }
+        { id: 16, bloom: "Understand L1", question: "Explain list comprehension in Python.", unit: "2" },
+        { id: 17, bloom: "Create L3", question: "Create a Python program for data visualization.", unit: "5" }
       ]
     }
   };
