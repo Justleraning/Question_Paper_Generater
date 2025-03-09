@@ -1,6 +1,7 @@
 // Sidebar.js
 import { useAuth } from "../Contexts/AuthContext.js";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { FiMenu, FiX } from "react-icons/fi"; 
 import { FaUser, FaTasks, FaUsers, FaKey, FaFileAlt, FaSignOutAlt, FaCheckCircle } from "react-icons/fa"; 
 
@@ -8,6 +9,18 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
   const { authState, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Auto-shrink sidebar when navigating to a specific module
+  useEffect(() => {
+    // When a path changes (user navigates to a module)
+    if (location.pathname !== "/dashboard") {
+      // Shrink the sidebar
+      setIsSidebarOpen(false);
+    } else {
+      // Expand on dashboard
+      setIsSidebarOpen(true);
+    }
+  }, [location.pathname, setIsSidebarOpen]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
@@ -126,21 +139,28 @@ const NavItemGroup = ({ label, isOpen, children }) => {
 };
 
 // Enhanced nav item component
-const NavItem = ({ icon, label, isOpen, onClick, isActive }) => (
-  <li 
-    className={`flex items-center space-x-3 p-3 rounded-md cursor-pointer transition-all duration-200
-      ${isActive 
-        ? "bg-gradient-to-r from-blue-600/30 to-blue-500/20 text-blue-300 shadow-sm" 
-        : "hover:bg-gray-700/50 text-gray-300 hover:text-white"}`}
-    onClick={onClick}
-  >
-    <span className={`flex-shrink-0 ${isActive ? "text-blue-300" : ""}`}>{icon}</span>
-    {isOpen && (
-      <span className="whitespace-nowrap overflow-hidden font-medium">
-        {label}
-      </span>
-    )}
-  </li>
-);
+const NavItem = ({ icon, label, isOpen, onClick, isActive }) => {
+  const handleClick = () => {
+    // Call the provided onClick handler
+    onClick();
+  };
+
+  return (
+    <li 
+      className={`flex items-center space-x-3 p-3 rounded-md cursor-pointer transition-all duration-200
+        ${isActive 
+          ? "bg-gradient-to-r from-blue-600/30 to-blue-500/20 text-blue-300 shadow-sm" 
+          : "hover:bg-gray-700/50 text-gray-300 hover:text-white"}`}
+      onClick={handleClick}
+    >
+      <span className={`flex-shrink-0 ${isActive ? "text-blue-300" : ""}`}>{icon}</span>
+      {isOpen && (
+        <span className="whitespace-nowrap overflow-hidden font-medium">
+          {label}
+        </span>
+      )}
+    </li>
+  );
+};
 
 export default Sidebar;
