@@ -1,9 +1,20 @@
 import React from 'react';
 import LogoImage from '../assets/full_logo.webp';
 
-const Navbar = ({ isSidebarOpen, userRole = "Teacher" }) => {
+const Navbar = ({ 
+  isSidebarOpen, 
+  isHovered = false,
+  userRole = "Teacher" 
+}) => {
+  // Determine navbar left position based on sidebar state
+  const getNavbarLeftPosition = () => {
+    if (isSidebarOpen) return 'left-64'; // 16rem
+    if (isHovered) return 'left-64'; // 16rem
+    return 'left-16'; // 4rem
+  };
+
   return (
-    <div className={`fixed top-0 ${isSidebarOpen ? 'left-72' : 'left-20'} right-0 z-40 transition-all duration-300 ease-in-out`}>
+    <div className={`fixed top-0 ${getNavbarLeftPosition()} right-0 z-40 transition-all duration-300 ease-in-out`}>
       {/* Top address bar */}
       <div className="w-full bg-slate-800 py-1 px-6 text-white text-sm flex items-center">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-2">
