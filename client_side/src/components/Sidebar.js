@@ -44,7 +44,7 @@ const Sidebar = ({
       onMouseEnter={() => !isSidebarOpen && setIsHovered(true)}
       onMouseLeave={() => !isSidebarOpen && setIsHovered(false)}
     >
-      <div className="flex items-center justify-start p-6 border-b border-gray-600">
+      <div className="flex items-center justify-start p-[0.8rem] border-b border-gray-600">
         <button 
           className="text-gray-300 hover:text-white hover:bg-gray-700 p-2 rounded-full transition-all duration-200"
           onClick={toggleSidebar}
