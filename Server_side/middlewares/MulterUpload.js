@@ -24,7 +24,11 @@ const storage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
   // Accept image files and documents
   const allowedFileTypes = /jpeg|jpg|png|gif|svg|pdf|docx?|txt/i;
+  
+  // Get file extension and check if it's allowed
   const extname = allowedFileTypes.test(path.extname(file.originalname).toLowerCase());
+  
+  // Check mimetype for additional security
   const mimetype = allowedFileTypes.test(file.mimetype);
 
   if (extname && mimetype) {
@@ -47,6 +51,13 @@ const upload = multer({
 const handleMulterError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     // A Multer error occurred when uploading
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        message: 'File too large',
+        error: 'File size exceeds 5MB limit'
+      });
+    }
+    
     return res.status(400).json({
       message: 'File upload error',
       error: err.message

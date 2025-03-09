@@ -54,6 +54,17 @@ function QuestionPool() {
     }
   }, [location.search]);
 
+  // Check for updated questions from CreateQuestion or EditQuestion
+  useEffect(() => {
+    if (location.state?.updatedQuestions) {
+      // We could process or use the updated questions here if needed
+      console.log("Received updated questions:", location.state.updatedQuestions);
+      
+      // Refresh the questions from the database
+      fetchQuestions();
+    }
+  }, [location.state]);
+
   // Fetch Questions
   const fetchQuestions = useCallback(async () => {
     // Only fetch if we have the required filters
@@ -157,12 +168,19 @@ function QuestionPool() {
         )}
 
         {/* Question Image */}
-        {question.image && (
-          <img 
-            src={question.image} 
-            alt="Question" 
-            className="din3-question-image" 
-          />
+        {question.imageUrl && (
+          <div className="din3-question-image-container">
+            <img 
+              src={question.imageUrl} 
+              alt="Question visual" 
+              className="din3-question-image" 
+              onError={(e) => {
+                console.error("Image failed to load:", e);
+                e.target.src = "/placeholder-image.png"; // Fallback image
+                e.target.alt = "Image failed to load";
+              }}
+            />
+          </div>
         )}
       </div>
     );
@@ -174,6 +192,26 @@ function QuestionPool() {
       ...prev,
       [field]: value
     }));
+  };
+
+  // Navigate to Create Question with subject and part info
+  const handleCreateQuestion = () => {
+    if (!filters.subjectCode || !filters.part) {
+      alert("Please select both a subject and part before creating questions.");
+      return;
+    }
+    
+    navigate(`/create-question?subjectCode=${encodeURIComponent(filters.subjectCode)}&part=${filters.part}`);
+  };
+
+  // Navigate to Edit Question with subject and part info
+  const handleEditQuestions = () => {
+    if (!filters.subjectCode || !filters.part) {
+      alert("Please select both a subject and part before editing questions.");
+      return;
+    }
+    
+    navigate(`/edit-question?subjectCode=${encodeURIComponent(filters.subjectCode)}&part=${filters.part}`);
   };
 
   return (
@@ -248,7 +286,7 @@ function QuestionPool() {
 
       {/* Question List */}
       <div className="din3-question-pool">
-        <h2>Questions:</h2>
+        <h2>Questions: {questions.length}</h2>
         <div className="din3-questions-box">
           {questions.length > 0 ? (
             questions.map((question, index) => (
@@ -267,7 +305,8 @@ function QuestionPool() {
                   {/* Expand/Collapse Button */}
                   {(question.fullText || 
                     question.options || 
-                    question.image) && (
+                    question.hasImage || 
+                    question.imageUrl) && (
                     <button 
                       className="din3-expand-btn" 
                       onClick={() => toggleExpand(question._id)}
@@ -293,13 +332,13 @@ function QuestionPool() {
       <div className="din3-button-group">
         <button 
           className="din3-action-btn" 
-          onClick={() => navigate("/create-question")}
+          onClick={handleCreateQuestion}
         >
           Create Question
         </button>
         <button 
           className="din3-action-btn" 
-          onClick={() => navigate("/edit-question")}
+          onClick={handleEditQuestions}
         >
           Edit Questions
         </button>

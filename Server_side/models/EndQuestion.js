@@ -55,8 +55,14 @@ const EndQuestionSchema = new mongoose.Schema({
     default: null
   },
   
-  // Optional Image
+  // Image - can be a string URL or a buffer object
   image: {
+    data: Buffer,
+    contentType: String
+  },
+  
+  // Image URL field (separate from buffer)
+  imageUrl: {
     type: String,
     default: null
   },
@@ -66,7 +72,8 @@ const EndQuestionSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 0,
-    max: 20
+    max: 20,
+    default: 2
   },
   
   // Additional metadata
@@ -81,37 +88,26 @@ const EndQuestionSchema = new mongoose.Schema({
     default: null
   }
 }, {
-  // Add indexes for efficient querying
-  indexes: [
-    { subjectCode: 1, part: 1 },
-    { bloomLevel: 1 },
-    { unit: 1 }
-  ]
+  // Enable virtuals in JSON
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Create a compound index for subject and part
+// Create compound indexes for efficient querying
 EndQuestionSchema.index({ subjectCode: 1, part: 1 });
+EndQuestionSchema.index({ bloomLevel: 1 });
+EndQuestionSchema.index({ unit: 1 });
 
 // Virtual for question complexity based on marks
 EndQuestionSchema.virtual('complexity').get(function() {
-  if (this.marks <= 2) return 'Easy';
-  if (this.marks <= 4) return 'Medium';
-  return 'Hard';
+  if (this.marks <= 2) return 'easy';
+  if (this.marks <= 4) return 'medium';
+  return 'hard';
 });
 
-// Middleware to validate options for MCQ
-EndQuestionSchema.pre('save', function(next) {
-  if (this.questionType === 'mcq' || this.questionType === 'mcq-image') {
-    if (!this.options || this.options.length < 2) {
-      return next(new Error('MCQ must have at least two options'));
-    }
-    
-    if (this.correctOption === null || this.correctOption < 0 || 
-        this.correctOption >= this.options.length) {
-      return next(new Error('Invalid correct option'));
-    }
-  }
-  next();
+// Virtual to check if the question has an image
+EndQuestionSchema.virtual('hasImage').get(function() {
+  return !!(this.image?.data || this.imageUrl);
 });
 
 const EndQuestion = mongoose.model('EndQuestion', EndQuestionSchema);

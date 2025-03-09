@@ -1,28 +1,77 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import "./CreateQuestion.css";
 
 function CreateQuestion() {
-  const [subjectCode, setSubjectCode] = useState("CA 3222");
-  const [subjectName, setSubjectName] = useState("C# AND DOT NET FRAMEWORK");
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Subject options for lookup
+  const SUBJECT_OPTIONS = [
+    { code: "CA 3222", name: "C# AND DOT NET FRAMEWORK" },
+    { code: "CA 3233", name: "Java Programming" },
+    { code: "CA 3244", name: "Python Basics" },
+  ];
+  
+  // State for subject details
+  const [subjectCode, setSubjectCode] = useState("");
+  const [subjectName, setSubjectName] = useState("");
+  const [defaultPart, setDefaultPart] = useState("A");
+  
+  // State for questions
   const [questions, setQuestions] = useState([
     {
       id: Date.now(),
-      bloomType: "",
+      bloomLevel: "",
       unit: "",
       part: "Part A",
       text: "",
-      imageSource: "upload", // Default image source
+      imageSource: "upload",
       questionImage: null,
-      questionImageUrl: ""
+      questionImageUrl: "",
+      marks: 2
     }
   ]);
+  
+  // Loading and error states
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
-  const navigate = useNavigate();
+  // Initialize from URL params on component mount
+  useEffect(() => {
+    // Parse URL query parameters
+    const queryParams = new URLSearchParams(location.search);
+    const subjectCodeParam = queryParams.get('subjectCode');
+    const partParam = queryParams.get('part');
+    
+    // Set subject code if present in URL
+    if (subjectCodeParam) {
+      setSubjectCode(subjectCodeParam);
+      
+      // Look up subject name based on subject code
+      const subject = SUBJECT_OPTIONS.find(s => s.code === subjectCodeParam);
+      if (subject) {
+        setSubjectName(subject.name);
+      }
+    }
+    
+    // Set default part if present in URL
+    if (partParam) {
+      setDefaultPart(partParam);
+      
+      // Update the first question's part
+      setQuestions(prevQuestions => 
+        prevQuestions.map((q, idx) => 
+          idx === 0 ? { ...q, part: `Part ${partParam}` } : q
+        )
+      );
+    }
+  }, [location.search]);
 
-  // Handle Bloom Type Change
-  const handleBloomTypeChange = (id, value) => {
-    setQuestions(questions.map((q) => (q.id === id ? { ...q, bloomType: value } : q)));
+  // Handle Bloom Level Change
+  const handleBloomLevelChange = (id, value) => {
+    setQuestions(questions.map((q) => (q.id === id ? { ...q, bloomLevel: value } : q)));
   };
 
   // Handle Unit Change
@@ -38,6 +87,11 @@ function CreateQuestion() {
   // Handle Question Text Change
   const handleQuestionChange = (id, value) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, text: value } : q)));
+  };
+  
+  // Handle Marks Change
+  const handleMarksChange = (id, value) => {
+    setQuestions(questions.map((q) => (q.id === id ? { ...q, marks: parseInt(value) || 2 } : q)));
   };
 
   // Handle Image Source Change
@@ -97,22 +151,92 @@ function CreateQuestion() {
       ...questions,
       {
         id: Date.now(),
-        bloomType: "",
+        bloomLevel: "",
         unit: "",
-        part: "Part A",
+        part: `Part ${defaultPart}`,
         text: "",
         imageSource: "upload",
         questionImage: null,
-        questionImageUrl: ""
+        questionImageUrl: "",
+        marks: 2
       }
     ]);
   };
 
-  // Save Questions & Redirect to Question Pool
-  const handleSaveQuestions = () => {
-    console.log("Saved Questions:", questions);
-    alert("Questions saved successfully!");
-    navigate("/question-pool", { state: { updatedQuestions: questions } });
+  // Validate a question
+  const validateQuestion = (question) => {
+    if (!question.bloomLevel) return "Bloom Level is required";
+    if (!question.unit) return "Unit is required";
+    if (!question.text) return "Question text is required";
+    return null;
+  };
+
+  // Save Questions to Database & Redirect to Question Pool
+  const handleSaveQuestions = async () => {
+    // Validate all questions first
+    for (const question of questions) {
+      const validationError = validateQuestion(question);
+      if (validationError) {
+        alert(`Validation error: ${validationError}`);
+        return;
+      }
+    }
+    
+    setSaving(true);
+    setError(null);
+    
+    // Track saved questions to return to QuestionPool
+    const savedQuestions = [];
+    
+    try {
+      // Save each question individually
+      for (const question of questions) {
+        // Create FormData for image upload
+        const formData = new FormData();
+        
+        // Add question data to FormData
+        formData.append('subjectCode', subjectCode);
+        formData.append('part', question.part.replace('Part ', '')); // Extract part letter (A, B, C)
+        formData.append('question', question.text);
+        formData.append('bloomLevel', question.bloomLevel);
+        formData.append('unit', question.unit);
+        formData.append('marks', question.marks || 2);
+        
+        // Handle image (URL or file)
+        if (question.imageSource === 'url' && question.questionImageUrl) {
+          formData.append('imageUrl', question.questionImageUrl);
+        } else if (question.imageSource === 'upload' && question.questionImage) {
+          formData.append('questionImage', question.questionImage);
+        }
+        
+        // Save question to database
+        const response = await axios.post('/api/endsem-questions/questions', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        
+        console.log("Question saved:", response.data);
+        savedQuestions.push(response.data.question);
+      }
+      
+      // Show success message
+      alert(`Successfully saved ${savedQuestions.length} question(s)!`);
+      
+      // Navigate back to question pool
+      navigate(`/question-pool?subjectCode=${encodeURIComponent(subjectCode)}&part=${defaultPart}`, { 
+        state: { 
+          updatedQuestions: savedQuestions
+        }
+      });
+      
+    } catch (err) {
+      console.error("Error saving questions:", err);
+      setError(err.response?.data?.message || err.message || "Failed to save questions");
+      alert(`Error: ${err.response?.data?.message || err.message || "Failed to save questions"}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -127,7 +251,6 @@ function CreateQuestion() {
             <input 
               type="text" 
               value={subjectCode} 
-              onChange={(e) => setSubjectCode(e.target.value)} 
               readOnly 
             />
           </div>
@@ -136,27 +259,28 @@ function CreateQuestion() {
             <input 
               type="text" 
               value={subjectName} 
-              onChange={(e) => setSubjectName(e.target.value)} 
               readOnly 
             />
           </div>
         </div>
 
+        {error && <div className="din4-error-message">{error}</div>}
+
         {questions.map((q) => (
           <div key={q.id} className="din4-question-container">
             <button className="din4-delete-btn" onClick={() => deleteQuestion(q.id)}>✖</button>
               
-            {/* Bloom Type, Unit, and Part Dropdowns */}
+            {/* Bloom Level, Unit, Part and Marks Dropdowns */}
             <div className="din4-dropdown-group-container">
-              {/* Bloom Type Dropdown */}
+              {/* Bloom Level Dropdown */}
               <div className="din4-dropdown-group">
-                <label className="din4-label">Bloom Type:</label>
+                <label className="din4-label">Bloom Level:</label>
                 <select 
                   className="din4-dropdown" 
-                  value={q.bloomType} 
-                  onChange={(e) => handleBloomTypeChange(q.id, e.target.value)}
+                  value={q.bloomLevel} 
+                  onChange={(e) => handleBloomLevelChange(q.id, e.target.value)}
                 >
-                  <option value="">Select Bloom Type</option>
+                  <option value="">Select Bloom Level</option>
                   <option value="Remember L1">Remember L1</option>
                   <option value="Understand L1">Understand L1</option>
                   <option value="Apply L2">Apply L2</option>
@@ -196,6 +320,20 @@ function CreateQuestion() {
                   <option value="Part C">Part C</option>
                 </select>
               </div>
+              
+              {/* Marks Dropdown */}
+              <div className="din4-dropdown-group">
+                <label className="din4-label">Marks:</label>
+                <select 
+                  className="din4-dropdown" 
+                  value={q.marks} 
+                  onChange={(e) => handleMarksChange(q.id, e.target.value)}
+                >
+                  <option value="2">2</option>
+                  <option value="4">4</option>
+                  <option value="10">10</option>
+                </select>
+              </div>
             </div>    
 
             {/* Question Input */}
@@ -210,14 +348,7 @@ function CreateQuestion() {
             {/* Image Upload Options */}
             <div className="din4-image-upload-container">
               <label className="din4-label">Upload Image:</label>
-              <select 
-                className="din4-image-source-dropdown"
-                value={q.imageSource}
-                onChange={(e) => handleImageSourceChange(q.id, e.target.value)}
-              >
-                <option value="upload">Upload Image</option>
-                <option value="url">Paste URL</option>
-              </select>
+              
 
               {q.imageSource === "upload" ? (
                 <input 
@@ -258,7 +389,13 @@ function CreateQuestion() {
         ))}
 
         <button className="din4-add-btn" onClick={addNewQuestion}>+ Add Question</button>
-        <button className="din4-save-btn" onClick={handleSaveQuestions}>Save Questions</button>
+        <button 
+          className="din4-save-btn" 
+          onClick={handleSaveQuestions}
+          disabled={saving}
+        >
+          {saving ? "Saving..." : "Save Questions"}
+        </button>
       </div>
     </div>
   );
