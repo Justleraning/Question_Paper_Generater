@@ -5,8 +5,8 @@ import "./QuestionPool.css";
 
 // Constants
 const BLOOM_OPTIONS = [
-  "Remember", "Understand", "Apply", 
-  "Analyze", "Evaluate", "Create"
+  "Remember L1", "Understand L1", "Apply L2", 
+  "Analyze L2", "Evaluate L3", "Create L3"
 ];
 
 const UNIT_OPTIONS = ["1", "2", "3", "4", "5"];
