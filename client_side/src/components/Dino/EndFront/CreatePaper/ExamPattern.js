@@ -5,9 +5,10 @@ import './ExamPattern.css';
 const ExamDetails = () => {
   const navigate = useNavigate();
   
-  // Initial exam pattern configuration with corrected distribution
+  // Initial exam pattern configuration with values from the provided table
   const [examConfig, setExamConfig] = useState({
-    totalMarks: 60,
+    totalMarks: 78, // Updated to 78 as per requirement
+    totalQuestions: 16, // Added total questions validation
     units: [
       { id: 1, name: 'Unit 1', enabled: true },
       { id: 2, name: 'Unit 2', enabled: true },
@@ -16,9 +17,9 @@ const ExamDetails = () => {
       { id: 5, name: 'Unit 5', enabled: true },
     ],
     blooms: [
-      { id: 1, name: 'Remember, Understand', enabled: true },
-      { id: 2, name: 'Apply, Analyze', enabled: true },
-      { id: 3, name: 'Evaluate, Create', enabled: true },
+      { id: 1, name: 'Level 1: Remember, Understand', enabled: true },
+      { id: 2, name: 'Level 2: Apply, Analyze', enabled: true },
+      { id: 3, name: 'Level 3: Evaluate, Create', enabled: true },
     ],
     parts: [
       { 
@@ -27,26 +28,29 @@ const ExamDetails = () => {
         description: 'Short answer',
         questionMarks: 2,
         totalMarks: 10,
-        questionsByUnit: [1, 1, 1, 1, 1], // 5 questions total (2×5=10 marks)
-        questionsByBloom: [3, 2, 0]
+        maxQuestions: 5,
+        questionsByUnit: [1, 1, 1, 1, 1], // Unit distribution from image
+        questionsByBloom: [2, 2, 1] // Bloom distribution from image
       },
       { 
         id: 'B', 
         name: 'Part B',
-        description: 'Application-based',
+        description: 'Medium answer',
         questionMarks: 4,
-        totalMarks: 20,
-        questionsByUnit: [1, 1, 1, 1, 1], // 5 questions total (4×5=20 marks)
-        questionsByBloom: [2, 2, 1]
+        totalMarks: 28,
+        maxQuestions: 7,
+        questionsByUnit: [1, 1, 2, 1, 2], // Unit distribution from image
+        questionsByBloom: [2, 2, 3] // Bloom distribution from image
       },
       { 
         id: 'C', 
         name: 'Part C',
-        description: 'Higher-order thinking',
+        description: 'Long answer',
         questionMarks: 10,
-        totalMarks: 30,
-        questionsByUnit: [1, 0, 1, 0, 1], // 3 questions total (10×3=30 marks)
-        questionsByBloom: [1, 1, 1]
+        totalMarks: 40,
+        maxQuestions: 4,
+        questionsByUnit: [1, 1, 1, 1, 0], // Unit distribution from image
+        questionsByBloom: [1, 2, 1] // Bloom distribution from image
       }
     ]
   });
@@ -125,7 +129,7 @@ const ExamDetails = () => {
     });
   };
 
-  // Function to handle bloom distribution changes
+  // Function to handle bloom distribution changes - fully dynamic like the unit changes
   const handleBloomDistributionChange = (partId, bloomIndex, value) => {
     const updatedParts = examConfig.parts.map(part => {
       if (part.id === partId) {
@@ -147,7 +151,6 @@ const ExamDetails = () => {
   };
 
   // Function to handle generate paper button click
-  // UPDATED: Changed the route to connect with CreatePapers component
   const handleGeneratePaper = () => {
     // Navigate to the CreatePapers component with exam configuration data
     navigate('/create-papers', { state: { examConfig } });
@@ -159,18 +162,40 @@ const ExamDetails = () => {
       const unitTotal = part.questionsByUnit.reduce((sum, count, index) => 
         examConfig.units[index].enabled ? sum + count : sum, 0) * part.questionMarks;
       
+      // Bloom totals are fully calculated and used for validation
       const bloomTotal = part.questionsByBloom.reduce((sum, count, index) => 
         examConfig.blooms[index].enabled ? sum + count : sum, 0) * part.questionMarks;
       
-      return { unitTotal, bloomTotal };
+      const unitQuestionTotal = part.questionsByUnit.reduce((sum, count, index) => 
+        examConfig.units[index].enabled ? sum + count : sum, 0);
+        
+      const bloomQuestionTotal = part.questionsByBloom.reduce((sum, count, index) => 
+        examConfig.blooms[index].enabled ? sum + count : sum, 0);
+      
+      return { 
+        unitTotal, 
+        bloomTotal, 
+        unitQuestionTotal,
+        bloomQuestionTotal
+      };
     });
     
-    const grandTotal = partTotals.reduce((sum, part) => sum + part.unitTotal, 0);
+    const grandTotalMarks = partTotals.reduce((sum, part) => sum + part.unitTotal, 0);
+    // Use bloom questions for the question total validation
+    const grandTotalQuestions = partTotals.reduce((sum, part) => sum + part.bloomQuestionTotal, 0);
     
-    return { partTotals, grandTotal };
+    return { 
+      partTotals, 
+      grandTotalMarks, 
+      grandTotalQuestions 
+    };
   };
   
   const totals = calculateTotals();
+
+  // Check if the current distribution is valid
+  const isValid = totals.grandTotalMarks === examConfig.totalMarks && 
+                 totals.grandTotalQuestions === examConfig.totalQuestions;
 
   return (
     <div className="din7-exam-details-container">
@@ -216,7 +241,7 @@ const ExamDetails = () => {
                     onChange={() => handleBloomToggle(bloom.id)}
                   />
                   <label htmlFor={`bloom-${bloom.id}`}>
-                    Level {bloom.id}: {bloom.name}
+                    {bloom.name}
                   </label>
                 </div>
               ))}
@@ -233,18 +258,18 @@ const ExamDetails = () => {
             <thead>
               <tr>
                 <th rowSpan="2">Part</th>
-                <th rowSpan="2">Description</th>
-                <th rowSpan="2">Marks per Question</th>
+                <th rowSpan="2">Marks Per Question</th>
                 <th colSpan={examConfig.units.filter(u => u.enabled).length}>Questions per Unit</th>
-                <th colSpan={examConfig.blooms.filter(b => b.enabled).length}>Questions per Bloom Level</th>
                 <th rowSpan="2">Total Marks</th>
+                <th colSpan={examConfig.blooms.filter(b => b.enabled).length}>Questions Per Bloom Level</th>
+                <th rowSpan="2">Total Questions</th>
               </tr>
               <tr>
                 {examConfig.units.map(unit => 
                   unit.enabled && <th key={`unit-header-${unit.id}`}>{unit.name}</th>
                 )}
                 {examConfig.blooms.map(bloom => 
-                  bloom.enabled && <th key={`bloom-header-${bloom.id}`}>Level {bloom.id}</th>
+                  bloom.enabled && <th key={`bloom-header-${bloom.id}`}>{bloom.name}</th>
                 )}
               </tr>
             </thead>
@@ -252,7 +277,6 @@ const ExamDetails = () => {
               {examConfig.parts.map((part, partIndex) => (
                 <tr key={part.id}>
                   <td>{part.name}</td>
-                  <td>{part.description}</td>
                   <td>{part.questionMarks}</td>
                   
                   {examConfig.units.map((unit, unitIndex) => 
@@ -272,6 +296,8 @@ const ExamDetails = () => {
                     )
                   )}
                   
+                  <td>{totals.partTotals[partIndex].unitTotal}</td>
+                  
                   {examConfig.blooms.map((bloom, bloomIndex) => 
                     bloom.enabled && (
                       <td key={`bloom-cell-${bloom.id}`}>
@@ -289,22 +315,23 @@ const ExamDetails = () => {
                     )
                   )}
                   
-                  <td>{totals.partTotals[partIndex].unitTotal}</td>
+                  <td>{totals.partTotals[partIndex].unitQuestionTotal}</td>
                 </tr>
               ))}
               <tr className="din7-total-row">
-                <td colSpan="3">Grand Total</td>
+                <td colSpan="2">Total</td>
                 {examConfig.units.map((unit, index) => 
                   unit.enabled && <td key={`unit-total-${unit.id}`}>{unitMarks[index]}</td>
                 )}
+                <td>{totals.grandTotalMarks}</td>
                 {examConfig.blooms.map((bloom, index) => 
                   bloom.enabled && <td key={`bloom-total-${bloom.id}`}>
                     {examConfig.parts.reduce((sum, part) => 
-                      sum + part.questionsByBloom[index] * part.questionMarks, 0
+                      sum + part.questionsByBloom[index], 0
                     )}
                   </td>
                 )}
-                <td>{totals.grandTotal}</td>
+                <td>{totals.grandTotalQuestions}</td>
               </tr>
             </tbody>
           </table>
@@ -313,19 +340,28 @@ const ExamDetails = () => {
 
       <div className="din7-action-section">
         <div className="din7-validation-message">
-          {totals.grandTotal !== examConfig.totalMarks ? (
+          {totals.grandTotalMarks !== examConfig.totalMarks && totals.grandTotalQuestions !== examConfig.totalQuestions ? (
             <p className="din7-error">
-              Warning: Total marks ({totals.grandTotal}) don't match expected total ({examConfig.totalMarks})
+              Warning: Total marks ({totals.grandTotalMarks}) don't match expected total ({examConfig.totalMarks}) 
+              and total questions ({totals.grandTotalQuestions}) don't match expected total ({examConfig.totalQuestions})
+            </p>
+          ) : totals.grandTotalMarks !== examConfig.totalMarks ? (
+            <p className="din7-error">
+              Warning: Total marks ({totals.grandTotalMarks}) don't match expected total ({examConfig.totalMarks})
+            </p>
+          ) : totals.grandTotalQuestions !== examConfig.totalQuestions ? (
+            <p className="din7-error">
+              Warning: Total questions ({totals.grandTotalQuestions}) don't match expected total ({examConfig.totalQuestions})
             </p>
           ) : (
-            <p className="din7-success">Pattern is valid: Total marks = {totals.grandTotal}</p>
+            <p className="din7-success">Pattern is valid: Total marks = {totals.grandTotalMarks}, Total questions = {totals.grandTotalQuestions}</p>
           )}
         </div>
         
         <button 
           className="din7-generate-btn"
           onClick={handleGeneratePaper}
-          disabled={totals.grandTotal !== examConfig.totalMarks}
+          disabled={!isValid}
         >
           Generate Paper
         </button>
