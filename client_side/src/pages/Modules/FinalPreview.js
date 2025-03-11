@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getAllQuestions, saveCompletedPaper, saveAnswerKey } from '../../services/paperService.js';
+import { getAllQuestions } from '../../services/paperService.js';
 import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, HeadingLevel, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
-import RandomizationPanel from './RandomizationPanel.js';
+import universityLogo from '../../assets/image.png'; // Import the university logo
 
 // Constants
 const SUBJECT_CODES = ["LR", "QP", "ENG", "CUSTOM"];
@@ -15,43 +15,116 @@ const SUBJECT_NAMES = {
   CUSTOM: ""
 };
 
+// Question limits based on mark type
+const QUESTION_LIMITS = {
+  40: 10, // 40 marks - 10 questions per section
+  60: 15  // 60 marks - 15 questions per section
+};
+
 const FinalPreview = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { courseName, customSubjectName, totalMarks: initialTotalMarks } = location.state || {};
+  const { 
+    courseName, 
+    customSubjectName, 
+    totalMarks: initialTotalMarks = 40, // Default to 40 if not provided
+    markType: initialMarkType = 40,
+    allQuestions
+  } = location.state || {};
   
   // Update custom subject name
   SUBJECT_NAMES.CUSTOM = customSubjectName || "Custom Subject";
   
   // States
   const [questions, setQuestions] = useState([]);
-  const [reserveQuestions, setReserveQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
   const [currentDate] = useState(new Date().toLocaleDateString());
   const [downloadFormat, setDownloadFormat] = useState('pdf');
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
-  const [selectedSubjects, setSelectedSubjects] = useState(
-    Object.keys(SUBJECT_NAMES).reduce((acc, code) => {
-      acc[code] = true;
-      return acc;
-    }, {})
-  );
+  
+  // Editing state
+  const [editingQuestionId, setEditingQuestionId] = useState(null);
+  const [editedQuestionText, setEditedQuestionText] = useState('');
+  const [editedOptions, setEditedOptions] = useState([]);
+  const [editedCorrectOption, setEditedCorrectOption] = useState(null);
   
   // Track questions by subject
   const [questionsBySubject, setQuestionsBySubject] = useState({
     LR: [], QP: [], ENG: [], CUSTOM: []
   });
 
-  // Track total marks and exam time - use passed value if available
-  const [totalMarks, setTotalMarks] = useState(initialTotalMarks || 20);
+  // Fixed markType from question entry, cannot be changed
+  const [markType] = useState(initialMarkType || 40);
+  
+  // Always use the configured mark type (40 or 60) regardless of question count
+  const [totalMarks, setTotalMarks] = useState(initialMarkType || 40);
+  
   const [examTime, setExamTime] = useState(1);
   
-  // Load questions on mount
+  // Load questions on mount or refresh
   useEffect(() => {
-    fetchAllQuestions();
-  }, []);
+    if (location.state?.returnFromAnswerKey && sessionStorage.getItem('savedQuestions')) {
+      // Restore questions from session storage when returning from answer key
+      const savedQuestions = JSON.parse(sessionStorage.getItem('savedQuestions'));
+      setQuestions(savedQuestions);
+      setLoading(false);
+    } else if (allQuestions) {
+      // If questions are passed from QuestionEntry
+      processAllQuestions(allQuestions);
+    } else {
+      // Clear any existing questions on refresh/initial load
+      setQuestions([]);
+      fetchAllQuestions();
+    }
+
+    // Cleanup function to clear questions on unmount
+    return () => {
+      setQuestions([]);
+    };
+  }, [location.pathname, allQuestions]);
+  
+  // Process questions passed from QuestionEntry
+  const processAllQuestions = (questionsData) => {
+    try {
+      let processedQuestions = [];
+      
+      // Process each subject's questions
+      Object.entries(questionsData).forEach(([subjectCode, subjectQuestions]) => {
+        if (!Array.isArray(subjectQuestions) || subjectQuestions.length === 0) return;
+        
+        // Add subject info to each question
+        const questionsWithSubject = subjectQuestions.map(q => ({
+          id: q.questionId || Math.random().toString(36).substr(2, 9),
+          subject: SUBJECT_NAMES[subjectCode],
+          question: q.text,
+          options: q.options,
+          correctOption: typeof q.correctOption === 'number' ? q.correctOption - 1 : 0, // Adjust from 1-based to 0-based
+          index: q.index || 0,
+          marks: 1
+        }));
+        
+        processedQuestions = [...processedQuestions, ...questionsWithSubject];
+      });
+      
+      // Limit questions based on mark type
+      const questionLimit = QUESTION_LIMITS[markType];
+      const selectedQuestions = limitQuestionsByType(processedQuestions, questionLimit);
+      
+      setQuestions(selectedQuestions);
+      setLoading(false);
+      
+      // Set notification
+      setNotification(`Paper preview ready with ${selectedQuestions.length} questions for a ${markType} mark exam.`);
+      setTimeout(() => setNotification(null), 3000);
+      
+    } catch (error) {
+      console.error("Error processing questions:", error);
+      setError("Failed to process questions. Please try again.");
+      setLoading(false);
+    }
+  };
   
   // Sort questions by subject when they change
   useEffect(() => {
@@ -65,17 +138,12 @@ const FinalPreview = () => {
       
       setQuestionsBySubject(organized);
       
-      // Only set total marks if not provided
-      if (!initialTotalMarks) {
-        const calculatedMarks = questions.reduce((total, q) => total + (q.marks || 1), 0);
-        setTotalMarks(calculatedMarks);
-      }
-      
       // Auto-adjust exam time based on question count
-      const suggestedTime = Math.ceil((questions.length * 2) / 60);
+      const questionsPerHour = markType === 40 ? 40 : 30; // Adjust based on difficulty
+      const suggestedTime = Math.ceil(questions.length / questionsPerHour);
       setExamTime(Math.max(1, suggestedTime));
     }
-  }, [questions, initialTotalMarks]);
+  }, [questions, markType]);
   
   // Fetch all questions from all subjects
   const fetchAllQuestions = async () => {
@@ -83,8 +151,7 @@ const FinalPreview = () => {
       setLoading(true);
       
       const subjects = [SUBJECT_NAMES.LR, SUBJECT_NAMES.QP, SUBJECT_NAMES.ENG, SUBJECT_NAMES.CUSTOM].filter(Boolean);
-      let allQuestions = [];
-      let reservedQuestions = [];
+      let allQuestionsData = [];
       
       for (const subject of subjects) {
         try {
@@ -96,17 +163,7 @@ const FinalPreview = () => {
               subject: subject
             }));
             
-            // Split into main questions and reserve pool
-            const reservePercent = location.state?.reservePercentage || 20;
-            const totalQuestions = questionsWithSubject.length;
-            const reserveCount = Math.max(2, Math.ceil(totalQuestions * (reservePercent / 100)));
-            
-            if (totalQuestions >= 7 + reserveCount) {
-              allQuestions = [...allQuestions, ...questionsWithSubject.slice(0, totalQuestions - reserveCount)];
-              reservedQuestions = [...reservedQuestions, ...questionsWithSubject.slice(totalQuestions - reserveCount)];
-            } else {
-              allQuestions = [...allQuestions, ...questionsWithSubject];
-            }
+            allQuestionsData = [...allQuestionsData, ...questionsWithSubject];
           }
         } catch (err) {
           console.warn(`Failed to fetch questions for ${subject}:`, err);
@@ -114,7 +171,7 @@ const FinalPreview = () => {
       }
       
       // Process and sort questions
-      const processedQuestions = allQuestions
+      const processedQuestions = allQuestionsData
         .filter(q => q && q.question && q.options)
         .map(q => ({
           id: q.id || Math.random().toString(36).substr(2, 9),
@@ -123,25 +180,20 @@ const FinalPreview = () => {
           options: q.options,
           correctOption: q.correctOption || 0,
           index: q.index || 0,
-          marks: location.state?.marksPerQuestion?.[Object.keys(SUBJECT_NAMES).find(key => SUBJECT_NAMES[key] === q.subject)] || 1
+          marks: 1 // Set default marks to 1
         }))
         .sort((a, b) => a.subject.localeCompare(b.subject) || a.index - b.index);
       
-      const processedReserves = reservedQuestions
-        .filter(q => q && q.question && q.options)
-        .map(q => ({
-          id: q.id || Math.random().toString(36).substr(2, 9),
-          subject: q.subject,
-          question: q.question,
-          options: q.options,
-          correctOption: q.correctOption || 0,
-          index: q.index || 0,
-          marks: location.state?.marksPerQuestion?.[Object.keys(SUBJECT_NAMES).find(key => SUBJECT_NAMES[key] === q.subject)] || 1
-        }));
+      // Random selection based on mark type
+      const questionLimit = QUESTION_LIMITS[markType];
+      const selectedQuestions = limitQuestionsByType(processedQuestions, questionLimit);
       
-      setQuestions(processedQuestions);
-      setReserveQuestions(processedReserves);
-      console.log("Questions loaded:", processedQuestions.length, "Reserved:", processedReserves.length);
+      setQuestions(selectedQuestions);
+      
+      // Set notification about question selection
+      const totalSelected = selectedQuestions.length;
+      setNotification(`${totalSelected} questions selected for the ${markType} mark exam paper.`);
+      setTimeout(() => setNotification(null), 3000);
       
     } catch (err) {
       setError("Failed to load questions. Please try again.");
@@ -151,86 +203,98 @@ const FinalPreview = () => {
     }
   };
 
-  // Randomize questions with reserves
-  const handleRandomize = ({ subjectCodes, totalMarks, reservePercentage }) => {
-    try {
-      // Debug the reserve questions
-      console.log("Starting randomization with reserves:", reserveQuestions);
+  // Function to limit questions based on mark type
+  const limitQuestionsByType = (allQuestionsData, limit) => {
+    // Group questions by subject
+    const bySubject = {};
+    SUBJECT_CODES.forEach(code => {
+      const subjectName = SUBJECT_NAMES[code];
+      bySubject[code] = allQuestionsData.filter(q => q.subject === subjectName);
+    });
+    
+    // For each subject, either take all questions if less than limit
+    // or randomly select up to the limit
+    let finalSelectedQuestions = [];
+    
+    Object.entries(bySubject).forEach(([subjectCode, subjectQuestions]) => {
+      if (subjectQuestions.length === 0) return;
       
-      if (reserveQuestions.length === 0) {
-        setNotification("No reserve questions available for randomization.");
-        return;
+      let selectedFromSubject;
+      if (subjectQuestions.length <= limit) {
+        // Take all questions if less than limit
+        selectedFromSubject = [...subjectQuestions];
+      } else {
+        // Randomly select questions up to the limit
+        selectedFromSubject = shuffleAndSelect(subjectQuestions, limit);
       }
       
-      // Group questions by subject
-      const currentBySubject = SUBJECT_CODES.reduce((acc, code) => {
-        acc[code] = questions.filter(q => q.subject === SUBJECT_NAMES[code]);
-        return acc;
-      }, {});
+      // Add selected questions to final list
+      finalSelectedQuestions = [...finalSelectedQuestions, ...selectedFromSubject];
+    });
+    
+    return finalSelectedQuestions;
+  };
+
+  // Shuffle and select a subset of questions
+  const shuffleAndSelect = (questions, count) => {
+    // Create a copy of the array to avoid modifying the original
+    const shuffled = [...questions];
+    
+    // Fisher-Yates shuffle algorithm
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    // Return the first 'count' elements
+    return shuffled.slice(0, count);
+  };
+
+  // Handle randomize button click - just re-randomize the order of existing questions
+  const handleRandomize = () => {
+    try {
+      setLoading(true);
       
-      const reservesBySubject = SUBJECT_CODES.reduce((acc, code) => {
-        acc[code] = reserveQuestions.filter(q => q.subject === SUBJECT_NAMES[code]);
-        return acc;
-      }, {});
+      // Group existing questions by subject
+      const bySubject = {};
+      SUBJECT_CODES.forEach(code => {
+        const subjectName = SUBJECT_NAMES[code];
+        bySubject[code] = questions.filter(q => q.subject === subjectName);
+      });
       
-      let newQuestionsList = [];
+      // Just re-randomize each subject's question order without dropping any questions
+      let randomizedQuestions = [];
       
-      // Only process selected subjects
-      for (const code of subjectCodes) {
-        const current = currentBySubject[code];
-        const reserves = reservesBySubject[code];
+      Object.entries(bySubject).forEach(([subjectCode, subjectQuestions]) => {
+        if (subjectQuestions.length === 0) return;
         
-        // Skip if no current questions or no reserves
-        if (current.length === 0 || reserves.length === 0) {
-          newQuestionsList = [...newQuestionsList, ...current];
-          continue;
+        // Shuffle the entire array without removing any questions
+        const shuffled = [...subjectQuestions];
+        
+        // Fisher-Yates shuffle algorithm
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         
-        // Calculate swap count (up to 30% or available reserves)
-        const swapCount = Math.min(Math.ceil(current.length * (reservePercentage / 100)), reserves.length);
+        // Reindex but keep all questions
+        const reindexed = shuffled.map((q, idx) => ({
+          ...q,
+          index: idx + 1
+        }));
         
-        // Select random questions to remove
-        const indices = [...Array(current.length).keys()];
-        const indicesToRemove = indices.sort(() => Math.random() - 0.5).slice(0, swapCount);
-        
-        // Keep questions that weren't selected for removal
-        const remaining = current.filter((_, idx) => !indicesToRemove.includes(idx));
-        
-        // Get random reserves
-        const newQuestions = reserves.sort(() => Math.random() - 0.5).slice(0, swapCount).map(q => {
-          // Randomize options order
-          const options = [...q.options].filter(opt => opt && opt.value);
-          const shuffledOptions = [...options].sort(() => Math.random() - 0.5);
-          
-          // Find new position of correct option
-          const correctOptionIndex = options.findIndex((_, idx) => idx === q.correctOption);
-          const newCorrectOptionIndex = shuffledOptions.findIndex(opt => opt === options[correctOptionIndex]);
-          
-          return {
-            ...q,
-            options: shuffledOptions,
-            correctOption: newCorrectOptionIndex
-          };
-        });
-        
-        newQuestionsList = [...newQuestionsList, ...remaining, ...newQuestions];
-      }
+        randomizedQuestions = [...randomizedQuestions, ...reindexed];
+      });
       
-      // Sort by subject
-      newQuestionsList.sort((a, b) => a.subject.localeCompare(b.subject) || a.index - b.index);
-      
-      // Update total marks if changed
-      if (totalMarks !== this.totalMarks) {
-        setTotalMarks(totalMarks);
-      }
-      
-      setQuestions(newQuestionsList);
-      setNotification("Questions randomized successfully!");
+      setQuestions(randomizedQuestions);
+      setNotification(`Questions shuffled! All ${randomizedQuestions.length} questions preserved.`);
       setTimeout(() => setNotification(null), 3000);
       
     } catch (error) {
       setError("Failed to randomize questions. Please try again.");
       console.error("Randomization error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -238,6 +302,9 @@ const FinalPreview = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
+      
+      // Save to session storage
+      sessionStorage.setItem('savedQuestions', JSON.stringify(questions));
       
       // Just show alert and return (as requested)
       setNotification("Paper saved successfully!");
@@ -257,29 +324,41 @@ const FinalPreview = () => {
   const generatePDF = () => {
     try {
       const doc = new jsPDF();
+      
+      // Add university logo
+      try {
+        doc.addImage(universityLogo, 'PNG', 20, 10, 20, 20);
+      } catch (logoErr) {
+        console.warn("Could not add logo:", logoErr);
+      }
+      
       doc.setFontSize(18);
       doc.text("ST. JOSEPH'S UNIVERSITY, BENGALURU - 27", 105, 20, { align: 'center' });
       doc.setFontSize(14);
-      doc.text(`Course: ${courseName}`, 105, 30, { align: 'center' });
+      
+      // Show both courseName and customSubjectName
+      const courseDisplay = customSubjectName 
+        ? `${courseName} - ${customSubjectName}` 
+        : courseName;
+      
+      doc.text(`Course: ${courseDisplay}`, 105, 30, { align: 'center' });
       doc.text("SEMESTER EXAMINATION", 105, 40, { align: 'center' });
       doc.setFontSize(12);
       doc.text(`Date: ${currentDate}`, 20, 50);
       doc.text(`Time: ${examTime} Hours`, 20, 60);
-      doc.text(`Max Marks: ${totalMarks}`, 180, 60, { align: 'right' });
+      
+      // Use the configured mark type, not the calculated one
+      doc.text(`Max Marks: ${markType}`, 180, 60, { align: 'right' });
+      
       doc.text("Answer all questions", 105, 70, { align: 'center' });
       
       // Process questions
-      const filteredQuestions = questions.filter(q => {
-        const subjectCode = Object.keys(SUBJECT_NAMES).find(key => SUBJECT_NAMES[key] === q.subject);
-        return selectedSubjects[subjectCode];
-      });
-      
       let y = 90;
       let questionNumber = 1;
       let currentSubject = null;
       
       // Generate PDF content
-      filteredQuestions.forEach((q) => {
+      questions.forEach((q) => {
         // Add new subject header
         if (q.subject !== currentSubject) {
           if (currentSubject !== null) {
@@ -334,20 +413,14 @@ const FinalPreview = () => {
     }
   };
 
-  // DOCX Generation (simplified)
+  // DOCX Generation
   const generateDOCX = () => {
     try {
-      // Filter questions based on selected subjects
-      const filteredQuestions = questions.filter(q => {
-        const subjectCode = Object.keys(SUBJECT_NAMES).find(key => SUBJECT_NAMES[key] === q.subject);
-        return selectedSubjects[subjectCode];
-      });
-      
       // Group by subject
-      const questionsBySubject = {};
-      filteredQuestions.forEach(q => {
-        if (!questionsBySubject[q.subject]) questionsBySubject[q.subject] = [];
-        questionsBySubject[q.subject].push(q);
+      const questionsBySubjectObj = {};
+      questions.forEach(q => {
+        if (!questionsBySubjectObj[q.subject]) questionsBySubjectObj[q.subject] = [];
+        questionsBySubjectObj[q.subject].push(q);
       });
       
       // Create document
@@ -386,13 +459,13 @@ const FinalPreview = () => {
   const viewAnswerKey = () => {
     // Store current questions and state in session storage
     sessionStorage.setItem('savedQuestions', JSON.stringify(questions));
-    sessionStorage.setItem('savedReserveQuestions', JSON.stringify(reserveQuestions));
     
     navigate('/answer-key', {
       state: {
         questions,
         courseName,
-        totalMarks,
+        customSubjectName, // Pass this to the answer key 
+        totalMarks: markType, // Use the configured mark type
         examTime,
         canReturn: true
       }
@@ -406,24 +479,65 @@ const FinalPreview = () => {
     return tmp.textContent || tmp.innerText || '';
   };
 
-  // Restore questions when returning from answer key
-  useEffect(() => {
-    if (location.state?.returnFromAnswerKey) {
-      const savedQuestions = sessionStorage.getItem('savedQuestions');
-      const savedReserveQuestions = sessionStorage.getItem('savedReserveQuestions');
-      
-      if (savedQuestions) setQuestions(JSON.parse(savedQuestions));
-      if (savedReserveQuestions) setReserveQuestions(JSON.parse(savedReserveQuestions));
-    }
-  }, [location.state]);
+  // Start editing a question
+  const startEditingQuestion = (question) => {
+    setEditingQuestionId(question.id);
+    setEditedQuestionText(question.question);
+    setEditedOptions(question.options);
+    setEditedCorrectOption(question.correctOption);
+  };
 
-  // Create subjects array for the randomization panel
-  const subjects = SUBJECT_CODES.map(code => ({
-    code,
-    name: SUBJECT_NAMES[code],
-    count: questionsBySubject[code]?.length || 0,
-    reserveCount: reserveQuestions.filter(q => q.subject === SUBJECT_NAMES[code]).length || 0
-  })).filter(subject => subject.name); // Filter out empty names
+  // Save edited question
+  const saveEditedQuestion = () => {
+    if (!editingQuestionId) return;
+    
+    // Validate
+    if (!editedQuestionText.trim()) {
+      setError("Question text cannot be empty");
+      return;
+    }
+    
+    const validOptions = editedOptions.filter(opt => opt && opt.value && opt.value.trim().length > 0);
+    if (validOptions.length < 2) {
+      setError("At least two options are required");
+      return;
+    }
+    
+    if (editedCorrectOption === null || editedCorrectOption === undefined) {
+      setError("Please select a correct option");
+      return;
+    }
+    
+    // Update question in the questions array
+    const updatedQuestions = questions.map(q => {
+      if (q.id === editingQuestionId) {
+        return {
+          ...q,
+          question: editedQuestionText,
+          options: editedOptions,
+          correctOption: editedCorrectOption
+        };
+      }
+      return q;
+    });
+    
+    setQuestions(updatedQuestions);
+    setEditingQuestionId(null);
+    setNotification("Question updated successfully!");
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingQuestionId(null);
+  };
+
+  // Handle option change in edit mode
+  const handleOptionChange = (index, value) => {
+    const updatedOptions = [...editedOptions];
+    updatedOptions[index] = { ...updatedOptions[index], value };
+    setEditedOptions(updatedOptions);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -438,6 +552,12 @@ const FinalPreview = () => {
       {error && (
         <div className="w-full mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
+          <button 
+            className="ml-2 text-red-700 font-bold"
+            onClick={() => setError(null)}
+          >
+            ×
+          </button>
         </div>
       )}
       
@@ -445,14 +565,30 @@ const FinalPreview = () => {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Final Paper Preview</h1>
         <p className="text-gray-600">{courseName}</p>
+        {customSubjectName && (
+          <p className="text-gray-600">{customSubjectName}</p>
+        )}
+        <p className="text-gray-600 mt-1">
+          {markType} Marks Paper ({QUESTION_LIMITS[markType]} questions per section)
+        </p>
       </div>
       
-      {/* Simplified Randomization Panel */}
-      <RandomizationPanel 
-        subjects={subjects} 
-        totalMarks={totalMarks}
-        onRandomize={handleRandomize}
-      />
+      {/* Simple Randomize Button */}
+      <div className="flex justify-center mb-6">
+        <button
+          onClick={handleRandomize}
+          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded-lg text-lg font-medium"
+          disabled={loading || questions.length === 0}
+        >
+          {loading ? 'Randomizing...' : 'Randomize Questions'}
+        </button>
+      </div>
+      
+      {/* Note about randomization */}
+      <div className="text-center mb-6 text-sm text-gray-600">
+        <p>For {markType} marks paper, each subject will have {QUESTION_LIMITS[markType]} questions maximum.</p>
+        <p>If a subject has fewer questions, all available questions will be used.</p>
+      </div>
       
       {/* Paper Preview */}
       <div className="bg-gray-50 border border-gray-300 p-6 rounded-lg mb-6">
@@ -467,34 +603,117 @@ const FinalPreview = () => {
               <div>
                 {/* University Header */}
                 <div className="text-center mb-6">
-                  <h2 className="text-xl font-bold">ST. JOSEPH'S UNIVERSITY, BENGALURU - 27</h2>
-                  <h3 className="text-lg font-semibold">{courseName}</h3>
+                  <div className="flex justify-center items-center mb-2">
+                    <img src={universityLogo} alt="University Logo" className="h-16 mr-2" />
+                    <h2 className="text-xl font-bold">ST. JOSEPH'S UNIVERSITY, BENGALURU - 27</h2>
+                  </div>
+                  <h3 className="text-lg font-semibold">
+                    {customSubjectName ? `${courseName} - ${customSubjectName}` : courseName}
+                  </h3>
                   <p className="font-medium mt-2">SEMESTER EXAMINATION</p>
                   <div className="flex justify-between mt-4">
                     <p>Date: {currentDate}</p>
                     <p>Time: {examTime} Hours</p>
-                    <p>Max Marks: {totalMarks}</p>
+                    <p>Max Marks: {markType}</p>
                   </div>
                   <p className="mt-2 font-medium">Answer all questions</p>
                 </div>
                 
                 {/* Questions Display */}
-                {SUBJECT_CODES.filter(code => selectedSubjects[code] && questionsBySubject[code]?.length > 0).map(subjectCode => (
+                {SUBJECT_CODES.filter(code => {
+                  const subjectQuestions = questionsBySubject[code];
+                  return subjectQuestions && subjectQuestions.length > 0;
+                }).map(subjectCode => (
                   <div key={subjectCode} className="mb-8">
                     <h3 className="text-lg font-bold mb-4 border-b pb-2">{SUBJECT_NAMES[subjectCode]}</h3>
                     
                     {questionsBySubject[subjectCode].map((q, idx) => (
-                      <div key={q.id} className="mb-6 pl-4">
-                        <p className="font-medium mb-2">{idx + 1}. {stripHTMLTags(q.question)}</p>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-8">
-                          {q.options && Array.isArray(q.options) && q.options.map((opt, optIdx) => (
-                            <div key={optIdx} className="mb-1">
-                              <span className="font-medium mr-1">{['A', 'B', 'C', 'D'][optIdx]}.</span>
-                              <span>{opt.type === 'Text' ? opt.value : '[Image]'}</span>
+                      <div key={q.id} className="mb-6 pl-4 border-l-4 border-gray-200 hover:border-blue-300 transition-colors duration-200">
+                        {editingQuestionId === q.id ? (
+                          // Edit mode
+                          <div className="bg-white p-4 border rounded shadow-sm">
+                            <h4 className="font-medium mb-2">Edit Question</h4>
+                            
+                            <div className="mb-3">
+                              <label className="block text-sm font-medium mb-1">Question Text:</label>
+                              <textarea
+                                value={editedQuestionText}
+                                onChange={(e) => setEditedQuestionText(e.target.value)}
+                                className="w-full p-2 border rounded"
+                                rows={3}
+                              />
                             </div>
-                          ))}
-                        </div>
+                            
+                            <div className="mb-3">
+                              <label className="block text-sm font-medium mb-1">Options:</label>
+                              {editedOptions.map((opt, optIdx) => (
+                                <div key={optIdx} className="flex items-center mb-2">
+                                  <span className="font-medium mr-2">{['A', 'B', 'C', 'D'][optIdx]}.</span>
+                                  <input
+                                    type="text"
+                                    value={opt?.value || ''}
+                                    onChange={(e) => handleOptionChange(optIdx, e.target.value)}
+                                    className="flex-1 p-2 border rounded"
+                                  />
+                                  <label className="ml-2 flex items-center">
+                                    <input
+                                      type="radio"
+                                      name={`correct-option-${q.id}`}
+                                      checked={editedCorrectOption === optIdx}
+                                      onChange={() => setEditedCorrectOption(optIdx)}
+                                      className="mr-1"
+                                    />
+                                    Correct
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={cancelEditing}
+                                className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={saveEditedQuestion}
+                                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          // View mode
+                          <div className="group">
+                            <div className="flex justify-between items-start">
+                              <p className="font-medium mb-2">{idx + 1}. {stripHTMLTags(q.question)}</p>
+                              <button
+                                onClick={() => startEditingQuestion(q)}
+                                className="px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                Edit
+                              </button>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-8">
+                              {q.options && Array.isArray(q.options) && q.options.map((opt, optIdx) => (
+                                <div key={optIdx} className="mb-1">
+                                  <span className="font-medium mr-1">{['A', 'B', 'C', 'D'][optIdx]}.</span>
+                                  <span className={optIdx === q.correctOption ? "text-green-600 font-medium" : ""}>
+                                    {opt.type === 'Text' ? opt.value : '[Image]'}
+                                  </span>
+                                  {optIdx === q.correctOption && (
+                                    <span className="ml-2 text-xs bg-green-100 text-green-800 px-1 py-0.5 rounded">
+                                      Correct
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -502,7 +721,7 @@ const FinalPreview = () => {
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                <p>No questions available. Please load questions or select different subjects.</p>
+                <p>No questions available. Please load questions or refresh the page.</p>
               </div>
             )}
           </div>
@@ -515,6 +734,7 @@ const FinalPreview = () => {
           <button
             className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
             onClick={() => setShowDownloadOptions(!showDownloadOptions)}
+            disabled={questions.length === 0}
           >
             Download
           </button>
@@ -548,6 +768,7 @@ const FinalPreview = () => {
         <button
           onClick={viewAnswerKey}
           className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+          disabled={questions.length === 0}
         >
           View Answer Key
         </button>
@@ -555,7 +776,7 @@ const FinalPreview = () => {
         <button
           onClick={handleSave}
           className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-          disabled={loading}
+          disabled={loading || questions.length === 0}
         >
           {loading ? 'Saving...' : 'Save & Complete Paper'}
         </button>
@@ -565,10 +786,11 @@ const FinalPreview = () => {
       <div className="mt-6 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg text-sm">
         <p className="font-semibold">Important:</p>
         <ul className="list-disc pl-5 mt-2">
-          <li>Once you save the paper, all entered questions will be removed from editing mode.</li>
-          <li>The paper and answer key will be saved to your account and can be accessed from "My Papers".</li>
-          <li>You cannot return to the question entry screen after viewing the final paper.</li>
-          <li>Click "Save & Complete Paper" to finalize and download your paper.</li>
+          <li>All questions are directly editable on this page. Hover over a question and click "Edit".</li>
+          <li>For {markType} marks paper, each subject will have up to {QUESTION_LIMITS[markType]} questions.</li>
+          <li>Use the "Randomize Questions" button to reorder and select questions.</li>
+          <li>When viewing the answer key, your edits will be preserved when you return.</li>
+          <li>Page will reset on refresh - make sure to save your work!</li>
         </ul>
       </div>
     </div>

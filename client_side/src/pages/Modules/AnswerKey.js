@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
+import universityLogo from '../../assets/images/logo.png'; // Import the university logo
 
 const AnswerKey = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { questions, courseName, totalMarks, examTime, canReturn = true } = location.state || {};
+  const { 
+    questions, 
+    courseName, 
+    customSubjectName,
+    totalMarks = 40, // Default to 40 if not provided
+    examTime, 
+    canReturn = true 
+  } = location.state || {};
   
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
@@ -19,23 +27,6 @@ const AnswerKey = () => {
     groupedQuestions[question.subject].push(question);
   });
   
-  // Block back button if canReturn is false
-  useEffect(() => {
-    if (!canReturn) {
-      // Block the back button
-      window.history.pushState(null, null, window.location.href);
-      const handlePopState = () => {
-        window.history.pushState(null, null, window.location.href);
-        setNotification("You cannot return to question entry. Please use the navigation buttons.");
-      };
-      window.addEventListener('popstate', handlePopState);
-      
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-      };
-    }
-  }, [canReturn]);
-  
   // Generate PDF of answer key
   const downloadAnswerKey = () => {
     try {
@@ -43,17 +34,27 @@ const AnswerKey = () => {
       
       const doc = new jsPDF();
       
+      // Add university logo
+      try {
+        doc.addImage(universityLogo, 'PNG', 20, 10, 20, 20);
+      } catch (logoErr) {
+        console.warn("Could not add logo:", logoErr);
+      }
+      
       // Add title
       doc.setFontSize(18);
       doc.text("ANSWER KEY", 105, 20, { align: 'center' });
       
-      // Add course info
+      // Add course info with customSubjectName if available
       doc.setFontSize(14);
-      doc.text(`Course: ${courseName}`, 105, 30, { align: 'center' });
+      const courseDisplay = customSubjectName 
+        ? `Course: ${courseName} - ${customSubjectName}` 
+        : `Course: ${courseName}`;
+      doc.text(courseDisplay, 105, 30, { align: 'center' });
       
       // Add total marks and time
       doc.setFontSize(12);
-      doc.text(`Total Marks: ${totalMarks || 'Not specified'}`, 20, 40);
+      doc.text(`Total Marks: ${totalMarks || 40}`, 20, 40); // Always show the configured marks
       doc.text(`Exam Time: ${examTime || 1} hours`, 20, 50);
       
       let y = 70;
@@ -125,12 +126,15 @@ const AnswerKey = () => {
   
   // Handle return navigation
   const handleReturn = () => {
-    if (canReturn) {
-      navigate(-1); // Go back to previous page
-    } else {
-      // Navigate to dashboard instead
-      navigate('/dashboard');
-    }
+    navigate('/all', { 
+      state: {
+        returnFromAnswerKey: true,
+        courseName,
+        customSubjectName,
+        totalMarks,
+        examTime
+      }
+    });
   };
   
   // Handle dashboard navigation
@@ -151,7 +155,8 @@ const AnswerKey = () => {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Answer Key</h1>
         <p className="text-gray-600">{courseName}</p>
-        {totalMarks && <p className="text-gray-600">Total Marks: {totalMarks}</p>}
+        {customSubjectName && <p className="text-gray-600">{customSubjectName}</p>}
+        <p className="text-gray-600">Total Marks: {totalMarks || 40}</p>
       </div>
       
       {/* Action Buttons */}
@@ -168,7 +173,7 @@ const AnswerKey = () => {
           onClick={handleReturn}
           className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
         >
-          {canReturn ? 'Back to Paper Preview' : 'Done'}
+          Back to Paper Preview
         </button>
         
         <button
@@ -179,17 +184,12 @@ const AnswerKey = () => {
         </button>
       </div>
       
-      {/* Warning if no return path */}
-      {!canReturn && (
-        <div className="mb-8 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg text-sm">
-          <p className="font-semibold">Note:</p>
-          <p>You cannot return to the question entry screen. The paper has been finalized and saved to your account.</p>
-        </div>
-      )}
-      
       {/* Answer Key Content */}
-      <div className="bg-white border border-gray-300 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-bold mb-4">Answer Key</h2>
+      <div className="bg-white border border-gray-300 p-6 rounded-lg mb-6 shadow-sm">
+        <div className="flex items-center justify-center mb-4">
+          <img src={universityLogo} alt="University Logo" className="h-12 mr-2" />
+          <h2 className="text-xl font-bold">Answer Key</h2>
+        </div>
         
         {Object.keys(groupedQuestions).length === 0 ? (
           <div className="text-center py-8">
