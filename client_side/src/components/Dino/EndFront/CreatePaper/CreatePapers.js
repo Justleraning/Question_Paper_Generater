@@ -1,308 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import axios from 'axios';
 import './CreatePapers.css';
-
-// Question pool data
-const questionPool = {
-  partA: [
-    {
-      id: 'a1',
-      text: 'List any two features of CLR.',
-      type: 'short',
-      points: 2,
-      alternatives: [
-        'Describe the Common Language Runtime in .NET.',
-        'Explain the role of CLR in the .NET framework.'
-      ]
-    },
-    {
-      id: 'a2',
-      text: 'Explain the difference between ref and out parameters in C#.',
-      type: 'short',
-      points: 2,
-      alternatives: [
-        'What are the key differences between ref and out keywords in C#?',
-        'How do ref and out parameters affect variable initialization in C#?'
-      ]
-    },
-    {
-      id: 'a3',
-      text: 'How do you prevent a method from being overridden in C#? Write a sample code.',
-      type: 'short_code',
-      points: 2,
-      alternatives: [
-        'Explain the purpose of the sealed keyword in C# with an example.',
-        'Demonstrate how to make a method that cannot be overridden in derived classes.'
-      ]
-    },
-    {
-      id: 'a4',
-      text: 'What is the purpose of using the finally block?',
-      type: 'short',
-      points: 2,
-      alternatives: [
-        'Explain exception handling in C# with finally block.',
-        'Why is the finally block important in exception handling?'
-      ]
-    },
-    {
-      id: 'a5',
-      text: 'What is the purpose of the SqlConnection class in ADO.NET? Write the syntax.',
-      type: 'short_code',
-      points: 2,
-      alternatives: [
-        'Explain how to establish a database connection in ADO.NET.',
-        'Write the code to connect to a SQL Server database using ADO.NET.'
-      ]
-    },
-    {
-      id: 'a6',
-      text: 'What are delegates in C#? Give an example.',
-      type: 'short_code',
-      points: 2,
-      alternatives: [
-        'Explain the concept of delegates and their uses in C#.',
-        'How are delegates different from function pointers in other languages?'
-      ]
-    },
-    {
-      id: 'a7',
-      text: 'Explain the concept of boxing and unboxing in C#.',
-      type: 'short',
-      points: 2,
-      alternatives: [
-        'What happens during boxing and unboxing of value types?',
-        'Describe the performance implications of boxing and unboxing.'
-      ]
-    },
-    {
-      id: 'a8',
-      text: 'What is an assembly in .NET?',
-      type: 'short',
-      points: 2,
-      alternatives: [
-        'Describe the structure and purpose of assemblies in .NET.',
-        'Explain the difference between private and shared assemblies.'
-      ]
-    }
-  ],
-  partB: [
-    {
-      id: 'b1',
-      text: 'Write a C# program to get a number and display the number in its reverse order.',
-      type: 'code',
-      points: 4,
-      alternatives: [
-        'Create a C# program that reverses an integer input by the user.',
-        'Write a C# algorithm that takes a multi-digit number and outputs it backwards.'
-      ]
-    },
-    {
-      id: 'b2',
-      text: 'How do we define a class and then add: variables, methods, modifiers, and further access to class members?',
-      type: 'theory',
-      points: 4,
-      alternatives: [
-        'Explain the syntax and structure of class definition in C#.',
-        'Demonstrate how to implement encapsulation in C# classes.'
-      ]
-    },
-    {
-      id: 'b3',
-      text: 'Write a program in C# to show the concept of the "Nested method".',
-      type: 'code',
-      points: 4,
-      alternatives: [
-        'Create a C# program demonstrating local functions in C#.',
-        'Implement a practical example of nested methods in C#.'
-      ]
-    },
-    {
-      id: 'b4',
-      text: 'How interface is different from inheritance? Give suitable syntax.',
-      type: 'theory_code',
-      points: 4,
-      alternatives: [
-        'Compare and contrast interfaces vs abstract classes in C#.',
-        'Explain when to use interfaces instead of inheritance with examples.'
-      ]
-    },
-    {
-      id: 'b5',
-      text: 'Can we create the object of a sealed class? Justify.',
-      type: 'theory',
-      points: 4,
-      alternatives: [
-        'Explain the purpose and limitations of sealed classes in C#.',
-        'Discuss the scenarios where sealed classes are beneficial.'
-      ]
-    },
-    {
-      id: 'b6',
-      text: 'Write a program in ASP.NET to find the date and time.',
-      type: 'code',
-      points: 4,
-      alternatives: [
-        'Create an ASP.NET web page that displays current date and time.',
-        'Implement a DateTime picker in ASP.NET with validation.'
-      ]
-    },
-    {
-      id: 'b7',
-      text: 'Compare and contrast ADO and ADO.NET.',
-      type: 'theory',
-      points: 4,
-      alternatives: [
-        'Explain the evolution from ADO to ADO.NET and its benefits.',
-        'Describe the architectural differences between ADO and ADO.NET.'
-      ]
-    },
-    {
-      id: 'b8',
-      text: 'Explain the concept of generics in C# with examples.',
-      type: 'theory_code',
-      points: 4,
-      alternatives: [
-        'Write a C# program demonstrating generic collections.',
-        'How do generics improve type safety in C#? Provide examples.'
-      ]
-    }
-  ],
-  partC: [
-    {
-      id: 'c1',
-      text: 'a) With suitable illustration explain the scope of each category of the variables.\nb) Write the C# program to demonstrate the working of foreach loop. List the characteristics of foreach loop.',
-      type: 'theory_code',
-      points: 10,
-      subpoints: [5, 5],
-      alternatives: [
-        'a) Describe variable scoping in C# (local, instance, static).\nb) Implement array and collection iteration using foreach loops.',
-        'a) Explain lifetime and accessibility of variables in C#.\nb) Compare for loop vs foreach loop with practical examples.'
-      ]
-    },
-    {
-      id: 'c2',
-      text: 'a) Write a C# program to illustrate the multilevel inheritance with the virtual method.\nb) Write a console program to find a Fibonacci series of entered number.',
-      type: 'code',
-      points: 10,
-      subpoints: [6, 4],
-      alternatives: [
-        'a) Implement method overriding across multiple inheritance levels.\nb) Create a program that generates Fibonacci numbers up to n terms.',
-        'a) Demonstrate polymorphism using virtual methods and inheritance.\nb) Write a recursive solution for Fibonacci sequence calculation.'
-      ]
-    },
-    {
-      id: 'c3',
-      text: 'a) Describe the architecture of ADO.NET.\nb) What is a data adapter? Writer a C# code to create a data set from a data adapter.',
-      type: 'theory_code',
-      points: 10,
-      subpoints: [5, 5],
-      alternatives: [
-        'a) Explain the components and layers in ADO.NET architecture.\nb) Implement data binding using DataAdapter and DataSet.',
-        'a) Draw the ADO.NET object model and explain each component.\nb) Write code to perform CRUD operations using DataAdapter.'
-      ]
-    },
-    {
-      id: 'c4',
-      text: 'Develop an ASP.NET forms application for student enrollment in the intercollege technical contest, with appropriate form events, controls, menus, and dialog boxes.',
-      type: 'project',
-      points: 10,
-      alternatives: [
-        'Create a web form for event registration with validation and confirmation.',
-        'Design a multi-page web application for managing student participation in competitions.'
-      ]
-    },
-    {
-      id: 'c5',
-      text: 'a) Explain the concept of threading in C#.\nb) Write a C# program that creates multiple threads to perform different tasks concurrently.',
-      type: 'theory_code',
-      points: 10,
-      subpoints: [5, 5],
-      alternatives: [
-        'a) Describe thread synchronization mechanisms in C#.\nb) Implement a producer-consumer pattern using threads.',
-        'a) Compare asynchronous programming to multi-threading.\nb) Create a thread pool example in C#.'
-      ]
-    }
-  ],
-  mcq: [
-    {
-      id: 'm1',
-      text: 'Which of the following is NOT a valid C# access modifier?',
-      options: [
-        'a) Public',
-        'b) Protected',
-        'c) Friend',
-        'd) Internal'
-      ],
-      answer: 'c',
-      points: 1,
-      alternatives: [
-        'What access modifier restricts access to the containing assembly?',
-        'Which keyword controls the visibility of class members in C#?'
-      ]
-    },
-    {
-      id: 'm2',
-      text: 'What does CLR stand for in .NET?',
-      options: [
-        'a) Common Language Runtime',
-        'b) Central Language Runtime',
-        'c) Common Logical Runtime',
-        'd) Central Logical Runtime'
-      ],
-      answer: 'a',
-      points: 1,
-      alternatives: [
-        'Which component of .NET executes the managed code?',
-        'What performs Just-In-Time compilation in .NET?'
-      ]
-    },
-    {
-      id: 'm3',
-      text: 'Which of the following is used to prevent a class from being inherited?',
-      options: [
-        'a) static',
-        'b) abstract',
-        'c) virtual',
-        'd) sealed'
-      ],
-      answer: 'd',
-      points: 1,
-      alternatives: [
-        'What keyword is used to make a class non-inheritable?',
-        'Which modifier prevents extension of a class?'
-      ]
-    },
-    {
-      id: 'm4',
-      text: 'What is the correct syntax to declare a delegate in C#?',
-      options: [
-        'a) delegate void MyDelegate();',
-        'b) void delegate MyDelegate();',
-        'c) MyDelegate delegate void();',
-        'd) void MyDelegate delegate();'
-      ],
-      answer: 'a',
-      points: 1,
-      alternatives: [
-        'How do you define a type-safe function pointer in C#?',
-        'What is the proper way to create a delegate type?'
-      ]
-    }
-  ]
-};
 
 const CreatePapers = () => {
   // Reference for printing
   const componentRef = useRef();
   
+  // Get exam configuration from router state
+  const location = useLocation();
+  const { examConfig, questionDistribution } = location.state || {};
+  
+  // Get exam details from localStorage
+  const [examDetails, setExamDetails] = useState({
+    course: "",
+    semester: "",
+    semesterExamination: "",
+    examinationConducted: "",
+    subjectCode: "",
+    subjectName: "",
+    examTimings: "2 hours",
+  });
+  
   // State for paper details
   const [paperDetails, setPaperDetails] = useState({
     university: "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
-    course: "BCA - III SEMESTER",
-    subject: "CA 3222: C# AND DOT NET FRAMEWORK",
-    examMonth: "October 2024",
     duration: "2",
-    maxMarks: "60"
+    maxMarks: "78"
   });
   
   // State for questions
@@ -315,42 +39,184 @@ const CreatePapers = () => {
   // State to control whether to show the paper
   const [showPaper, setShowPaper] = useState(false);
   
-  // Function to safely select random questions from the pool
-  const selectRandomQuestions = (pool, count) => {
-    // Check if pool is an array and not empty
-    if (!Array.isArray(pool) || pool.length === 0) {
-      console.error('Question pool is not an array or is empty:', pool);
-      return []; // Return empty array if pool is invalid
+  // State for loading indicator
+  const [loading, setLoading] = useState(false);
+  
+  // State for error messages
+  const [error, setError] = useState(null);
+
+  // Load exam details from localStorage on component mount
+  useEffect(() => {
+    try {
+      const savedExamDetails = localStorage.getItem('examDetails');
+      if (savedExamDetails) {
+        setExamDetails(JSON.parse(savedExamDetails));
+      }
+    } catch (error) {
+      console.error('Error loading exam details from localStorage:', error);
     }
-    
-    // Return all questions if count is greater than pool size
-    if (count >= pool.length) {
-      return [...pool]; // Return a copy of the array
-    }
-    
-    // Shuffle and select questions
-    const shuffled = [...pool].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
+  }, []);
+  
+  // Helper function to map bloom levels between UI and API
+  const mapBloomLevel = (level) => {
+    const bloomMap = {
+      1: 'Remember L1',  // Level 1: Remember, Understand
+      2: 'Apply L2',     // Level 2: Apply, Analyze
+      3: 'Evaluate L3'   // Level 3: Evaluate, Create
+    };
+    return bloomMap[level] || level;
   };
   
-  // Function to generate a new question paper
-  const generatePaper = () => {
+  // Helper function to get the bloom level number from a string
+  const getBloomLevelNumber = (bloomString) => {
+    if (bloomString.includes('Remember') || bloomString.includes('Understand')) {
+      return 1;
+    } else if (bloomString.includes('Apply') || bloomString.includes('Analyze')) {
+      return 2;
+    } else if (bloomString.includes('Evaluate') || bloomString.includes('Create')) {
+      return 3;
+    }
+    return 1; // Default to level 1 if unknown
+  };
+  
+  // Helper function to shuffle an array
+  const shuffleArray = (array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+  
+  // Function to fetch questions from the backend
+  const fetchQuestions = async () => {
+    if (!examDetails.subjectCode) {
+      setError("Missing subject code. Please set exam details first.");
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
     try {
-      // Make sure questionPool exists and has the expected structure
-      if (!questionPool || !questionPool.partA || !questionPool.partB || !questionPool.partC) {
-        console.error('Question pool is not properly structured:', questionPool);
-        throw new Error('Question pool is not properly structured');
+      // Prepare containers for the fetched questions
+      const partAQuestions = [];
+      const partBQuestions = [];
+      const partCQuestions = [];
+      
+      // Only proceed if we have exam configuration
+      if (examConfig && questionDistribution) {
+        // Fetch questions for each part
+        for (const part of examConfig.parts) {
+          const partId = part.id;
+          
+          // Fetch questions for each unit in this part
+          for (let unitIndex = 0; unitIndex < part.questionsByUnit.length; unitIndex++) {
+            const unitId = unitIndex + 1;
+            const questionsNeeded = part.questionsByUnit[unitIndex];
+            
+            if (questionsNeeded > 0 && examConfig.units[unitIndex].enabled) {
+              // Fetch questions for each bloom level for this unit and part
+              for (let bloomIndex = 0; bloomIndex < part.questionsByBloom.length; bloomIndex++) {
+                const bloomId = bloomIndex + 1;
+                const bloomQuestionsNeeded = part.questionsByBloom[bloomIndex];
+                
+                if (bloomQuestionsNeeded > 0 && examConfig.blooms[bloomIndex].enabled) {
+                  // Calculate approximate questions needed for this unit/bloom combination
+                  // This is a simplification - in reality, you would need a more sophisticated algorithm
+                  // to properly distribute questions across both unit and bloom dimensions
+                  let questionsForThisBloom = Math.ceil(questionsNeeded * (bloomQuestionsNeeded / part.maxQuestions));
+                  
+                  // Fetch questions for this part, unit, and bloom level
+                  const response = await axios.get('/api/endsem-questions', {
+                    params: {
+                      subjectCode: examDetails.subjectCode,
+                      part: partId,
+                      unit: unitId.toString(),
+                      bloomLevel: mapBloomLevel(bloomId)
+                    }
+                  });
+                  
+                  const availableQuestions = response.data.questions || [];
+                  
+                  if (availableQuestions.length === 0) {
+                    console.warn(`No questions found for part ${partId}, unit ${unitId}, bloom level ${bloomId}`);
+                    continue;
+                  }
+                  
+                  // Take the minimum of available questions and needed questions
+                  const fetchCount = Math.min(availableQuestions.length, questionsForThisBloom);
+                  
+                  // Randomly select questions
+                  const selectedQuestions = shuffleArray(availableQuestions).slice(0, fetchCount);
+                  
+                  // Add to the appropriate part
+                  if (partId === 'A') {
+                    partAQuestions.push(...selectedQuestions);
+                  } else if (partId === 'B') {
+                    partBQuestions.push(...selectedQuestions);
+                  } else if (partId === 'C') {
+                    partCQuestions.push(...selectedQuestions);
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // Limit questions to match the required count for each part
+        const limitedPartA = partAQuestions.slice(0, examConfig.parts.find(p => p.id === 'A').maxQuestions);
+        const limitedPartB = partBQuestions.slice(0, examConfig.parts.find(p => p.id === 'B').maxQuestions);
+        const limitedPartC = partCQuestions.slice(0, examConfig.parts.find(p => p.id === 'C').maxQuestions);
+        
+        // Update the questions state
+        setQuestions({
+          partA: limitedPartA,
+          partB: limitedPartB,
+          partC: limitedPartC
+        });
+        
+        // Display warning if not enough questions were found
+        if (
+          limitedPartA.length < examConfig.parts.find(p => p.id === 'A').maxQuestions ||
+          limitedPartB.length < examConfig.parts.find(p => p.id === 'B').maxQuestions ||
+          limitedPartC.length < examConfig.parts.find(p => p.id === 'C').maxQuestions
+        ) {
+          setError("Warning: Not enough questions available in the database for some sections.");
+        }
+      } else {
+        // Fallback if exam configuration is not available
+        // Fetch some questions for each part
+        for (const partId of ['A', 'B', 'C']) {
+          const response = await axios.get('/api/endsem-questions', {
+            params: {
+              subjectCode: examDetails.subjectCode,
+              part: partId
+            }
+          });
+          
+          const availableQuestions = response.data.questions || [];
+          
+          // Add to the appropriate part
+          if (partId === 'A') {
+            partAQuestions.push(...availableQuestions.slice(0, 5)); // Limit to 5 questions for Part A
+          } else if (partId === 'B') {
+            partBQuestions.push(...availableQuestions.slice(0, 7)); // Limit to 7 questions for Part B
+          } else if (partId === 'C') {
+            partCQuestions.push(...availableQuestions.slice(0, 4)); // Limit to 4 questions for Part C
+          }
+        }
+        
+        // Update the questions state
+        setQuestions({
+          partA: partAQuestions,
+          partB: partBQuestions,
+          partC: partCQuestions
+        });
+        
+        setError("Warning: Using fallback question loading as exam configuration is not available.");
       }
-      
-      const partAQuestions = selectRandomQuestions(questionPool.partA, 5);
-      const partBQuestions = selectRandomQuestions(questionPool.partB, 7);
-      const partCQuestions = selectRandomQuestions(questionPool.partC, 4);
-      
-      setQuestions({
-        partA: partAQuestions,
-        partB: partBQuestions,
-        partC: partCQuestions
-      });
       
       setShowPaper(true);
       
@@ -362,90 +228,90 @@ const CreatePapers = () => {
         }
       }, 100);
     } catch (error) {
-      console.error('Error generating paper:', error);
-      alert('There was an error generating the question paper. Please check the console for details.');
+      console.error('Error fetching questions:', error);
+      setError(`Error fetching questions: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
   
-  // Function to replace a question with an alternative
-  const replaceQuestion = (questionId) => {
+  // Function to replace a question with another from the database
+  const replaceQuestion = async (questionId, part, unit, bloomLevel) => {
     try {
-      // Determine which part the question belongs to
-      let part;
-      let questionIndex;
+      setLoading(true);
       
-      if (questionId.startsWith('a')) {
-        part = 'partA';
-        questionIndex = questionPool.partA.findIndex(q => q.id === questionId);
-      } else if (questionId.startsWith('b')) {
-        part = 'partB';
-        questionIndex = questionPool.partB.findIndex(q => q.id === questionId);
-      } else if (questionId.startsWith('c')) {
-        part = 'partC';
-        questionIndex = questionPool.partC.findIndex(q => q.id === questionId);
-      } else if (questionId.startsWith('m')) {
-        part = 'mcq';
-        questionIndex = questionPool.mcq.findIndex(q => q.id === questionId);
-      }
+      // Get bloom level number or use bloomLevel directly if it's already a number
+      const bloomLevelNumber = typeof bloomLevel === 'number' 
+        ? bloomLevel 
+        : getBloomLevelNumber(bloomLevel);
       
-      if (questionIndex !== -1 && part && questionPool[part]) {
-        // Get the current question
-        const currentQuestion = questionPool[part][questionIndex];
-        
-        // Find an alternative question that's not currently displayed
-        const otherPossibleQuestions = questionPool[part].filter(q => 
-          !questions[part].some(displayedQ => displayedQ.id === q.id) && q.id !== questionId
-        );
-        
-        // Create a copy of the current questions
-        const updatedQuestions = { ...questions };
-        
-        if (otherPossibleQuestions.length > 0) {
-          // Select a random alternative question
-          const alternativeQuestion = otherPossibleQuestions[Math.floor(Math.random() * otherPossibleQuestions.length)];
-          
-          // Find the question to replace in the current questions array
-          const replaceIndex = updatedQuestions[part].findIndex(q => q.id === questionId);
-          
-          if (replaceIndex !== -1) {
-            // Replace the question
-            updatedQuestions[part][replaceIndex] = alternativeQuestion;
-            setQuestions(updatedQuestions);
-            
-            // Show a success message
-            // alert('Question replaced successfully!');
-          }
-        } else {
-          // If no alternative questions are available, use the alternatives within the current question
-          if (currentQuestion.alternatives && currentQuestion.alternatives.length > 0) {
-            // Find the question to update in the current questions array
-            const updateIndex = updatedQuestions[part].findIndex(q => q.id === questionId);
-            
-            if (updateIndex !== -1) {
-              // Get a random alternative text
-              const alternativeText = currentQuestion.alternatives[Math.floor(Math.random() * currentQuestion.alternatives.length)];
-              
-              // Create a modified question with the alternative text
-              const modifiedQuestion = { ...updatedQuestions[part][updateIndex], text: alternativeText };
-              
-              // Update the question
-              updatedQuestions[part][updateIndex] = modifiedQuestion;
-              setQuestions(updatedQuestions);
-              
-              // Show a success message
-              alert('Question replaced with an alternative version!');
-            }
-          } else {
-            alert('No alternative questions available for this section.');
-          }
+      // Fetch a replacement question with the same unit and bloom level
+      const response = await axios.get('/api/endsem-questions', {
+        params: {
+          subjectCode: examDetails.subjectCode,
+          part: part,
+          unit: unit.toString(),
+          bloomLevel: mapBloomLevel(bloomLevelNumber)
         }
-      } else {
-        console.error('Question not found:', questionId);
-        alert('Error: Question not found.');
+      });
+      
+      const availableQuestions = response.data.questions || [];
+      
+      // Filter out the current question
+      const filteredQuestions = availableQuestions.filter(q => q._id !== questionId);
+      
+      if (filteredQuestions.length === 0) {
+        alert("No alternative questions available for this section. Try refreshing the page or adding more questions to the database.");
+        setLoading(false);
+        return;
       }
+      
+      // Select a random replacement question
+      const replacementQuestion = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+      
+      // Create a copy of the current questions
+      const updatedQuestions = { ...questions };
+      
+      // Find the question to replace
+      let questionIndex;
+      if (part === 'A') {
+        questionIndex = updatedQuestions.partA.findIndex(q => q._id === questionId);
+        if (questionIndex !== -1) {
+          updatedQuestions.partA[questionIndex] = replacementQuestion;
+        }
+      } else if (part === 'B') {
+        questionIndex = updatedQuestions.partB.findIndex(q => q._id === questionId);
+        if (questionIndex !== -1) {
+          updatedQuestions.partB[questionIndex] = replacementQuestion;
+        }
+      } else if (part === 'C') {
+        questionIndex = updatedQuestions.partC.findIndex(q => q._id === questionId);
+        if (questionIndex !== -1) {
+          updatedQuestions.partC[questionIndex] = replacementQuestion;
+        }
+      }
+      
+      // Update questions state
+      setQuestions(updatedQuestions);
+      
     } catch (error) {
       console.error('Error replacing question:', error);
       alert('There was an error replacing the question. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Function to randomize all questions in the paper
+  const randomizeQuestions = async () => {
+    try {
+      setLoading(true);
+      await fetchQuestions(); // Refetch all questions with new randomization
+    } catch (error) {
+      console.error('Error randomizing questions:', error);
+      alert('There was an error randomizing the questions. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -555,7 +421,7 @@ const CreatePapers = () => {
       // Update the page footer to show correct page numbers
       const pageFooter = tempContainer.querySelector('.din8-page-footer');
       if (pageFooter) {
-        pageFooter.textContent = 'Page 1 of 2';
+        pageFooter.textContent = 'Page 1 of 1';
       }
       
       // Adjust margins and padding for a cleaner look
@@ -638,23 +504,121 @@ const CreatePapers = () => {
   
   // Generate a paper on first load
   useEffect(() => {
-    try {
-      generatePaper();
-    } catch (error) {
-      console.error('Error in initial paper generation:', error);
+    fetchQuestions();
+  }, [examDetails.subjectCode]); // Refetch when subject code changes
+  
+  // Add CSS for the loading spinner and error message
+  const additionalStyles = `
+    .din8-loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      width: 100%;
     }
+
+    .din8-loading-spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid #3498db;
+      width: 40px;
+      height: 40px;
+      animation: din8-spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes din8-spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .din8-loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: white;
+      font-size: 18px;
+    }
+
+    .din8-error-message {
+      background-color: #ffeeee;
+      border: 1px solid #ffaaaa;
+      border-radius: 4px;
+      padding: 10px 15px;
+      margin: 10px 0;
+      color: #d84040;
+      font-size: 14px;
+    }
+
+    .din8-no-questions {
+      padding: 10px;
+      margin: 10px 0;
+      font-style: italic;
+      color: #888;
+      text-align: center;
+      background-color: #f8f8f8;
+      border-radius: 4px;
+      border: 1px dashed #ccc;
+    }
+
+    .din8-question-image-container {
+      margin-top: 10px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .din8-question-image {
+      max-width: 100%;
+      max-height: 200px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+  `;
+  
+  // Insert additional styles
+  useEffect(() => {
+    // Create a style element
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = additionalStyles;
+    
+    // Append to the head
+    document.head.appendChild(styleElement);
+    
+    // Clean up on component unmount
+    return () => {
+      document.head.removeChild(styleElement);
+    };
   }, []);
   
-  // Get current date for the paper
-  const today = new Date();
-  const day = String(today.getDate()).padStart(2, '0');
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const year = today.getFullYear().toString().slice(-2);
+  if (loading) {
+    return (
+      <div className="din8-loading-container">
+        <div className="din8-loading-spinner"></div>
+        <p>Loading question paper...</p>
+      </div>
+    );
+  }
   
   return (
     <div className="din8-app-container">
       {/* Question Paper Generator Title */}
       <h1 className="din8-main-title">Question Paper Generator</h1>
+      
+      {error && (
+        <div className="din8-error-message">
+          {error}
+        </div>
+      )}
       
       {showPaper && (
         <div className="din8-paper-container" id="din8-paper-container">
@@ -671,10 +635,10 @@ const CreatePapers = () => {
                   />
                   <div className="din8-header-text">
                     <div className="din8-university-name">{paperDetails.university}</div>
-                    <div className="din8-course-details">{paperDetails.course}</div>
-                    <div className="din8-course-details">SEMESTER EXAMINATION: {paperDetails.examMonth}</div>
-                    <div className="din8-course-details">(Examination conducted in November 2024)</div>
-                    <div className="din8-paper-title">{paperDetails.subject}</div>
+                    <div className="din8-course-details">{examDetails.course} - {examDetails.semester} SEMESTER</div>
+                    <div className="din8-course-details">SEMESTER EXAMINATION: {examDetails.semesterExamination}</div>
+                    <div className="din8-course-details">(Examination conducted in {examDetails.examinationConducted})</div>
+                    <div className="din8-paper-title">{examDetails.subjectCode}: {examDetails.subjectName}</div>
                     <div className="din8-course-details">( For current batch students only )</div>
                   </div>
                 </div>
@@ -686,11 +650,11 @@ const CreatePapers = () => {
               </div>
               
               <div className="din8-exam-info">
-                <div>Time: {paperDetails.duration} Hours</div>
+                <div>Time: {examDetails.examTimings}</div>
                 <div>Max Marks: {paperDetails.maxMarks}</div>
               </div>
               
-              <div className="din8-course-details">This paper contains 2 printed pages and 3 parts</div>
+              <div className="din8-course-details">This paper contains 1 printed page and 3 parts</div>
               
               {/* Part A */}
               <div className="din8-part-title">PART-A</div>
@@ -700,19 +664,34 @@ const CreatePapers = () => {
               </div>
               
               <div className="din8-question-list">
-                {questions.partA.map((question, index) => (
-                  <div className="din8-question" id={question.id} key={question.id}>
-                    <span className="din8-question-number">{index + 1}.</span>
-                    <span className="din8-question-text">{question.text}</span>
-                    
-                    <button 
-                      className="din8-replace-btn" 
-                      onClick={() => replaceQuestion(question.id)}
-                    >
-                      Replace
-                    </button>
-                  </div>
-                ))}
+                {questions.partA.length > 0 ? (
+                  questions.partA.map((question, index) => (
+                    <div className="din8-question" id={question._id} key={question._id || index}>
+                      <span className="din8-question-number">{index + 1}.</span>
+                      <span className="din8-question-text">{question.question}</span>
+                      
+                      {/* Show image if available */}
+                      {question.hasImage && question.imageUrl && (
+                        <div className="din8-question-image-container">
+                          <img 
+                            src={question.imageUrl} 
+                            alt={`Image for question ${index + 1}`}
+                            className="din8-question-image"
+                          />
+                        </div>
+                      )}
+                      
+                      <button 
+                        className="din8-replace-btn" 
+                        onClick={() => replaceQuestion(question._id, 'A', question.unit, getBloomLevelNumber(question.bloomLevel))}
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="din8-no-questions">Not enough questions available for Part A</div>
+                )}
               </div>
               
               {/* Part B */}
@@ -723,19 +702,34 @@ const CreatePapers = () => {
               </div>
               
               <div className="din8-question-list">
-                {questions.partB.map((question, index) => (
-                  <div className="din8-question" id={question.id} key={question.id}>
-                    <span className="din8-question-number">{index + 6}.</span>
-                    <span className="din8-question-text">{question.text}</span>
-                    
-                    <button 
-                      className="din8-replace-btn" 
-                      onClick={() => replaceQuestion(question.id)}
-                    >
-                      Replace
-                    </button>
-                  </div>
-                ))}
+                {questions.partB.length > 0 ? (
+                  questions.partB.map((question, index) => (
+                    <div className="din8-question" id={question._id} key={question._id || index}>
+                      <span className="din8-question-number">{index + 6}.</span>
+                      <span className="din8-question-text">{question.question}</span>
+                      
+                      {/* Show image if available */}
+                      {question.hasImage && question.imageUrl && (
+                        <div className="din8-question-image-container">
+                          <img 
+                            src={question.imageUrl} 
+                            alt={`Image for question ${index + 6}`}
+                            className="din8-question-image"
+                          />
+                        </div>
+                      )}
+                      
+                      <button 
+                        className="din8-replace-btn" 
+                        onClick={() => replaceQuestion(question._id, 'B', question.unit, getBloomLevelNumber(question.bloomLevel))}
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="din8-no-questions">Not enough questions available for Part B</div>
+                )}
               </div>
               
               {/* Part C */}
@@ -746,18 +740,34 @@ const CreatePapers = () => {
               </div>
               
               <div className="din8-question-list">
-                {questions.partC.map((question, index) => (
-                  <div className="din8-question" id={question.id} key={question.id}>
-                    <span className="din8-question-number">{index + 13}.</span>
-                    <span className="din8-question-text">{question.text}</span>
-                    <button 
-                      className="din8-replace-btn" 
-                      onClick={() => replaceQuestion(question.id)}
-                    >
-                      Replace
-                    </button>
-                  </div>
-                ))}
+                {questions.partC.length > 0 ? (
+                  questions.partC.map((question, index) => (
+                    <div className="din8-question" id={question._id} key={question._id || index}>
+                      <span className="din8-question-number">{index + questions.partB.length + 6}.</span>
+                      <span className="din8-question-text">{question.question}</span>
+                      
+                      {/* Show image if available */}
+                      {question.hasImage && question.imageUrl && (
+                        <div className="din8-question-image-container">
+                          <img 
+                            src={question.imageUrl} 
+                            alt={`Image for question ${index + questions.partB.length + 6}`}
+                            className="din8-question-image"
+                          />
+                        </div>
+                      )}
+                      
+                      <button 
+                        className="din8-replace-btn" 
+                        onClick={() => replaceQuestion(question._id, 'C', question.unit, getBloomLevelNumber(question.bloomLevel))}
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="din8-no-questions">Not enough questions available for Part C</div>
+                )}
               </div>
               
               <div className="din8-page-footer">Page 1 of 1</div>
@@ -772,8 +782,8 @@ const CreatePapers = () => {
             <button className="din8-action-btn din8-download-btn" onClick={downloadPaper}>
               Download Paper
             </button>
-            <button className="din8-action-btn din8-generate-btn" onClick={generatePaper}>
-              Randomize Question
+            <button className="din8-action-btn din8-generate-btn" onClick={randomizeQuestions}>
+              Randomize Questions
             </button>
             <button className="din8-action-btn din8-approve-btn" onClick={sendForApproval}>
               Send for Approval
