@@ -1,24 +1,50 @@
-// Sidebar.js
 import { useAuth } from "../Contexts/AuthContext.js";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { FiMenu, FiX } from "react-icons/fi"; 
 import { FaUser, FaTasks, FaUsers, FaKey, FaFileAlt, FaSignOutAlt, FaCheckCircle } from "react-icons/fa"; 
 
-const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
+const Sidebar = ({ 
+  isSidebarOpen, 
+  setIsSidebarOpen, 
+  isHovered = false, 
+  setIsHovered = () => {} 
+}) => {
   const { authState, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Auto-shrink sidebar when navigating to a specific module
+  useEffect(() => {
+    // When a path changes (user navigates to a module)
+    if (location.pathname !== "/dashboard") {
+      // Shrink the sidebar
+      setIsSidebarOpen(false);
+    } else {
+      // Expand on dashboard
+      setIsSidebarOpen(true);
+    }
+  }, [location.pathname, setIsSidebarOpen]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };
 
+  // Determine sidebar width based on open state, hover state, and manual toggle
+  const getSidebarWidth = () => {
+    if (isSidebarOpen) return "w-64";  // Reduced from w-72 to w-64
+    if (isHovered) return "w-64";      // Reduced from w-72 to w-64
+    return "w-16";                     // Reduced from w-20 to w-16
+  };
+
   return (
     <aside 
       className={`h-screen bg-gradient-to-b from-gray-800 to-gray-700 text-white fixed top-0 left-0 transition-all duration-300 ease-in-out z-50 shadow-xl
-        ${isSidebarOpen ? "w-72" : "w-20"} flex flex-col overflow-hidden`}
+        ${getSidebarWidth()} flex flex-col overflow-hidden`}
+      onMouseEnter={() => !isSidebarOpen && setIsHovered(true)}
+      onMouseLeave={() => !isSidebarOpen && setIsHovered(false)}
     >
-      <div className="flex items-center justify-between p-6 border-b border-gray-600">
+      <div className="flex items-center justify-start p-[0.8rem] border-b border-gray-600">
         <button 
           className="text-gray-300 hover:text-white hover:bg-gray-700 p-2 rounded-full transition-all duration-200"
           onClick={toggleSidebar}
@@ -34,32 +60,32 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
             <NavItem 
               icon={<FaUser />} 
               label="Dashboard" 
-              isOpen={isSidebarOpen} 
+              isOpen={isSidebarOpen || isHovered} 
               onClick={() => navigate("/dashboard")} 
               isActive={location.pathname === "/dashboard"}
             />
 
             {authState.user?.role === "Teacher" && (
               <>
-                <NavItemGroup label="Paper Management" isOpen={isSidebarOpen}>
+                <NavItemGroup label="Paper Management" isOpen={isSidebarOpen || isHovered}>
                   <NavItem 
                     icon={<FaTasks />} 
                     label="Status of Paper" 
-                    isOpen={isSidebarOpen} 
+                    isOpen={isSidebarOpen || isHovered} 
                     onClick={() => navigate("/status-of-paper")} 
                     isActive={location.pathname === "/status-of-paper"}
                   />
                   <NavItem 
                     icon={<FaFileAlt />} 
                     label="My Papers" 
-                    isOpen={isSidebarOpen} 
+                    isOpen={isSidebarOpen || isHovered} 
                     onClick={() => navigate("/mypapers")} 
                     isActive={location.pathname === "/mypapers"}
                   />
                   <NavItem 
                     icon={<FaFileAlt />} 
                     label="Rejected Papers" 
-                    isOpen={isSidebarOpen} 
+                    isOpen={isSidebarOpen || isHovered} 
                     onClick={() => navigate("/rejected-papers")} 
                     isActive={location.pathname === "/rejected-papers"}
                   />
@@ -69,25 +95,25 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
 
             {(authState.user?.role === "Admin" || authState.user?.role === "SuperAdmin") && (
               <>
-                <NavItemGroup label="Administration" isOpen={isSidebarOpen}>
+                <NavItemGroup label="Administration" isOpen={isSidebarOpen || isHovered}>
                   <NavItem 
                     icon={<FaUsers />} 
                     label="Add/Remove Users" 
-                    isOpen={isSidebarOpen} 
+                    isOpen={isSidebarOpen || isHovered} 
                     onClick={() => navigate("/manage-users")} 
                     isActive={location.pathname === "/manage-users"}
                   />
                   <NavItem 
                     icon={<FaKey />} 
                     label="View Reset Requests" 
-                    isOpen={isSidebarOpen} 
+                    isOpen={isSidebarOpen || isHovered} 
                     onClick={() => navigate("/view-reset-requests")} 
                     isActive={location.pathname === "/view-reset-requests"}
                   />
                   <NavItem 
                     icon={<FaCheckCircle />} 
                     label="View Approval Papers" 
-                    isOpen={isSidebarOpen} 
+                    isOpen={isSidebarOpen || isHovered} 
                     onClick={() => navigate("/view-approval-papers")} 
                     isActive={location.pathname === "/view-approval-papers"}
                   />
@@ -104,7 +130,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
           onClick={logout}
         >
           <FaSignOutAlt className="text-red-100" />
-          {isSidebarOpen && <span className="font-medium">Logout</span>}
+          {(isSidebarOpen || isHovered) && <span className="font-medium">Logout</span>}
         </button>
       </div>
     </aside>
@@ -126,21 +152,28 @@ const NavItemGroup = ({ label, isOpen, children }) => {
 };
 
 // Enhanced nav item component
-const NavItem = ({ icon, label, isOpen, onClick, isActive }) => (
-  <li 
-    className={`flex items-center space-x-3 p-3 rounded-md cursor-pointer transition-all duration-200
-      ${isActive 
-        ? "bg-gradient-to-r from-blue-600/30 to-blue-500/20 text-blue-300 shadow-sm" 
-        : "hover:bg-gray-700/50 text-gray-300 hover:text-white"}`}
-    onClick={onClick}
-  >
-    <span className={`flex-shrink-0 ${isActive ? "text-blue-300" : ""}`}>{icon}</span>
-    {isOpen && (
-      <span className="whitespace-nowrap overflow-hidden font-medium">
-        {label}
-      </span>
-    )}
-  </li>
-);
+const NavItem = ({ icon, label, isOpen, onClick, isActive }) => {
+  const handleClick = () => {
+    // Call the provided onClick handler
+    onClick();
+  };
+
+  return (
+    <li 
+      className={`flex items-center space-x-3 p-3 rounded-md cursor-pointer transition-all duration-200
+        ${isActive 
+          ? "bg-gradient-to-r from-blue-600/30 to-blue-500/20 text-blue-300 shadow-sm" 
+          : "hover:bg-gray-700/50 text-gray-300 hover:text-white"}`}
+      onClick={handleClick}
+    >
+      <span className={`flex-shrink-0 ${isActive ? "text-blue-300" : ""}`}>{icon}</span>
+      {isOpen && (
+        <span className="whitespace-nowrap overflow-hidden font-medium">
+          {label}
+        </span>
+      )}
+    </li>
+  );
+};
 
 export default Sidebar;

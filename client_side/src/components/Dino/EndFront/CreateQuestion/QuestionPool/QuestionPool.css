@@ -9,8 +9,17 @@
     width: 90%;
     max-width: 1200px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    overflow-y: auto;
-    max-height: 90vh;
+}
+
+/* Page Header */
+.din3-question-pool-container h1 {
+    text-align: left;
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    width: fit-content;
 }
 
 /* Header Section */
@@ -151,13 +160,11 @@
     transform: scale(1.2);
 }
 
-/* Expanded Content */
 .din3-expanded-content {
-    background: #f9f9f9;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 8px;
-    border-left: 3px solid #007bff;
+    margin-top: 12px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
 }
 
 /* MCQ Options */
@@ -177,40 +184,38 @@
 }
 
 /* MCQ Image Options */
+.din3-mcq-options {
+    list-style-type: disc;
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
 .din3-mcq-image-options {
     display: flex;
+    flex-wrap: wrap;
     gap: 15px;
-    justify-content: center;
-    margin-top: 10px;
+    margin: 10px 0;
 }
 
 .din3-mcq-image-option {
-    text-align: center;
-    cursor: pointer;
-    transition: transform 0.3s;
+    max-width: 200px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 8px;
 }
 
 .din3-mcq-image-option img {
-    width: 80px;
-    height: 80px;
-    border-radius: 10px;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+    max-width: 100%;
+    border-radius: 4px;
 }
-
-.din3-mcq-image-option p {
-    margin-top: 5px;
-    font-weight: bold;
-}
-
 /* Question Images */
 .din3-question-image {
-    width: 100%;
-    max-width: 280px;
-    height: auto;
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 6px;
+    margin-top: 10px;
     display: block;
-    margin: 10px auto;
-    border-radius: 10px;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 /* Scrollbar */

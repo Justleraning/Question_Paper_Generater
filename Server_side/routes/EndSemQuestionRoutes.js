@@ -3,7 +3,7 @@ const router = express.Router();
 const EndSemQuestionController = require('../controllers/EndSemQuestionController');
 const Upload = require('../middlewares/MulterUpload');
 
-// GET all questions
+// GET questions by subject and part
 router.get(
   '/', 
   EndSemQuestionController.getQuestionsBySubjectAndPart
@@ -33,6 +33,12 @@ router.delete(
 router.post(
   '/generate-paper',
   EndSemQuestionController.generateQuestionPaper
+);
+
+// GET image for a specific question
+router.get(
+  '/questions/:id/image',
+  EndSemQuestionController.getQuestionImage
 );
 
 module.exports = router;

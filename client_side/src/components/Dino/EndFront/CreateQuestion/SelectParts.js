@@ -33,7 +33,7 @@ function SelectParts() {
     // Extract just the letter from "Part X"
     const partLetter = part.replace("Part ", "");
     
-    // Pass the selected subject code and part to the next page
+    // Pass the selected subject code and part to QuestionPool.js as originally intended
     navigate(`/question-pool?subjectCode=${encodeURIComponent(selectedSubjectCode)}&part=${partLetter}`);
   };
 
@@ -48,7 +48,7 @@ function SelectParts() {
           onChange={handleSubjectChange}
           value={selectedSubjectCode}
         >
-          <option value="" disabled selected>Select Subject Code</option>
+          <option value="" disabled>Select Subject Code</option>
           {subjectOptions.map((subject, index) => (
             <option key={index} value={subject.code}>
               {subject.code}
