@@ -1,106 +1,101 @@
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
 const path = require("path");
-const errorHandler = require("./middlewares/errorHandler");
+const errorHandler = require("./middlewares/errorHandler"); // Unified Error Handler
 
 // Initialize Express App
 const app = express();
 
-// Middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ 
-  extended: true, 
-  limit: '10mb' 
+// CORS Configuration
+app.use(cors({
+  origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
 }));
 
-// Request logging middleware
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Log Incoming Requests
 app.use((req, res, next) => {
-  console.log(`🔍 ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  console.log(`🔍 Incoming Request: ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// Database Connection
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("✅ Connected to MongoDB successfully");
-  } catch (error) {
-    console.error("❌ MongoDB Connection Error:", error);
-    process.exit(1);
-  }
-};
-
-connectDB();
-
-// Additional Mongoose Configuration
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("✅ Connected to MongoDB"))
+.catch(err => {
+  console.error("❌ MongoDB Connection Error:", err);
+  process.exit(1);
 });
 
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
+// Define Question Paper Schema
+const questionSchema = new mongoose.Schema({
+  semester: String,
+  subject: String,
+  units: [String],
+  questions: [
+    {
+      text: String,
+      marks: Number,
+      image: String, 
+      unit: String,
+    },
+  ],
 });
+
+const QuestionPaper = mongoose.model("QuestionPaper", questionSchema);
 
 // Import Routes
-const routes = {
-  auth: require("./routes/authRoutes"),
-  users: require("./routes/userRoutes"),
-  questions: require("./routes/questionRoutes"),
-  papers: require("./routes/paperRoutes"),
-  courses: require("./routes/CourseRoutes"),
-  subjects: require("./routes/subjectRoutes"),
-  units: require("./routes/unitRoutes"),
-  questionsIsaac: require("./routes/questionRoutes_Isaac"),
-  randomization: require("./routes/randomizationRoutes"),
-  endSemQuestions: require("./routes/EndSemQuestionRoutes")
-};
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const questionRoutes = require("./routes/questionRoutes");
+const paperRoutes = require("./routes/paperRoutes");
+const courseRoutes = require("./routes/CourseRoutes");
+const subjectRoutes = require("./routes/subjectRoutes");
+const unitRoutes = require("./routes/unitRoutes");
+const questionRoutesIsaac = require("./routes/questionRoutes_Isaac");
+const randomizationRoutes = require("./routes/randomizationRoutes");
+const endSemQuestionRoutes = require("./routes/EndSemQuestionRoutes"); // Add EndSem Question Routes
 
 // Route Handlers
-Object.entries(routes).forEach(([name, route]) => {
-  app.use(`/api/${name}`, route);
-  console.log(`📍 Registered route: /api/${name}`);
-});
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/questions", questionRoutes);
+app.use("/api/questions-isaac", questionRoutesIsaac);
+app.use("/api/papers", paperRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/subjects", subjectRoutes);
+app.use("/api/units", unitRoutes);
+app.use("/api/randomize", randomizationRoutes);
+app.use("/api/endsem-questions", endSemQuestionRoutes); // Add EndSem Question Routes
+
+// Existing routes remain the same...
+// (All the previous routes for QuestionPaper remain unchanged)
 
 // Error handling middleware
 app.use(errorHandler);
 
-// Production Frontend Serving
+// Serve Frontend in Production Mode
 if (process.env.NODE_ENV === "production") {
+  console.log("🚀 Serving Frontend in Production Mode...");
   const frontendPath = path.join(__dirname, "../frontend/build");
   app.use(express.static(frontendPath));
   
+  // Serve React `index.html` for any unknown route
   app.get("*", (req, res) => {
     res.sendFile(path.join(frontendPath, "index.html"));
   });
 }
 
-// Graceful Shutdown
-const shutdown = () => {
-  console.log('Received kill signal, shutting down gracefully');
-  mongoose.connection.close(false, () => {
-    console.log('MongoDB connection closed');
-    process.exit(0);
-  });
-};
-
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
-
 // Start Server
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  server.close(() => process.exit(1));
-});
-
-module.exports = app;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
