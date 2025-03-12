@@ -8,12 +8,9 @@ const errorHandler = require("./middlewares/errorHandler"); // Unified Error Han
 // Initialize Express App
 const app = express();
 
+// CORS Configuration
 app.use(cors({
-  origin: [
-    "http://localhost:3000", 
-    "https://question-paper-generator-i5zc.onrender.com",
-    "https://767d18f6--gilded-sherbet-4ee672.netlify.app"
-  ],
+  origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
