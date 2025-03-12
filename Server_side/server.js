@@ -3,99 +3,142 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
-const errorHandler = require("./middlewares/errorHandler"); // Unified Error Handler
+const helmet = require("helmet"); // Added for security
+const compression = require("compression"); // Added for performance
+const errorHandler = require("./middlewares/errorHandler");
 
 // Initialize Express App
 const app = express();
 
-// CORS Configuration
-app.use(cors({
-  origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true
-}));
+// Enhanced CORS Configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      "http://localhost:3000", 
+      "http://127.0.0.1:3000", 
+      "https://your-production-domain.com" // Add your production domain
+    ];
+
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: [
+    "Content-Type", 
+    "Authorization", 
+    "Access-Control-Allow-Methods",
+    "Access-Control-Allow-Origin",
+    "Access-Control-Allow-Headers"
+  ],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
 
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors(corsOptions)); // Apply CORS first
+app.use(helmet()); // Add security headers
+app.use(compression()); // Compress responses
 
-// Log Incoming Requests
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '10mb' 
+}));
+
+// Request logging middleware
 app.use((req, res, next) => {
-  console.log(`🔍 Incoming Request: ${req.method} ${req.originalUrl}`);
+  console.log(`🔍 ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-   useUnifiedTopology: true,
-})
-.then(() => console.log("✅ Connected to MongoDB"))
-.catch(err => {
-  console.error("❌ MongoDB Connection Error:", err);
-  process.exit(1);
+// Database Connection
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("✅ Connected to MongoDB successfully");
+  } catch (error) {
+    console.error("❌ MongoDB Connection Error:", error);
+    process.exit(1);
+  }
+};
+
+connectDB();
+
+// Additional Mongoose Configuration
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
 });
 
-// Define Question Paper Schema
-const questionSchema = new mongoose.Schema({
-  semester: String,
-  subject: String,
-  units: [String],
-  questions: [
-    {
-      text: String,
-      marks: Number,
-      image: String, 
-      unit: String,
-    },
-  ],
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
 });
-
-const QuestionPaper = mongoose.model("QuestionPaper", questionSchema);
 
 // Import Routes
-const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
-const questionRoutes = require("./routes/questionRoutes");
-const paperRoutes = require("./routes/paperRoutes");
-const courseRoutes = require("./routes/CourseRoutes");
-const subjectRoutes = require("./routes/subjectRoutes");
-const unitRoutes = require("./routes/unitRoutes");
-const questionRoutesIsaac = require("./routes/questionRoutes_Isaac");
-const randomizationRoutes = require("./routes/randomizationRoutes");
-const endSemQuestionRoutes = require("./routes/EndSemQuestionRoutes"); // Add EndSem Question Routes
+const routes = {
+  auth: require("./routes/authRoutes"),
+  users: require("./routes/userRoutes"),
+  questions: require("./routes/questionRoutes"),
+  papers: require("./routes/paperRoutes"),
+  courses: require("./routes/CourseRoutes"),
+  subjects: require("./routes/subjectRoutes"),
+  units: require("./routes/unitRoutes"),
+  questionsIsaac: require("./routes/questionRoutes_Isaac"),
+  randomization: require("./routes/randomizationRoutes"),
+  endSemQuestions: require("./routes/EndSemQuestionRoutes")
+};
 
 // Route Handlers
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/questions", questionRoutes);
-app.use("/api/questions-isaac", questionRoutesIsaac);
-app.use("/api/papers", paperRoutes);
-app.use("/api/courses", courseRoutes);
-app.use("/api/subjects", subjectRoutes);
-app.use("/api/units", unitRoutes);
-app.use("/api/randomize", randomizationRoutes);
-app.use("/api/endsem-questions", endSemQuestionRoutes); // Add EndSem Question Routes
+Object.entries(routes).forEach(([name, route]) => {
+  app.use(`/api/${name}`, route);
+  console.log(`📍 Registered route: /api/${name}`);
+});
 
-// Existing routes remain the same...
-// (All the previous routes for QuestionPaper remain unchanged)
+// Fallback OPTIONS handler
+app.options('*', cors(corsOptions));
 
 // Error handling middleware
 app.use(errorHandler);
 
-// Serve Frontend in Production Mode
+// Production Frontend Serving
 if (process.env.NODE_ENV === "production") {
-  console.log("🚀 Serving Frontend in Production Mode...");
   const frontendPath = path.join(__dirname, "../frontend/build");
   app.use(express.static(frontendPath));
   
-  // Serve React `index.html` for any unknown route
   app.get("*", (req, res) => {
     res.sendFile(path.join(frontendPath, "index.html"));
   });
 }
 
+// Graceful Shutdown
+const shutdown = () => {
+  console.log('Received kill signal, shutting down gracefully');
+  mongoose.connection.close(false, () => {
+    console.log('MongoDB connection closed');
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
 // Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  server.close(() => process.exit(1));
+});
+
+module.exports = app;
