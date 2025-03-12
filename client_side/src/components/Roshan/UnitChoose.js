@@ -37,7 +37,7 @@ const UnitChoose = () => {
         alignItems: "center",
         height: "100vh",
         fontFamily: "Arial, sans-serif",
-        background: "none",
+        background: "#a247cc",
       },
       textWrapper: {
         textAlign: "center",
@@ -46,35 +46,36 @@ const UnitChoose = () => {
       gradientText: {
         fontSize: "25px",
         fontWeight: "bold",
-        background: "linear-gradient(to right, rgb(203, 36, 36), rgb(209, 91, 23))",
+        background: "linear-gradient(to right, #e10c0c, rgb(115, 48, 9))",
         WebkitBackgroundClip: "text",
         WebkitTextFillColor: "transparent",
       },
-    container: { padding: '20px', marginTop:"45px", borderRadius:'20px', textAlign: 'center', background: "linear-gradient(to right,rgb(218, 225, 232),rgb(208, 222, 222))"},
+    container: { padding: '20px', marginTop:"45px", borderRadius:'20px', textAlign: 'center', boxShadow:'4px 4px 4px 6px rgba(0, 0, 0, 0.1)', background: "linear-gradient(to right,rgb(218, 225, 232),rgb(208, 222, 222))"},
     subject: { fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' },
     label: { display: 'block', margin: '15px 0', fontWeight: 'bold' },
-    button: {
-      padding: '10px 30px',
-      marginTop: '20px',
-      backgroundColor: '#4CAF50',
-      color: 'white',
-      fontSize: '17px',
-      border: 'none',
-      margin: '15px',
-      borderRadius: '20px',
-      cursor: 'pointer',
+    baseButton: {
+      padding: "9px 8px",
+      fontSize: "18px",
+      letterSpacing: "0.5px",
+      border: "none",
+      borderRadius: "8px",
+      cursor: "pointer",
+      transition: "all 0.25s ease",
+      position: "relative",
+      marginTop: "22px",
+      overflow: "hidden",
+      boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+      minWidth: "120px",
+      textAlign: "center",
     },
-    backButton: {
-      padding: '10px 30px',
-      marginTop: '20px',
-      backgroundColor: '#007bff',
-      color: 'white',
-      border: 'none',
-      fontSize: '17px',
-      margin: '15px',
-      borderRadius: '20px',
-      cursor: 'pointer',
-      marginRight: '10px',
+    nextbutton: {
+      backgroundColor: "#1dce6c",
+      border: "2px solid transparent",
+      flex: "1",
+    },
+    backbutton: {
+      backgroundColor: "#3c8ec8",
+      border: "2px solid transparent",
     },
     unitButton: {
       display: 'inline-block',
@@ -84,6 +85,8 @@ const UnitChoose = () => {
       borderRadius: '5px',
       cursor: 'pointer',
       backgroundColor: '#f0f0f0',
+      transition: "all 0.20s ease",
+      position: "relative"
     },
     selectedUnit: {
       backgroundColor: '#8854E8',
@@ -107,19 +110,49 @@ const UnitChoose = () => {
               ...styles.unitButton,
               ...(selectedUnits.includes(unit) ? styles.selectedUnit : {}),
             }}
-            onClick={() => handleSelection(unit)}
+            onMouseOver={(e) => {
+              e.target.style.transform = "translateY(0)";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.transform = "translateY(3px)";
+          }}
+          onClick={(e) => {handleSelection(unit)}}
           >
             Unit {unit}
           </div>
         ))}
       </div>
       <div>
-        <button style={styles.backButton} onClick={handleBack} onMouseOver={(e) => (e.target.style.color = "rgb(15, 20, 72)")} onMouseOut={(e) => (e.target.style.color = "rgb(241, 243, 244)")}>
-          Back
-        </button>
-        <button style={styles.button} onClick={handleSubmit} onMouseOver={(e) => (e.target.style.color = "rgb(8, 73, 18)")} onMouseOut={(e) => (e.target.style.color = "rgb(223, 231, 223)")}>
-          Next
-        </button>
+      <button 
+        style={{...styles.baseButton, ...styles.backbutton}}
+        className="backbutton" 
+        onClick={handleBack}
+        onMouseOver={(e) => {
+          e.target.style.transform = "translateX(-7px)";
+          e.target.style.boxShadow = "0 7px 14px rgba(0, 0, 0, 0.15)";
+        }}
+        onMouseOut={(e) => {
+          e.target.style.transform = "translateX(0)";
+          e.target.style.boxShadow = "0 4px 6px rgba(0, 0, 0, 0.1)";
+        }}
+      >
+        &#129136; Back
+      </button>
+      <button 
+        style={{...styles.baseButton, ...styles.nextbutton,  marginLeft: "30px"}}
+        className="nextbutton"
+        onClick={handleSubmit}
+        onMouseOver={(e) => {
+          e.target.style.transform = "translateX(7px)";
+          e.target.style.boxShadow = "0 7px 14px rgba(0, 0, 0, 0.15)";
+        }}
+        onMouseOut={(e) => {
+          e.target.style.transform = "translateX(0)";
+          e.target.style.boxShadow = "0 4px 6px rgba(0, 0, 0, 0.1)";
+        }}
+      >
+        Next &#129138;
+      </button>
       </div>
     </div>
     </div>

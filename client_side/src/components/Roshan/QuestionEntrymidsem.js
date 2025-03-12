@@ -67,10 +67,10 @@ const QuestionEntry = () => {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily:"sans-serif", background: "none", padding: "20px" }}>
+    <div style={{ display: "block", minHeight: "100vh", fontFamily:"sans-serif", background: "lightgray", padding: "25px" }}>
 
       <div style={{ flexGrow: 1, padding: "20px", textAlign: "center" }}>
-        <div style={{ marginBottom: "20px", border: "1px dotted black", backgroundColor: "white", padding: "10px" }}>
+        <div style={{ marginBottom: "20px", border: "1px dotted black", backgroundColor: "white", boxShadow: '4px 4px 8px 6px rgba(0, 0, 0, 0.1)', padding: "10px" }}>
           <h2 style={{ color: "black" }}>BCA - {semester}</h2>
           <h3 style={{ color: "black" }}>{selectedSubject}</h3>
         </div>
@@ -79,7 +79,7 @@ const QuestionEntry = () => {
         <h4 style={{ textAlign: "center", marginBottom:"20px", color: "black" }}>(Minimum 19 questions)</h4>
 
         {selectedUnits.map((unit) => (
-          <div key={unit} style={{ width: "60%", margin: "20px auto", padding: "20px", border: "2px solid #ddd", borderRadius: "10px", backgroundColor: "#f9f9f9", textAlign: "center" }}>
+          <div key={unit} style={{ width: "55%", margin: "20px auto", padding: "20px", border: "2px solid #ddd", borderRadius: "10px", boxShadow: '4px 4px 8px 6px rgba(0, 0, 0, 0.1)', backgroundColor: "#f8f7f7", textAlign: "center" }}>
             <h3 style={{ color: "#333" }}>Unit {unit}</h3>
 
             {/* Ensure at least one question input box is rendered */}
@@ -95,11 +95,13 @@ const QuestionEntry = () => {
                       width: "100%",
                       minHeight: "100px",
                       padding: "10px",
+                      background: "#ebe9e9",
                       borderRadius: "5px",
+                      boxSizing: "border-box",
                       border: "1px solid #ddd",
                       resize: "vertical",
                       fontFamily: "sans-serif",
-                      fontSize: "14px"
+                      fontSize: "16px"
                     }}
                     placeholder="Enter your question here..."
                   />
@@ -142,32 +144,6 @@ const QuestionEntry = () => {
                     )}
                   </div>
                 )}
-
-                {/* Delete Question Button */}
-                <button
-                  onClick={() => {
-                    if (questionData[unit].length > 1) {
-                      setQuestionData((prev) => ({
-                        ...prev,
-                        [unit]: prev[unit].filter((_, i) => i !== index),
-                      }));
-                    } else {
-                      alert("You must have at least one question per unit.");
-                    }
-                  }}
-                  style={{
-                    marginTop: "10px",
-                    padding: "5px 10px",
-                    backgroundColor: "#dc3545",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "5px",
-                    cursor: "pointer",
-                    alignSelf: "flex-end",
-                  }}
-                >
-                  Delete
-                </button>
               </div>
             )) : (
               // If no questions exist, force add one input
@@ -196,13 +172,19 @@ const QuestionEntry = () => {
               onClick={() => addQuestion(unit)}
               style={{
                 padding: "10px 15px",
-                borderRadius: "50%",
-                backgroundColor: "teal",
+                borderRadius: "80%",
+                backgroundColor: "green",
                 color: "white",
                 border: "none",
                 cursor: "pointer",
                 fontSize: "20px",
                 marginTop: "10px",
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = "#2ba229";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = "green";
               }}
             >
               +
@@ -222,6 +204,17 @@ const QuestionEntry = () => {
             borderRadius: "5px",
             cursor: "pointer",
             fontSize: "16px",
+            transition: "all 0.25s ease",
+            position: "relative",
+            overflow: "hidden",
+          }}
+          onMouseOver={(e) => {
+            e.target.style.transform = "translateX(3px)";
+            e.target.style.backgroundColor = "#2a2096";
+          }}
+          onMouseOut={(e) => {
+            e.target.style.transform = "translateX(-1.2px)";
+            e.target.style.backgroundColor = "#3c2dde";
           }}
         >
           Confirm & Preview &#129094;

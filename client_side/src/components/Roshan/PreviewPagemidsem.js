@@ -113,405 +113,413 @@ const PreviewPage = () => {
       flexGrow: 1, 
       padding: '20px', 
       textAlign: 'center', 
-      fontFamily:'verdana',  
-      background: "none",
-      minHeight: '100vh'
-    }}>
-      <h2 style={{ 
-        marginBottom: '20px', 
-        color: 'black', 
-        fontFamily:'verdana',
-        fontSize: '26px',
-        fontWeight: 'bold',
-        textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
-      }}>Preview Questions</h2>
-
-      <div style={{
-        backgroundColor: 'white',
-        padding: '15px',
-        borderRadius: '8px',
-        marginBottom: '20px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+      fontFamily:'sans-serif',  
+      background: "linear-gradient( #091979, #0059ff)",
+        minHeight: '100vh'
       }}>
-        <h3 style={{ 
-          color: '#333', 
-          margin: '0 0 5px 0',
-          fontSize: '18px'
-        }}>BCA - {semester}</h3>
-        <h4 style={{ 
-          color: '#555', 
-          margin: '0',
-          fontSize: '16px'
-        }}>{selectedSubject}</h4>
-      </div>
+        <h2 style={{ 
+          marginBottom: '20px', 
+          color: 'white', 
+          fontFamily:'verdana',
+          fontSize: '26px',
+          fontWeight: 'bold',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
+        }}>Preview Questions</h2>
 
-      {Object.entries(questionsData).map(([unit, questions]) => (
-        <div key={unit} style={{ 
-          marginBottom: '30px', 
-          padding: '20px', 
-          border: '2px solid #ddd', 
-          borderRadius: '10px', 
-          backgroundColor: '#f9f9f9', 
-          textAlign: 'center',
-          boxShadow: '0 3px 6px rgba(0,0,0,0.1)'
+        <div style={{
+          backgroundColor: 'white',
+          padding: '15px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
         }}>
           <h3 style={{ 
             color: '#333', 
-            textAlign: 'center',
-            borderBottom: '1px solid #ddd',
-            paddingBottom: '8px',
-            marginBottom: '15px',
+            margin: '0 0 5px 0',
             fontSize: '20px'
-          }}>Unit {unit}</h3>
+          }}>BCA - {semester}</h3>
+          <h4 style={{ 
+            color: '#444', 
+            margin: '0',
+            fontSize: '18px'
+          }}>{selectedSubject}</h4>
+        </div>
 
-          {/* Part A - 2 Marks Questions */}
-          <div style={{ marginBottom: '15px' }}>
-            <h4 style={{ 
-              color: '#d9534f', 
-              textAlign: 'center', 
-              fontSize: '15px', 
-              fontWeight:'bold',
-              backgroundColor: '#f8f9fa',
-              padding: '8px',
-              borderRadius: '5px',
-              marginBottom: '10px'
-            }}>Part A - 2 Marks Questions</h4>
-            
-            {questions
-              .filter(q => q.marks === '2')
-              .map((q, index) => {
-                // Get the actual question number for this mark category
-                const questionIndex = questionsData[unit].findIndex(question => question === q);
-                const questionNumber = getQuestionNumber(unit, questionIndex, '2');
-                
-                return (
-                  <div key={index} style={{ 
-                    padding: '10px', 
-                    borderBottom: '1px solid #ddd', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '10px',
-                    textAlign: 'left'
-                  }}>
-                    {isEditing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                        <textarea
-                          value={q.text}
-                          onChange={(e) => handleQuestionChange(unit, questionIndex, e.target.value)}
-                          style={{ 
-                            flex: 1, 
-                            padding: '8px', 
-                            border: '1px solid #ccc', 
-                            borderRadius: '5px',
-                            marginBottom: '5px',
-                            fontSize: '14px',
-                            minHeight: '60px',
-                            resize: 'vertical'
-                          }}
-                        />
-                        
-                        {/* Delete button if in edit mode */}
-                        <button 
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to delete this question?")) {
-                              setQuestionsData(prev => ({
-                                ...prev,
-                                [unit]: prev[unit].filter((_, i) => i !== questionIndex)
-                              }));
-                            }
-                          }}
-                          style={{
-                            alignSelf: 'flex-end',
-                            padding: '3px 8px',
-                            backgroundColor: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{
-                        margin: '0',
-                        fontSize: '14px',
-                        width: '100%'
-                      }}>
-                        <strong>Q{questionNumber}:</strong>{' '}
-                        {q.text}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+        {Object.entries(questionsData).map(([unit, questions]) => (
+          <div key={unit} style={{ 
+            marginBottom: '30px', 
+            padding: '20px', 
+            border: '2px solid #ddd', 
+            borderRadius: '10px', 
+            backgroundColor: '#f9f9f9', 
+            textAlign: 'center',
+            boxShadow: '0 3px 6px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ 
+              color: '#333', 
+              textAlign: 'center',
+              borderBottom: '1px solid #ddd',
+              paddingBottom: '8px',
+              marginBottom: '15px',
+              fontSize: '20px'
+            }}>Unit {unit}</h3>
+
+            {/* Part A - 2 Marks Questions */}
+            <div style={{ marginBottom: '15px' }}>
+              <h4 style={{ 
+                color: '#d9534f', 
+                textAlign: 'center', 
+                fontSize: '15px', 
+                fontWeight:'bold',
+                backgroundColor: '#f8f9fa',
+                padding: '8px',
+                borderRadius: '5px',
+                marginBottom: '10px'
+              }}>Part A - 2 Marks Questions</h4>
               
-            {isEditing && (
-              <button 
-                onClick={() => handleAddQuestion(unit, '2')} 
-                style={{ 
-                  marginTop: '10px', 
-                  padding: '5px 10px', 
-                  backgroundColor: '#28a745', 
-                  color: 'white', 
-                  fontSize:'14px',
-                  border: 'none',
-                  borderRadius: '5px', 
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                }}
-              >
-                ➕ Add 2 Mark Question
-              </button>
-            )}
-          </div>
-
-          {/* Part B - 4 Marks Questions */}
-          <div style={{ marginTop: '25px' }}>
-            <h4 style={{ 
-              color: '#0275d8', 
-              textAlign: 'center', 
-              fontSize:'15px', 
-              fontWeight:'bold',
-              backgroundColor: '#f8f9fa',
-              padding: '8px',
-              borderRadius: '5px',
-              marginBottom: '10px'
-            }}>Part B - 4 Marks Questions</h4>
-            
-            {questions
-              .filter(q => q.marks === '4')
-              .map((q, index) => {
-                // Get the actual question number for this mark category
-                const questionIndex = questionsData[unit].findIndex(question => question === q);
-                const questionNumber = getQuestionNumber(unit, questionIndex, '4');
-                
-                return (
-                  <div key={index} style={{ 
-                    padding: '10px', 
-                    borderBottom: '1px solid #ddd', 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '10px',
-                    textAlign: 'left'
-                  }}>
-                    {isEditing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                        <textarea
-                          value={q.text}
-                          onChange={(e) => handleQuestionChange(unit, questionIndex, e.target.value)}
-                          style={{ 
-                            flex: 1, 
-                            padding: '8px', 
-                            border: '1px solid #ccc', 
-                            borderRadius: '5px',
-                            marginBottom: '5px',
-                            fontSize: '14px',
-                            minHeight: '80px',
-                            resize: 'vertical'
-                          }}
-                        />
-                        
-                        {/* Image upload for 4-mark questions */}
-                        <div style={{ marginTop: '5px', marginBottom: '5px' }}>
+              {questions
+                .filter(q => q.marks === '2')
+                .map((q, index) => {
+                  // Get the actual question number for this mark category
+                  const questionIndex = questionsData[unit].findIndex(question => question === q);
+                  const questionNumber = getQuestionNumber(unit, questionIndex, '2');
+                  
+                  return (
+                    <div key={index} style={{ 
+                      padding: '10px', 
+                      borderBottom: '1px solid #ddd', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px',
+                      textAlign: 'left'
+                    }}>
+                      {isEditing ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                           <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageChange(unit, questionIndex, e.target.files[0])}
+                            value={typeof q.text === 'string' && !q.text.startsWith('<') ? q.text : ''}
+                            onChange={(e) => handleQuestionChange(unit, questionIndex, e.target.value)}
                             style={{ 
-                              display: 'block',
+                              flex: 1,
+                              width: "95%",
+                              padding: '8px', 
+                              border: '1px solid #ccc', 
+                              borderRadius: '5px',
                               marginBottom: '5px',
                               fontSize: '14px'
                             }}
                           />
+                          
+                          {/* Delete button if in edit mode */}
+                          <button 
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to delete this question?")) {
+                                setQuestionsData(prev => ({
+                                  ...prev,
+                                  [unit]: prev[unit].filter((_, i) => i !== questionIndex)
+                                }));
+                              }
+                            }}
+                            style={{
+                              alignSelf: 'flex-end',
+                              padding: '3px 8px',
+                              backgroundColor: "#dc3545",
+                              color: "white",
+                              display: 'flex',
+                              fontSize: '18px',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              borderRadius: "30%",
+                            }}
+                          >
+                          &#10799;
+                          </button>
                         </div>
-                        
-                        {/* Delete button if in edit mode */}
-                        <button 
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to delete this question?")) {
-                              setQuestionsData(prev => ({
-                                ...prev,
-                                [unit]: prev[unit].filter((_, i) => i !== questionIndex)
-                              }));
-                            }
-                          }}
-                          style={{
-                            alignSelf: 'flex-end',
-                            padding: '3px 8px',
-                            backgroundColor: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ) : (
-                      <>
+                      ) : (
                         <div style={{
+                          fontWeight: format.bold ? "bold" : "normal",
+                          fontStyle: format.italic ? "italic" : "normal",
+                          textDecoration: format.underline ? "underline" : "none",
                           margin: '0',
                           fontSize: '14px',
                           width: '100%'
                         }}>
-                          <strong>Q{questionNumber}:</strong>{' '}
-                          {q.text}
+                          <strong style={{fontSize: '15px'}}>Q{questionNumber}:</strong>{' '}
+                          <span dangerouslySetInnerHTML={{ __html: q.text }} />
                         </div>
-                        
-                        {q.image && (
-                          <img 
-                            src={q.image} 
-                            alt="Question diagram" 
-                            style={{ 
-                              maxWidth: '200px', 
-                              maxHeight: '150px', 
-                              border: '1px solid #ddd',
-                              borderRadius: '4px',
-                              margin: '5px 0'
-                            }} 
-                          />
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                      )}
+                    </div>
+                  );
+                })}
+                
+              {isEditing && (
+                <button 
+                  onClick={() => handleAddQuestion(unit, '2')} 
+                  style={{ 
+                    marginTop: '10px', 
+                    padding: '8px 10px', 
+                    backgroundColor: '#28a745', 
+                    color: 'white', 
+                    fontSize:'15px',
+                    border: 'none',
+                    borderRadius: '15px', 
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  + Add 2 Mark Question
+                </button>
+              )}
+            </div>
+
+            {/* Part B - 4 Marks Questions */}
+            <div style={{ marginTop: '25px' }}>
+              <h4 style={{ 
+                color: '#0275d8', 
+                textAlign: 'center', 
+                fontSize: '15px', 
+                fontWeight: 'bold',
+                backgroundColor: '#f8f9fa',
+                padding: '8px',
+                borderRadius: '5px',
+                marginBottom: '10px'
+              }}>Part B - 4 Marks Questions</h4>
               
-            {isEditing && (
+              {questions
+                .filter(q => q.marks === '4')
+                .map((q, index) => {
+                  // Get the actual question number for this mark category
+                  const questionIndex = questionsData[unit].findIndex(question => question === q);
+                  const questionNumber = getQuestionNumber(unit, questionIndex, '4');
+                  
+                  return (
+                    <div key={index} style={{ 
+                      padding: '10px', 
+                      borderBottom: '1px solid #ddd', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      textAlign: 'left'
+                    }}>
+                      {isEditing ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                          <input
+                            value={typeof q.text === 'string' && !q.text.startsWith('<') ? q.text : ''}
+                            onChange={(e) => handleQuestionChange(unit, questionIndex, e.target.value)}
+                            style={{ 
+                              flex: 1, 
+                              width: "95%",
+                              padding: '8px', 
+                              border: '1px solid #ccc', 
+                              borderRadius: '5px',
+                              marginBottom: '5px',
+                              fontSize: '15px'
+                            }}
+                          />
+                          
+                          {/* Image upload for 4-mark questions */}
+                          <div style={{ marginTop: '5px', marginBottom: '5px' }}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleImageChange(unit, questionIndex, e.target.files[0])}
+                              style={{ 
+                                display: 'block',
+                                marginBottom: '5px',
+                                fontSize: '14px'
+                              }}
+                            />
+                          </div>
+                          
+                          {/* Delete button if in edit mode */}
+                          <button 
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to delete this question?")) {
+                                setQuestionsData(prev => ({
+                                  ...prev,
+                                  [unit]: prev[unit].filter((_, i) => i !== questionIndex)
+                                }));
+                              }
+                            }}
+                            style={{
+                              alignSelf: 'flex-end',
+                              padding: '3px 8px',
+                              backgroundColor: "#dc3545",
+                              color: "white",
+                              display: 'flex',
+                              fontSize: '18px',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              borderRadius: "30%",
+                            }}
+                          >
+                          &#10799;
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{
+                            fontWeight: format.bold ? "bold" : "normal",
+                            fontStyle: format.italic ? "italic" : "normal",
+                            textDecoration: format.underline ? "underline" : "none",
+                            margin: '0',
+                            fontSize: '14px',
+                            width: '100%'
+                          }}>
+                            <strong style={{fontSize: '15px'}}>Q{questionNumber}:</strong>{' '}
+                            <span dangerouslySetInnerHTML={{ __html: q.text }} />
+                          </div>
+                          
+                          {q.image && (
+                            <img 
+                              src={q.image} 
+                              alt="Question diagram" 
+                              style={{ 
+                                maxWidth: '200px', 
+                                maxHeight: '150px', 
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                margin: '5px 0'
+                              }} 
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+                
+              {isEditing && (
+                <button 
+                  onClick={() => handleAddQuestion(unit, '4')} 
+                  style={{ 
+                    marginTop: '10px', 
+                    padding: '8px 10px', 
+                    backgroundColor: '#ff5733', 
+                    color: 'white', 
+                    fontSize: '15px', 
+                    border: 'none',
+                    borderRadius: '15px', 
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  + Add 4 Mark Question
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <div style={{ marginBottom: '30px' }}>
+          {isEditing ? (
+            <>
               <button 
-                onClick={() => handleAddQuestion(unit, '4')} 
+                onClick={handleCancel} 
                 style={{ 
-                  marginTop: '10px', 
-                  padding: '5px 10px', 
-                  backgroundColor: '#ff5733', 
+                  padding: '10px 15px', 
+                  backgroundColor: '#d9534f', 
                   color: 'white', 
-                  fontSize:'14px', 
-                  border: 'none',
                   borderRadius: '5px', 
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                  fontSize:'16px', 
+                  border: 'none',
+                  cursor: 'pointer', 
+                  marginRight: '10px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}
               >
-                ➕ Add 4 Mark Question
+                Cancel
               </button>
-            )}
-          </div>
-        </div>
-      ))}
 
-      <div style={{ marginBottom: '30px' }}>
-        {isEditing ? (
-          <>
+              <button 
+                onClick={handleSaveToBackend} 
+                disabled={isLoading} 
+                style={{ 
+                  padding: '10px 15px', 
+                  backgroundColor: '#ff5733', 
+                  color: 'white', 
+                  border: '1px dotted black', 
+                  borderRadius: '5px', 
+                  cursor: isLoading ? 'not-allowed' : 'pointer', 
+                  fontSize: '16px', 
+                  marginRight: '10px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  opacity: isLoading ? 0.7 : 1
+                }}
+              >
+                {isLoading ? "Saving..." : "Confirm & Save ✅"}
+              </button>
+            </>
+          ) : (
             <button 
-              onClick={handleCancel} 
+              onClick={handleEdit} 
               style={{ 
                 padding: '10px 15px', 
-                backgroundColor: '#d9534f', 
-                color: 'white', 
-                borderRadius: '5px', 
+                backgroundColor: '#f6da08', 
+                color: 'black', 
                 fontSize:'16px', 
+                borderRadius: '5px', 
                 border: 'none',
                 cursor: 'pointer', 
-                marginRight: '10px',
+                marginRight:'10px',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
               }}
             >
-              Cancel
+              Edit
             </button>
+          )}
 
-            <button 
-              onClick={handleSaveToBackend} 
-              disabled={isLoading} 
-              style={{ 
-                padding: '10px 15px', 
-                backgroundColor: '#ff5733', 
-                color: 'white', 
-                border: '1px dotted black', 
-                borderRadius: '5px', 
-                cursor: isLoading ? 'not-allowed' : 'pointer', 
-                fontSize: '16px', 
-                marginRight: '10px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                opacity: isLoading ? 0.7 : 1
-              }}
-            >
-              {isLoading ? "Saving..." : "Confirm & Save ✅"}
-            </button>
-          </>
-        ) : (
           <button 
-            onClick={handleEdit} 
+            onClick={handleSaveToBackend} 
+            disabled={isLoading} 
             style={{ 
               padding: '10px 15px', 
-              backgroundColor: '#f6da08', 
-              color: 'black', 
-              fontSize:'16px', 
+              backgroundColor: '#f92e00', 
+              color: 'white', 
+              borderRadius: '5px', 
+              border: 'none',
+              cursor: isLoading ? 'not-allowed' : 'pointer', 
+              fontSize: '16px',
+              marginRight: '10px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              opacity: isLoading ? 0.7 : 1
+            }}
+          >
+            {isLoading ? "Saving..." : "Save All ✔"}
+          </button>
+
+          <button 
+            onClick={handleFinalPaper} 
+            style={{ 
+              padding: '10px 15px', 
+              backgroundColor: '#16ac13', 
+              color: 'white', 
               borderRadius: '5px', 
               border: 'none',
               cursor: 'pointer', 
-              marginRight:'10px',
+              fontSize: '16px',
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
             }}
           >
-            Edit
+            Final Paper 📄
           </button>
-        )}
-
-        <button 
-          onClick={handleSaveToBackend} 
-          disabled={isLoading} 
-          style={{ 
-            padding: '10px 15px', 
-            backgroundColor: '#f92e00', 
-            color: 'white', 
-            borderRadius: '5px', 
-            border: 'none',
-            cursor: isLoading ? 'not-allowed' : 'pointer', 
-            fontSize: '16px',
-            marginRight: '10px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            opacity: isLoading ? 0.7 : 1
-          }}
-        >
-          {isLoading ? "Saving..." : "Save All ✔"}
-        </button>
-
-        <button 
-          onClick={handleFinalPaper} 
-          style={{ 
-            padding: '10px 15px', 
-            backgroundColor: '#16ac13', 
-            color: 'white', 
-            borderRadius: '5px', 
-            border: 'none',
-            cursor: 'pointer', 
-            fontSize: '16px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-          }}
-        >
-          Final Paper 📄
-        </button>
+        </div>
+        
+        <div style={{
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          padding: '10px',
+          borderRadius: '5px',
+          border: '1px solid #f5c6cb',
+          marginTop: '20px',
+          fontWeight: 'bold',
+          textAlign: 'center'
+        }}>
+          ⚠️ WARNING: MOVING BACK TO THE PREVIOUS PAGE CAN CAUSE YOU TO LOSE EVERYTHING ⚠️
+        </div>
       </div>
-      
-      <div style={{
-        backgroundColor: '#f8d7da',
-        color: '#721c24',
-        padding: '10px',
-        borderRadius: '5px',
-        border: '1px solid #f5c6cb',
-        marginTop: '20px',
-        fontWeight: 'bold',
-        textAlign: 'center'
-      }}>
-        ⚠️ WARNING: MOVING BACK TO THE PREVIOUS PAGE CAN CAUSE YOU TO LOSE EVERYTHING ⚠️
-      </div>
-    </div>
   );
 };
 

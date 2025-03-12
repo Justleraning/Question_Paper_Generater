@@ -328,6 +328,7 @@ const ViewPaper = () => {
             color: "white",
             border: "none",
             borderRadius: "5px",
+            marginBottom: '10px',
             cursor: "pointer",
             fontSize: "17px",
           }}>
@@ -336,6 +337,7 @@ const ViewPaper = () => {
         <button onClick={handleDelete} disabled={deleting}style={{
             padding: "10px 15px",
             fontSize: "17px",
+            marginBottom: '10px',
             margin: "5px",
             background: deleting ? "#a6a6a6" : "#dc3545",
             color: "white",
@@ -346,6 +348,7 @@ const ViewPaper = () => {
         <button onClick={handleDownload}style={{
             padding: "10px 15px",
             margin: "5px",
+            marginBottom: '10px',
             background: "#007bff",
             fontSize: "17px",
             color: "white",
@@ -363,6 +366,7 @@ const ViewPaper = () => {
             color: "black",
             border: "none",
             borderRadius: "5px",
+            marginBottom: '10px',
             cursor: "pointer",
           }}>
             Send for Approval
