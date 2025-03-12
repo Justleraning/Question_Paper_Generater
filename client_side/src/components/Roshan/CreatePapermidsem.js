@@ -115,8 +115,18 @@ const CreatePaperRosh = () => {
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
+                transition: "all 0.20s ease",
+                position: 'relative',
                 fontSize: "15px",
                 cursor: "pointer"
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = "#3a85ff";
+                e.target.style.transform = "translateY(0)";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = "#007bff";
+                e.target.style.transform = "translateY(2px)";
               }}>
               View Paper
             </button>
