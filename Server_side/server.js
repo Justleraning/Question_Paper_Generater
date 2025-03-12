@@ -1,48 +1,13 @@
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
 const path = require("path");
-const helmet = require("helmet"); // Added for security
-const compression = require("compression"); // Added for performance
 const errorHandler = require("./middlewares/errorHandler");
 
 // Initialize Express App
 const app = express();
 
-// Enhanced CORS Configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      "http://localhost:3000", 
-      "http://127.0.0.1:3000", 
-      "https://your-production-domain.com" // Add your production domain
-    ];
-
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: [
-    "Content-Type", 
-    "Authorization", 
-    "Access-Control-Allow-Methods",
-    "Access-Control-Allow-Origin",
-    "Access-Control-Allow-Headers"
-  ],
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-
 // Middleware
-app.use(cors(corsOptions)); // Apply CORS first
-app.use(helmet()); // Add security headers
-app.use(compression()); // Compress responses
-
-// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ 
   extended: true, 
@@ -99,9 +64,6 @@ Object.entries(routes).forEach(([name, route]) => {
   app.use(`/api/${name}`, route);
   console.log(`📍 Registered route: /api/${name}`);
 });
-
-// Fallback OPTIONS handler
-app.options('*', cors(corsOptions));
 
 // Error handling middleware
 app.use(errorHandler);
