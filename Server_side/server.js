@@ -65,6 +65,8 @@ const unitRoutes = require("./routes/unitRoutes");
 const questionRoutesIsaac = require("./routes/questionRoutes_Isaac");
 const randomizationRoutes = require("./routes/randomizationRoutes");
 const endSemQuestionRoutes = require("./routes/EndSemQuestionRoutes"); // Add EndSem Question Routes
+const endPapersRoutes = require("./routes/EndPapersRoutes");
+const { endPapersAuth } = require('./middlewares/EndPapersMiddleware');
 
 // Route Handlers
 app.use("/api/auth", authRoutes);
@@ -77,6 +79,7 @@ app.use("/api/subjects", subjectRoutes);
 app.use("/api/units", unitRoutes);
 app.use("/api/randomize", randomizationRoutes);
 app.use("/api/endsem-questions", endSemQuestionRoutes); // Add EndSem Question Routes
+app.use("/api/endpapers", endPapersRoutes);
 
 // Existing routes remain the same...
 // (All the previous routes for QuestionPaper remain unchanged)

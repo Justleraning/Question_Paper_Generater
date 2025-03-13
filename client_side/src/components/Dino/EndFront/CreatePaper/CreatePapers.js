@@ -831,12 +831,62 @@ const CreatePapers = () => {
   };
 
   // Function to save paper (in a real app, this would save to a database)
-  const savePaper = () => {
-    alert('Question paper has been saved successfully!');
-  };
-  
-  // Improved PDF generation function with Word-like behavior for images and text flow
-// Improved PDF generation function with proper layout
+  // Update your savePaper function in CreatePapers.js
+
+const savePaper = async () => {
+  try {
+    // Show loading state
+    setLoading(true);
+    
+    // Try to get token if available, but we don't require it anymore
+    const token = localStorage.getItem('userToken') || 
+                 localStorage.getItem('authToken') || 
+                 localStorage.getItem('token') || 
+                 'no-token-required';  // This will be handled by our middleware
+    
+    // Prepare the paper data in the required format (your existing code)
+    const paperData = {
+      university: {
+        name: paperDetails.university,
+        logoUrl: "/SJU.png"
+      },
+      examDetails: {
+        course: examDetails.course,
+        semester: examDetails.semester,
+        semesterExamination: examDetails.semesterExamination,
+        examinationConducted: examDetails.examinationConducted,
+        subjectCode: examDetails.subjectCode,
+        subjectName: examDetails.subjectName,
+        examTimings: examDetails.examTimings,
+        maxMarks: paperDetails.maxMarks,
+        duration: paperDetails.duration
+      },
+      // Rest of your paperData stays the same...
+    };
+    
+    // Send the paper data to the server with or without token
+    const response = await axios.post('http://localhost:5000/api/endpapers', paperData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    // Handle successful save
+    if (response.status === 201) {
+      alert('Question paper has been saved successfully!');
+    } else {
+      throw new Error('Failed to save paper');
+    }
+  } catch (error) {
+    console.error('Error saving paper:', error);
+    alert(`Failed to save paper: ${error.response?.data?.message || error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Improved PDF generation function with Word-like behavior for images and text flow
 const downloadPaper = () => {
   // Show loading indicator
   const loadingOverlay = document.createElement('div');
