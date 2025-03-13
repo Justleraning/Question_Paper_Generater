@@ -41,10 +41,8 @@ import FinalPreview from "../pages/Modules/FinalPreview.js";
 import GeneralQuestions from "../pages/Modules/GeneralQuestions.js";
 import CreatePaper from "../pages/Papers/CreatePaper.js";
 import PaperStatus from "../pages/Papers/PaperStatus.js";
-import RejectedPapers from "../pages/Papers/RejectedPapers.js";
 import MyPapers from "../pages/Papers/MyPapers.js";
 import AdminDashboard from "../pages/AdminDashboard.js";
-import PaperApproval from "../pages/Papers/PaperApproval.js";
 import ResetRequests from "../pages/Users/ResetRequests.js";
 import ManageUsers from "../pages/Users/ManageUsers.js";
 import SuperAdminPanel from "../pages/SuperAdmin/SuperAdminPanel.js";
@@ -88,14 +86,13 @@ const AppRoutes = () => {
         <Route path="/question-preview" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPreview /></PrivateRoute>} />
         <Route path="/paper-status" element={<PrivateRoute allowedRoles={["Teacher"]}><PaperStatus /></PrivateRoute>} />
         <Route path="/preview/:subjectKey" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPreview /></PrivateRoute>} />
-        <Route path="/rejected-papers" element={<PrivateRoute allowedRoles={["Teacher"]}><RejectedPapers /></PrivateRoute>} />
         <Route path="/mypapers" element={<PrivateRoute allowedRoles={["Teacher"]}><MyPapers /></PrivateRoute>} />
 
         {/* ✅ Admin & SuperAdmin Routes */}
         <Route path="/admin-dashboard" element={<PrivateRoute allowedRoles={["Admin"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/view-reset-requests" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><ResetRequests /></PrivateRoute>} />
         <Route path="/manage-users" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><ManageUsers /></PrivateRoute>} />
-        <Route path="/approve-papers" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApproval /></PrivateRoute>} />
+        
 
         {/* ✅ SuperAdmin Routes */}
         <Route path="/super-admin-panel" element={<PrivateRoute allowedRoles={["SuperAdmin"]}><SuperAdminPanel /></PrivateRoute>} />
