@@ -8,12 +8,14 @@ const Question = require("./models/Question");
 const Paper = require("./models/Paper");
 const Course = require("./models/Course");
 const EndQuestion = require("./models/EndQuestion");
+const EndPapers = require("./models/EndPapersModel");
 
 const users = require("./data/dummyUsers");
 const questions = require("./data/dummyQuestions");
 const papers = require("./data/dummyPapers");
 const courses = require("./data/CourseData");
 const endquestion = require('./data/EndSemQuestionData');
+const endpapers = require('./data/dummyEndPapers');
 
 dotenv.config();
 connectDB();
@@ -49,6 +51,7 @@ const importData = async () => {
     await Paper.deleteMany();
     await Course.deleteMany();
     await EndQuestion.deleteMany();
+    await EndPapers.deleteMany();
 
     console.log("🗑 Existing data cleared.");
 
@@ -79,6 +82,19 @@ const importData = async () => {
       if (endSemError.errors) {
         Object.keys(endSemError.errors).forEach(key => {
           console.error(`Validation Error for ${key}: ${endSemError.errors[key].message}`);
+        });
+      }
+    }
+
+    // Insert End Papers
+    try {
+      await EndPapers.insertMany(endpapers);
+      console.log("✅ End Papers inserted.");
+    } catch (endPapersError) {
+      console.error(`❌ Error inserting End Papers: ${endPapersError.message}`);
+      if (endPapersError.errors) {
+        Object.keys(endPapersError.errors).forEach(key => {
+          console.error(`Validation Error for ${key}: ${endPapersError.errors[key].message}`);
         });
       }
     }
