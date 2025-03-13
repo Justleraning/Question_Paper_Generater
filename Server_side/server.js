@@ -10,11 +10,7 @@ const app = express();
 
 // CORS Configuration
 app.use(cors({
-  origin: [
-    "http://localhost:3000", 
-    "http://127.0.0.1:3000",
-    "https://gilded-sherbet-4ee762.netlify.app" // Add your Netlify domain
-  ],
+  origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
@@ -33,7 +29,7 @@ app.use((req, res, next) => {
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
-   useUnifiedTopology: true,
+  useUnifiedTopology: true,
 })
 .then(() => console.log("✅ Connected to MongoDB"))
 .catch(err => {
