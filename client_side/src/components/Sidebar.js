@@ -1,8 +1,10 @@
 import { useAuth } from "../Contexts/AuthContext.js";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
-import { FiMenu, FiX } from "react-icons/fi"; 
+import { useEffect, useState } from "react";
+import { FiMenu, FiX, FiChevronDown, FiChevronRight } from "react-icons/fi"; 
 import { FaUser, FaTasks, FaUsers, FaKey, FaFileAlt, FaSignOutAlt, FaCheckCircle } from "react-icons/fa"; 
+import { HiOutlineClipboardDocument, HiOutlineAcademicCap, HiOutlineBookOpen } from "react-icons/hi2";
+import { LuBriefcase } from "react-icons/lu";
 
 const Sidebar = ({ 
   isSidebarOpen, 
@@ -13,6 +15,7 @@ const Sidebar = ({
   const { authState, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [expandedItems, setExpandedItems] = useState({});
 
   // Auto-shrink sidebar when navigating to a specific module
   useEffect(() => {
@@ -28,6 +31,13 @@ const Sidebar = ({
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
+  };
+
+  const toggleSubMenu = (key) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   // Determine sidebar width based on open state, hover state, and manual toggle
@@ -75,20 +85,45 @@ const Sidebar = ({
                     onClick={() => navigate("/status-of-paper")} 
                     isActive={location.pathname === "/status-of-paper"}
                   />
-                  <NavItem 
-                    icon={<FaFileAlt />} 
-                    label="My Papers" 
-                    isOpen={isSidebarOpen || isHovered} 
-                    onClick={() => navigate("/mypapers")} 
-                    isActive={location.pathname === "/mypapers"}
-                  />
-                  <NavItem 
-                    icon={<FaFileAlt />} 
-                    label="Rejected Papers" 
-                    isOpen={isSidebarOpen || isHovered} 
-                    onClick={() => navigate("/rejected-papers")} 
-                    isActive={location.pathname === "/rejected-papers"}
-                  />
+                  
+                  <NavItemWithSubmenu
+                    icon={<FaFileAlt />}
+                    label="My Papers"
+                    isOpen={isSidebarOpen || isHovered}
+                    isExpanded={expandedItems["myPapers"]}
+                    toggleExpand={() => toggleSubMenu("myPapers")}
+                    isActive={location.pathname.startsWith("/mypapers")}
+                  >
+                    <SubNavItem
+                      icon={<HiOutlineClipboardDocument />}
+                      label="Entrance Exam"
+                      isOpen={isSidebarOpen || isHovered}
+                      onClick={() => navigate("/mypapers/entrance-exam")}
+                      isActive={location.pathname === "/mypapers/entrance-exam"}
+                    />
+                    <SubNavItem
+                      icon={<HiOutlineAcademicCap />}
+                      label="Mid-Semester"
+                      isOpen={isSidebarOpen || isHovered}
+                      onClick={() => navigate("/mypapers/mid-semester")}
+                      isActive={location.pathname === "/mypapers/mid-semester"}
+                    />
+                    <SubNavItem
+                      icon={<HiOutlineBookOpen />}
+                      label="End-Semester"
+                      isOpen={isSidebarOpen || isHovered}
+                      onClick={() => navigate("/mypapers/end-semester")}
+                      isActive={location.pathname === "/mypapers/end-semester"}
+                    />
+                    <SubNavItem
+                      icon={<LuBriefcase />}
+                      label="Open Electives"
+                      isOpen={isSidebarOpen || isHovered}
+                      onClick={() => navigate("/mypapers/open-electives")}
+                      isActive={location.pathname === "/mypapers/open-electives"}
+                    />
+                  </NavItemWithSubmenu>
+                  
                 </NavItemGroup>
               </>
             )}
@@ -173,6 +208,61 @@ const NavItem = ({ icon, label, isOpen, onClick, isActive }) => {
         </span>
       )}
     </li>
+  );
+};
+
+// Nav item with submenu
+const NavItemWithSubmenu = ({ icon, label, isOpen, isExpanded, toggleExpand, isActive, children }) => {
+  return (
+    <div className="relative">
+      <div 
+        className={`flex items-center justify-between p-3 rounded-md cursor-pointer transition-all duration-200
+          ${isActive 
+            ? "bg-gradient-to-r from-blue-600/30 to-blue-500/20 text-blue-300 shadow-sm" 
+            : "hover:bg-gray-700/50 text-gray-300 hover:text-white"}`}
+        onClick={toggleExpand}
+      >
+        <div className="flex items-center space-x-3">
+          <span className={`flex-shrink-0 ${isActive ? "text-blue-300" : ""}`}>{icon}</span>
+          {isOpen && (
+            <span className="whitespace-nowrap overflow-hidden font-medium">
+              {label}
+            </span>
+          )}
+        </div>
+        {isOpen && (
+          <span>
+            {isExpanded ? <FiChevronDown size={16} /> : <FiChevronRight size={16} />}
+          </span>
+        )}
+      </div>
+      
+      {isExpanded && isOpen && (
+        <div className="pl-7 mt-1 space-y-1">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Sub nav item component
+const SubNavItem = ({ icon, label, isOpen, onClick, isActive }) => {
+  return (
+    <div 
+      className={`flex items-center space-x-3 p-2 rounded-md cursor-pointer transition-all duration-200
+        ${isActive 
+          ? "bg-gray-700/50 text-white" 
+          : "hover:bg-gray-600/30 text-gray-300 hover:text-white"}`}
+      onClick={onClick}
+    >
+      <span className="flex-shrink-0 text-lg">{icon}</span>
+      {isOpen && (
+        <span className="whitespace-nowrap overflow-hidden text-sm">
+          {label}
+        </span>
+      )}
+    </div>
   );
 };
 
