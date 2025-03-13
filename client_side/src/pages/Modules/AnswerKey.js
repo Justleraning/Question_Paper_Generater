@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
-import universityLogo from '../../assets/images/logo.png'; // Import the university logo
 
 const AnswerKey = () => {
   const location = useLocation();
@@ -33,13 +32,6 @@ const AnswerKey = () => {
       setLoading(true);
       
       const doc = new jsPDF();
-      
-      // Add university logo
-      try {
-        doc.addImage(universityLogo, 'PNG', 20, 10, 20, 20);
-      } catch (logoErr) {
-        console.warn("Could not add logo:", logoErr);
-      }
       
       // Add title
       doc.setFontSize(18);
@@ -133,15 +125,12 @@ const AnswerKey = () => {
         customSubjectName,
         totalMarks,
         examTime
-      }
+      },
+      replace: true // Use replace to avoid adding to history stack
     });
   };
   
-  // Handle dashboard navigation
-  const goToDashboard = () => {
-    navigate('/dashboard');
-  };
-  
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       {/* Notification */}
@@ -176,18 +165,12 @@ const AnswerKey = () => {
           Back to Paper Preview
         </button>
         
-        <button
-          onClick={goToDashboard}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-        >
-          Go to Dashboard
-        </button>
+        
       </div>
       
       {/* Answer Key Content */}
       <div className="bg-white border border-gray-300 p-6 rounded-lg mb-6 shadow-sm">
-        <div className="flex items-center justify-center mb-4">
-          <img src={universityLogo} alt="University Logo" className="h-12 mr-2" />
+        <div className="text-center mb-4">
           <h2 className="text-xl font-bold">Answer Key</h2>
         </div>
         

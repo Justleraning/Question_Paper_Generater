@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getAllQuestions } from '../../services/paperService.js';
 import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph, HeadingLevel, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
 import universityLogo from '../../assets/image.png'; // Import the university logo
 
@@ -176,7 +176,7 @@ const FinalPreview = () => {
         .map(q => ({
           id: q.id || Math.random().toString(36).substr(2, 9),
           subject: q.subject,
-          question: q.question,
+          question:stripHTMLTags(q.question),
           options: q.options,
           correctOption: q.correctOption || 0,
           index: q.index || 0,
@@ -296,6 +296,7 @@ const FinalPreview = () => {
     } finally {
       setLoading(false);
     }
+    fetchAllQuestions();
   };
 
   // Save paper and show alert
@@ -413,40 +414,218 @@ const FinalPreview = () => {
     }
   };
 
+
   // DOCX Generation
-  const generateDOCX = () => {
-    try {
-      // Group by subject
-      const questionsBySubjectObj = {};
-      questions.forEach(q => {
-        if (!questionsBySubjectObj[q.subject]) questionsBySubjectObj[q.subject] = [];
-        questionsBySubjectObj[q.subject].push(q);
-      });
-      
-      // Create document
+const generateDOCX = () => {
+  try {
+    // Convert the university logo to base64 (if needed)
+    const logoPromise = new Promise((resolve) => {
+      // Create a temporary canvas to handle the image
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve({ width: img.width, height: img.height, data: canvas.toDataURL('image/png') });
+      };
+      img.onerror = function() {
+        console.warn("Could not load university logo for DOCX");
+        resolve(null);
+      };
+      img.src = universityLogo;
+    });
+
+    // Wait for logo processing, then create document
+    logoPromise.then(logoData => {
       const doc = new Document({
-        sections: [{
-          properties: {},
-          children: [
-            new Paragraph({
-              text: "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
-              heading: HeadingLevel.HEADING_1,
-              alignment: AlignmentType.CENTER,
-            }),
-            // Other document elements would go here
-          ],
-        }],
+        sections: [
+          {
+            properties: {},
+            children: [
+              // University Logo and Header (in a table for alignment)
+              ...(logoData ? [
+                new Table({
+                  rows: [
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          width: { size: 20, type: WidthType.PERCENTAGE },
+                          children: [
+                            new Paragraph({
+                              children: [
+                                new ImageRun({
+                                  data: logoData.data.split(',')[1],
+                                  transformation: {
+                                    width: 100,
+                                    height: 100
+                                  }
+                                })
+                              ],
+                              alignment: AlignmentType.CENTER
+                            })
+                          ],
+                          borders: { top: {}, bottom: {}, left: {}, right: {} }
+                        }),
+                        new TableCell({
+                          width: { size: 80, type: WidthType.PERCENTAGE },
+                          children: [
+                            new Paragraph({
+                              text: "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
+                              heading: HeadingLevel.HEADING_1,
+                              alignment: AlignmentType.CENTER,
+                              bold: true
+                            })
+                          ],
+                          borders: { top: {}, bottom: {}, left: {}, right: {} }
+                        })
+                      ]
+                    })
+                  ],
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  borders: { top: {}, bottom: {}, left: {}, right: {} }
+                })
+              ] : [
+                // Fallback if logo can't be loaded
+                new Paragraph({
+                  text: "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
+                  heading: HeadingLevel.HEADING_1,
+                  alignment: AlignmentType.CENTER,
+                  bold: true
+                })
+              ]),
+              
+              // Course Name
+              new Paragraph({
+                text: customSubjectName 
+                  ? `${courseName} - ${customSubjectName}`
+                  : courseName,
+                heading: HeadingLevel.HEADING_2,
+                alignment: AlignmentType.CENTER,
+                bold: true,
+                spacing: { before: 200, after: 200 }
+              }),
+              
+              // SEMESTER EXAMINATION
+              new Paragraph({
+                text: "SEMESTER EXAMINATION",
+                heading: HeadingLevel.HEADING_3,
+                alignment: AlignmentType.CENTER,
+                bold: true,
+                spacing: { after: 300 }
+              }),
+              
+              // Date, Time and Marks
+              new Paragraph({
+                text: `Date: ${currentDate}`,
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 100 }
+              }),
+              new Paragraph({
+                text: `Time: ${examTime} Hours`,
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 100 }
+              }),
+              new Paragraph({
+                text: `Max Marks: ${markType}`,
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 200 }
+              }),
+              
+              // Answer all questions
+              new Paragraph({
+                text: "Answer all questions",
+                alignment: AlignmentType.CENTER,
+                bold: true,
+                spacing: { before: 200, after: 400 }
+              }),
+              
+              // Process each subject and its questions
+              ...processQuestionsForDOCX()
+            ]
+          }
+        ]
       });
 
+      // Generate the document
       Packer.toBlob(doc).then(blob => {
         saveAs(blob, `${courseName}_Exam_Paper.docx`);
         setNotification("DOCX downloaded successfully!");
         setTimeout(() => setNotification(null), 3000);
       });
-    } catch (error) {
-      setError("Failed to generate DOCX. Please try again.");
+    });
+  } catch (error) {
+    console.error("Error generating DOCX:", error);
+    setError("Failed to generate DOCX. Please try again.");
+  }
+};
+
+// Helper function to process questions by subject for DOCX format
+const processQuestionsForDOCX = () => {
+  let docElements = [];
+  let questionNumber = 1;
+  let currentSubject = null;
+  
+  // Group questions by subject
+  const subjectGroups = {};
+  
+  SUBJECT_CODES.forEach(code => {
+    const subjectName = SUBJECT_NAMES[code];
+    const subjectQuestions = questions.filter(q => q.subject === subjectName);
+    
+    if (subjectQuestions.length > 0) {
+      subjectGroups[code] = subjectQuestions;
     }
-  };
+  });
+  
+  // Process each subject group
+  Object.entries(subjectGroups).forEach(([code, subjectQuestions]) => {
+    const subjectName = SUBJECT_NAMES[code];
+    
+    // Add subject header
+    docElements.push(
+      new Paragraph({
+        text: subjectName,
+        heading: HeadingLevel.HEADING_2,
+        alignment: AlignmentType.LEFT,
+        bold: true,
+        spacing: { before: 400, after: 200 }
+      })
+    );
+    
+    // Process questions
+    subjectQuestions.forEach((q, idx) => {
+      // Question text
+      docElements.push(
+        new Paragraph({
+          text: `${questionNumber}. ${stripHTMLTags(q.question)}`,
+          spacing: { before: 200, after: 100 }
+        })
+      );
+      
+      // Options
+      if (q.options && Array.isArray(q.options)) {
+        q.options.forEach((opt, optIdx) => {
+          if (opt && opt.value) {
+            docElements.push(
+              new Paragraph({
+                text: `   ${['A', 'B', 'C', 'D'][optIdx]}. ${opt.type === 'Text' ? stripHTMLTags(opt.value) : '[Image]'}`,
+                indent: { left: 500 },
+                spacing: { after: 100 }
+              })
+            );
+          }
+        });
+      }
+      
+      questionNumber++;
+    });
+  });
+  
+  return docElements;
+};
+
 
   // Handle download
   const handleDownload = () => {
@@ -460,9 +639,17 @@ const FinalPreview = () => {
     // Store current questions and state in session storage
     sessionStorage.setItem('savedQuestions', JSON.stringify(questions));
     
+    const questionsForAnswerKey = questions.map(q => ({
+      id: q.id,
+      subject: q.subject,
+      question: q.question,
+      correctOption: q.correctOption,
+      marks: q.marks || 1
+    }));
+
     navigate('/answer-key', {
       state: {
-        questions,
+        questions:questionsForAnswerKey,
         courseName,
         customSubjectName, // Pass this to the answer key 
         totalMarks: markType, // Use the configured mark type
@@ -531,6 +718,8 @@ const FinalPreview = () => {
   const cancelEditing = () => {
     setEditingQuestionId(null);
   };
+
+
 
   // Handle option change in edit mode
   const handleOptionChange = (index, value) => {

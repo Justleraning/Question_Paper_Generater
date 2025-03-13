@@ -10,8 +10,63 @@ const GeneratePaper = () => {
   const [showSubjects, setShowSubjects] = useState(false); // Controls subject visibility
   const [loading, setLoading] = useState(true); // Loading state
   const [error, setError] = useState(null); // Error state
+  const [subjectError, setSubjectError] = useState(""); // Validation error for custom subject
 
   const navigate = useNavigate();
+
+  // Function to validate custom subject input with improved detection
+  const validateCustomSubject = (input) => {
+    // Convert input to lowercase and remove all spaces for more flexible matching
+    const lowerInput = input.toLowerCase().trim();
+    const lowerInputNoSpaces = lowerInput.replace(/\s+/g, '');
+    
+    // Reserved subject names (both with spaces and without)
+    const reservedSubjects = [
+      // With spaces
+      "quantitative problem solving",
+      "logical reasoning",
+      "english",
+      // Without spaces
+      "quantitativeproblemssolving",
+      "quantitativeproblemsolving", 
+      "logicalreasoning",
+      "english"
+    ];
+    
+    // Reserved subject patterns (more flexible matching)
+    const reservedPatterns = [
+      /^quantitative\s*problem\s*solving$/i,
+      /^logical\s*reasoning$/i,
+      /^english$/i
+    ];
+    
+    // Check if input matches any reserved subject (with or without spaces)
+    const isReservedExact = reservedSubjects.some(subject => 
+      lowerInput === subject || lowerInputNoSpaces === subject.replace(/\s+/g, '')
+    );
+    
+    // Check if input matches any reserved pattern
+    const isReservedPattern = reservedPatterns.some(pattern => 
+      pattern.test(lowerInput)
+    );
+    
+    // Check for special characters (allow letters, numbers, spaces and basic punctuation)
+    const hasSpecialChars = /[^\w\s.,'-]/.test(input);
+    
+    // Create error message based on validation results
+    let errorMessage = "";
+    
+    if (isReservedExact || isReservedPattern) {
+      errorMessage = `"${input}" is a reserved subject name. Please use a different name or add a number (e.g. "${input} 2").`;
+    } else if (hasSpecialChars) {
+      errorMessage = "Subject name should not contain special characters.";
+    }
+    
+    return {
+      isValid: !(isReservedExact || isReservedPattern || hasSpecialChars),
+      errorMessage
+    };
+  };
 
   // ✅ Fetch available courses on mount
   useEffect(() => {
@@ -61,30 +116,52 @@ const GeneratePaper = () => {
     }
   };
 
-  // ✅ Handle paper generation
+  // Handle custom subject change with validation
+  const handleCustomSubjectChange = (e) => {
+    const newValue = e.target.value;
+    setCustomSubject(newValue);
+    
+    // Only show validation error if there's actually input
+    if (newValue.trim()) {
+      const validation = validateCustomSubject(newValue);
+      setSubjectError(validation.isValid ? "" : validation.errorMessage);
+    } else {
+      setSubjectError("");
+    }
+  };
+
+  // ✅ Handle paper generation with validation
   const handleGenerate = () => {
     if (!course) {
       alert("⚠️ Please select a course.");
       return;
     }
-    if (!customSubject.trim()) {
+    
+    const customSubjectTrimmed = customSubject.trim();
+    if (!customSubjectTrimmed) {
       alert("⚠️ Please enter a custom subject.");
       return;
     }
-  
+    
+    // Validate custom subject input
+    const validation = validateCustomSubject(customSubjectTrimmed);
+    if (!validation.isValid) {
+      alert(`⚠️ ${validation.errorMessage}`);
+      return;
+    }
+    
     // Get course name properly
     const selectedCourse = courses.find((c) => String(c.id) === String(course));
     const courseName = selectedCourse ? selectedCourse.name : "Unknown Course";
-  
+
     console.log("✅ Selected Course Name:", courseName);
-    console.log("✅ Selected Subject:", customSubject.trim());
-  
+    console.log("✅ Selected Subject:", customSubjectTrimmed);
+
     // Navigate with proper encoding
-    const redirectPath = `/enter-questions/${encodeURIComponent(courseName)}/${encodeURIComponent(customSubject.trim())}`;
+    const redirectPath = `/enter-questions/${encodeURIComponent(courseName)}/${encodeURIComponent(customSubjectTrimmed)}`;
     console.log("🔀 Navigating to:", redirectPath);
     navigate(redirectPath);
   };
-  
 
   return (
     <div className="flex flex-col w-full px-12 py-10">
@@ -129,23 +206,26 @@ const GeneratePaper = () => {
         </div>
       )}
 
-      {/* Custom Subject Input */}
+      {/* Custom Subject Input with Validation - Warnings Only */}
       <div className="mt-4 w-full max-w-3xl">
         <label className="block text-lg">Enter Custom Subject:</label>
         <input
           type="text"
           value={customSubject}
-          onChange={(e) => setCustomSubject(e.target.value)}
-          className="border p-2 rounded w-full mt-2"
+          onChange={handleCustomSubjectChange}
+          className={`border p-2 rounded w-full mt-2 ${subjectError ? 'border-red-500' : ''}`}
           placeholder="Enter custom subject"
         />
+        {subjectError && (
+          <p className="text-red-500 text-sm mt-1">{subjectError}</p>
+        )}
       </div>
 
       {/* Generate Paper Button */}
       <button
         onClick={handleGenerate}
         className="mt-6 bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 transition w-full max-w-3xl"
-        disabled={loading || !!error}
+        disabled={loading || !!error || !!subjectError}
       >
         Generate Paper
       </button>

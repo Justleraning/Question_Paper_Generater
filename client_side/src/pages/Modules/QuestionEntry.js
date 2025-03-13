@@ -184,14 +184,14 @@ const QuestionEntry = () => {
         // Update state and cache
         const updatedProgress = {...subjectProgress};
         updatedProgress[subject].questions[index] = {
-          text: data.question, 
+          text: stripHTMLTags(data.question), 
           options: fullOptions,
           correctOption: validCorrectOption,
           questionId: data.questionId
         };
         
         updateState({
-          questionText: data.question,
+          questionText: stripHTMLTags(data.question),
           options: fullOptions,
           correctOption: validCorrectOption,
           isQuestionSaved: true,
@@ -286,7 +286,7 @@ const QuestionEntry = () => {
       const payload = {
         courseName: decodedCourseName,
         subject: SUBJECT_NAMES[subject],
-        question: questionText,
+        question: stripHTMLTags(questionText) ,
         options: formattedOptions,
         correctOption: validCorrectOption - 1, // Convert to 0-based, ensure it's a number
         index,
@@ -319,6 +319,11 @@ const QuestionEntry = () => {
     }
   };
 
+  const stripHTMLTags = (html) => {
+    const tmp = document.createElement('DIV');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
   // Navigation handlers
   const handleSaveQuestion = async () => {
     updateState({ error: null });
@@ -358,6 +363,8 @@ const QuestionEntry = () => {
       updateState({ currentQuestionIndex: currentQuestionIndex - 1, error: null });
     }
   };
+
+ 
 
   const showNextSubjectConfirm = async () => {
     // Validate and save
