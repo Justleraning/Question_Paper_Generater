@@ -13,6 +13,7 @@ import CreateQuestion from "../components/Dino/EndFront/CreateQuestion/QuestionP
 import EditQuestion from "../components/Dino/EndFront/CreateQuestion/QuestionPool/EditQuestion.js";
 import ExamPattern from  "../components/Dino/EndFront/CreatePaper/ExamPattern.js";
 import CreatePapers from "../components/Dino/EndFront/CreatePaper/CreatePapers.js";
+import EndSemSide from "../pages/Papers/EndSemSide.js";
 
 // ✅ Roshan Routes
 import MainPage from "../components/Roshan/MainPage.js";
@@ -124,6 +125,7 @@ const AppRoutes = () => {
         <Route path="/exam-details" element={<PrivateRoute allowedRoles={["Teacher"]}><ExamDetails /></PrivateRoute>} />
         <Route path="/exam-pattern" element={<PrivateRoute allowedRoles={["Teacher"]}><ExamPattern /></PrivateRoute>} />
         <Route path="/question-pool" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPool /></PrivateRoute>} />
+        <Route path="/end-semester" element={<PrivateRoute allowedRoles={["Teacher"]}><EndSemSide/></PrivateRoute>} />
 
         {/* ✅ Redirect Unknown Routes */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
