@@ -26,7 +26,7 @@ const CreatePapers = () => {
   const [paperDetails, setPaperDetails] = useState({
     university: "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
     duration: "2",
-    maxMarks: "78"
+    maxMarks: "60"
   });
   
   // State for questions
@@ -45,6 +45,12 @@ const CreatePapers = () => {
   // State for error messages
   const [error, setError] = useState(null);
 
+  // State for total page count - we'll keep it simple with just one page initially
+  const [totalPages, setTotalPages] = useState(1);
+
+  // State to track resized images and their dimensions
+  const [imageStates, setImageStates] = useState({});
+  
   // Load exam details from localStorage on component mount
   useEffect(() => {
     try {
@@ -88,6 +94,472 @@ const CreatePapers = () => {
     }
     return shuffled;
   };
+
+  // Improved content overflow detection that considers image states
+  const checkContentOverflow = () => {
+    setTimeout(() => {
+      const paperContainer = document.querySelector('.din8-a4-paper');
+      const firstPage = document.querySelector('.din8-a4-page');
+      
+      if (!paperContainer || !firstPage) return;
+      
+      // A4 size in pixels (approximate)
+      const a4Height = 1123; // 297mm at 96dpi
+      
+      // Check if content overflows the first page
+      if (firstPage.scrollHeight > a4Height) {
+        // Calculate how many pages we need
+        const totalContentHeight = firstPage.scrollHeight;
+        const pagesNeeded = Math.ceil(totalContentHeight / a4Height);
+        
+        // Create additional pages if needed
+        const existingPages = document.querySelectorAll('.din8-a4-page').length;
+        if (existingPages < pagesNeeded) {
+          // Remove any existing overflow pages
+          const existingOverflowPages = document.querySelectorAll('.din8-overflow-page');
+          existingOverflowPages.forEach(page => {
+            if (page.parentNode) {
+              page.parentNode.removeChild(page);
+            }
+          });
+          
+          // Create new pages as needed
+          for (let i = existingPages; i < pagesNeeded; i++) {
+            const newPage = document.createElement('div');
+            newPage.className = 'din8-a4-page din8-overflow-page';
+            
+            // Add footer to new page
+            const newFooter = document.createElement('div');
+            newFooter.className = 'din8-page-footer';
+            newFooter.textContent = `Page ${i + 1} of ${pagesNeeded}`;
+            newPage.appendChild(newFooter);
+            
+            paperContainer.appendChild(newPage);
+          }
+          
+          // Update total pages count
+          setTotalPages(pagesNeeded);
+          
+          // Update paper info text
+          const paperInfoText = document.querySelector('.din8-paper-info');
+          if (paperInfoText) {
+            paperInfoText.textContent = `This paper contains ${pagesNeeded} printed pages and 3 parts`;
+          }
+          
+          // Update all page footers
+          const pageFooters = paperContainer.querySelectorAll('.din8-page-footer');
+          pageFooters.forEach((footer, index) => {
+            footer.textContent = `Page ${index + 1} of ${pagesNeeded}`;
+          });
+          
+          // Now distribute content across pages - improved algorithm
+          balanceContentAcrossPages(paperContainer, pagesNeeded, a4Height);
+        }
+      } else {
+        // No overflow, ensure we only have one page
+        const extraPages = document.querySelectorAll('.din8-overflow-page');
+        extraPages.forEach(page => {
+          if (page.parentNode) {
+            page.parentNode.removeChild(page);
+          }
+        });
+        
+        setTotalPages(1);
+        
+        // Update paper info text
+        const paperInfoText = document.querySelector('.din8-paper-info');
+        if (paperInfoText) {
+          paperInfoText.textContent = 'This paper contains 1 printed page and 3 parts';
+        }
+        
+        // Update page footer
+        const pageFooter = document.querySelector('.din8-page-footer');
+        if (pageFooter) {
+          pageFooter.textContent = 'Page 1 of 1';
+        }
+      }
+    }, 500); // Small delay to ensure content is rendered
+  };
+
+  // Improved function to distribute content across pages
+  const balanceContentAcrossPages = (paperContainer, pagesNeeded, a4Height) => {
+    const firstPage = document.querySelector('.din8-a4-page');
+    const pages = paperContainer.querySelectorAll('.din8-a4-page');
+    
+    if (!firstPage || pages.length <= 1) return;
+    
+    // Get all question elements from the first page
+    const allQuestions = Array.from(firstPage.querySelectorAll('.din8-question'));
+    
+    // Get all part elements
+    const allParts = Array.from(firstPage.querySelectorAll('.din8-part-title, .din8-part-instructions, .din8-question-list'));
+    
+    // Keep track of which page we're currently filling
+    let currentPageIndex = 0;
+    let currentPageHeight = 0;
+    const pageHeightLimit = a4Height - 50; // Leave some margin
+    
+    // Header content that should always stay on the first page
+    const headerContent = firstPage.querySelector('.din8-university-header');
+    const registrationBox = firstPage.querySelector('.din8-registration-box');
+    const examInfo = firstPage.querySelector('.din8-exam-info');
+    const paperInfo = firstPage.querySelector('.din8-paper-info');
+    
+    // Calculate header height
+    let headerHeight = 0;
+    if (headerContent) headerHeight += headerContent.offsetHeight;
+    if (registrationBox) headerHeight += registrationBox.offsetHeight;
+    if (examInfo) headerHeight += examInfo.offsetHeight;
+    if (paperInfo) headerHeight += paperInfo.offsetHeight;
+    
+    currentPageHeight = headerHeight;
+    
+    // First, hide all content in overflow pages
+    for (let i = 1; i < pages.length; i++) {
+      const pageContent = pages[i].querySelectorAll('*:not(.din8-page-footer)');
+      pageContent.forEach(el => {
+        if (el !== pages[i] && !el.classList.contains('din8-page-footer')) {
+          el.remove();
+        }
+      });
+    }
+    
+    // Function to check if an element is a part title
+    const isPartTitle = (element) => element.classList.contains('din8-part-title');
+    const isPartInstructions = (element) => element.classList.contains('din8-part-instructions');
+    
+    // Now distribute content
+    let currentPart = null;
+    let partInstructions = null;
+    
+    allParts.forEach(element => {
+      // Clone the element
+      const clone = element.cloneNode(true);
+      
+      // Check if this is a part title
+      if (isPartTitle(element)) {
+        currentPart = clone;
+        
+        // If we're not on the first page, we need to add this part title to the current overflow page
+        if (currentPageIndex > 0) {
+          // Hide original
+          element.style.display = 'none';
+          
+          // Add to current page
+          pages[currentPageIndex].appendChild(clone);
+          currentPageHeight += clone.offsetHeight;
+        } else {
+          // On first page, just measure height
+          currentPageHeight += element.offsetHeight;
+        }
+      } 
+      // Check if this is part instructions
+      else if (isPartInstructions(element)) {
+        partInstructions = clone;
+        
+        // If we're not on the first page, add these instructions too
+        if (currentPageIndex > 0) {
+          // Hide original
+          element.style.display = 'none';
+          
+          // Add to current page
+          pages[currentPageIndex].appendChild(clone);
+          currentPageHeight += clone.offsetHeight;
+        } else {
+          // On first page, just measure height
+          currentPageHeight += element.offsetHeight;
+        }
+      }
+      // This is a question list
+      else {
+        // Get all questions in this list
+        const questions = Array.from(element.querySelectorAll('.din8-question'));
+        
+        questions.forEach(question => {
+          // Check if adding this question would overflow the current page
+          const questionHeight = question.offsetHeight;
+          
+          if (currentPageHeight + questionHeight > pageHeightLimit) {
+            // Move to next page
+            currentPageIndex++;
+            currentPageHeight = 0;
+            
+            // If this is the first element on a new page and we have a current part title,
+            // add the part title and instructions first
+            if (currentPart && !pages[currentPageIndex].querySelector('.din8-part-title')) {
+              const partClone = currentPart.cloneNode(true);
+              pages[currentPageIndex].appendChild(partClone);
+              currentPageHeight += partClone.offsetHeight;
+              
+              if (partInstructions) {
+                const instructionsClone = partInstructions.cloneNode(true);
+                pages[currentPageIndex].appendChild(instructionsClone);
+                currentPageHeight += instructionsClone.offsetHeight;
+              }
+            }
+          }
+          
+          // If we're not on the first page, we need to move this question
+          if (currentPageIndex > 0) {
+            // Clone the question
+            const questionClone = question.cloneNode(true);
+            
+            // Add event listeners to any replace buttons
+            const replaceBtn = questionClone.querySelector('.din8-replace-btn');
+            if (replaceBtn) {
+              const questionId = question.id;
+              const part = getPartFromQuestion(question);
+              const unit = getUnitFromQuestion(question);
+              const bloomLevel = getBloomLevelFromQuestion(question);
+              
+              replaceBtn.addEventListener('click', () => replaceQuestion(questionId, part, unit, bloomLevel));
+            }
+            
+            // Add draggable functionality to images
+            const images = questionClone.querySelectorAll('.din8-question-image');
+            images.forEach(img => {
+              initializeImageControls(img);
+            });
+            
+            // Hide original
+            question.style.display = 'none';
+            
+            // Add to current page
+            pages[currentPageIndex].appendChild(questionClone);
+          }
+          
+          // Update current page height
+          currentPageHeight += questionHeight;
+        });
+      }
+    });
+  };
+  
+  // Helper functions to get question metadata
+  const getPartFromQuestion = (question) => {
+    // Search up the DOM tree to find the part
+    let current = question;
+    while (current && current.parentElement) {
+      current = current.parentElement;
+      
+      // Check if we found a part section
+      if (current.previousElementSibling && current.previousElementSibling.classList.contains('din8-part-title')) {
+        const partTitle = current.previousElementSibling.textContent;
+        if (partTitle.includes('PART-A')) return 'A';
+        if (partTitle.includes('PART-B')) return 'B';
+        if (partTitle.includes('PART-C')) return 'C';
+      }
+    }
+    
+    // Default
+    return 'A';
+  };
+  
+  const getUnitFromQuestion = (question) => {
+    // In a real implementation, this would extract the unit from the question
+    // This is a placeholder - you would need to implement this based on your data structure
+    return 1;
+  };
+  
+  const getBloomLevelFromQuestion = (question) => {
+    // In a real implementation, this would extract the bloom level from the question
+    // This is a placeholder - you would need to implement this based on your data structure
+    return 1;
+  };
+  
+  // Enhanced image handling with improved drag and resize
+  const initializeImageControls = (img) => {
+    if (!img || img.getAttribute('data-initialized')) return;
+    
+    // Mark as initialized
+    img.setAttribute('data-initialized', 'true');
+    
+    // Get the container
+    const container = img.closest('.din8-question-image-container');
+    if (!container) return;
+    
+    // Set container styles
+    container.style.position = 'relative';
+    container.style.minHeight = '50px';
+    
+    // Set image styles
+    img.style.position = 'relative';
+    img.style.cursor = 'move';
+    img.style.maxWidth = '100%';
+    img.style.border = '1px solid #ddd';
+    img.style.borderRadius = '4px';
+    img.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+    
+    // Create resize handle
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'din8-resize-handle';
+    resizeHandle.style.position = 'absolute';
+    resizeHandle.style.right = '0';
+    resizeHandle.style.bottom = '0';
+    resizeHandle.style.width = '10px';
+    resizeHandle.style.height = '10px';
+    resizeHandle.style.background = '#007bff';
+    resizeHandle.style.cursor = 'nwse-resize';
+    
+    container.appendChild(resizeHandle);
+    
+    // Variables to track dragging
+    let isDragging = false;
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight, startLeft, startTop;
+    let imgId = img.src.split('/').pop().split('.')[0];
+    
+    // Initialize image state if not already present
+    if (!imageStates[imgId]) {
+      setImageStates(prev => ({
+        ...prev,
+        [imgId]: {
+          width: img.offsetWidth,
+          height: img.offsetHeight,
+          left: 0,
+          top: 0
+        }
+      }));
+    }
+    
+    // Apply saved state if available
+    if (imageStates[imgId]) {
+      img.style.width = `${imageStates[imgId].width}px`;
+      img.style.height = `${imageStates[imgId].height}px`;
+      img.style.left = `${imageStates[imgId].left}px`;
+      img.style.top = `${imageStates[imgId].top}px`;
+    }
+    
+    // Mouse down on image (start drag)
+    img.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = parseInt(img.style.left || '0');
+      startTop = parseInt(img.style.top || '0');
+      e.preventDefault();
+    });
+    
+    // Mouse down on resize handle (start resize)
+    resizeHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startWidth = img.offsetWidth;
+      startHeight = img.offsetHeight;
+      e.preventDefault();
+    });
+    
+    // Create a single mousemove handler for the document
+    const handleMouseMove = (e) => {
+      if (isDragging) {
+        // Calculate the new position
+        const newLeft = startLeft + (e.clientX - startX);
+        const newTop = startTop + (e.clientY - startY);
+        
+        // Apply the new position
+        img.style.left = `${newLeft}px`;
+        img.style.top = `${newTop}px`;
+        
+        // Update state
+        setImageStates(prev => ({
+          ...prev,
+          [imgId]: {
+            ...prev[imgId],
+            left: newLeft,
+            top: newTop
+          }
+        }));
+        
+        // Dynamic reflow
+        requestAnimationFrame(checkContentOverflow);
+        
+      } else if (isResizing) {
+        // Calculate the new size while maintaining aspect ratio
+        const aspectRatio = startHeight / startWidth;
+        const newWidth = Math.max(50, startWidth + (e.clientX - startX));
+        const newHeight = Math.max(50, newWidth * aspectRatio);
+        
+        // Apply the new size
+        img.style.width = `${newWidth}px`;
+        img.style.height = `${newHeight}px`;
+        
+        // Update state
+        setImageStates(prev => ({
+          ...prev,
+          [imgId]: {
+            ...prev[imgId],
+            width: newWidth,
+            height: newHeight
+          }
+        }));
+        
+        // Dynamic reflow as the image is being resized
+        requestAnimationFrame(checkContentOverflow);
+      }
+    };
+    
+    // Add the event listener to the document
+    document.addEventListener('mousemove', handleMouseMove);
+    
+    // Mouse up (stop drag or resize)
+    const handleMouseUp = () => {
+      if (isDragging || isResizing) {
+        isDragging = false;
+        isResizing = false;
+        
+        // Final check for overflow
+        checkContentOverflow();
+      }
+    };
+    
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    // Clean up function to remove event listeners
+    const cleanUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    // Add the cleanup function to the image
+    img._cleanup = cleanUp;
+  };
+  
+  // Add the image controls to all images
+  const addImageDragAndResize = () => {
+    setTimeout(() => {
+      const images = document.querySelectorAll('.din8-question-image');
+      images.forEach(img => initializeImageControls(img));
+    }, 500);
+  };
+  
+  // Enhanced function to handle image changes
+  useEffect(() => {
+    // Clean up function to remove event listeners when unmounting
+    return () => {
+      const images = document.querySelectorAll('.din8-question-image');
+      images.forEach(img => {
+        if (img._cleanup) img._cleanup();
+      });
+    };
+  }, []);
+  
+  // Monitor for changes that might affect page layout
+  useEffect(() => {
+    if (showPaper) {
+      // Check for overflow and add image controls
+      checkContentOverflow();
+      addImageDragAndResize();
+      
+      // Add window resize listener
+      window.addEventListener('resize', checkContentOverflow);
+      
+      // Clean up
+      return () => {
+        window.removeEventListener('resize', checkContentOverflow);
+      };
+    }
+  }, [questions, showPaper]);
   
   // Function to fetch questions from the backend
   const fetchQuestions = async () => {
@@ -124,8 +596,6 @@ const CreatePapers = () => {
                 
                 if (bloomQuestionsNeeded > 0 && examConfig.blooms[bloomIndex].enabled) {
                   // Calculate approximate questions needed for this unit/bloom combination
-                  // This is a simplification - in reality, you would need a more sophisticated algorithm
-                  // to properly distribute questions across both unit and bloom dimensions
                   let questionsForThisBloom = Math.ceil(questionsNeeded * (bloomQuestionsNeeded / part.maxQuestions));
                   
                   // Fetch questions for this part, unit, and bloom level
@@ -220,13 +690,22 @@ const CreatePapers = () => {
       
       setShowPaper(true);
       
+      // Reset image states when loading new questions
+      setImageStates({});
+      
       // Scroll to the generated paper after a short delay to allow rendering
       setTimeout(() => {
         const paperElement = document.getElementById('din8-paper-container');
         if (paperElement) {
           paperElement.scrollIntoView({ behavior: 'smooth' });
         }
-      }, 100);
+        
+        // Add drag and resize functionality to images after paper is shown
+        addImageDragAndResize();
+        
+        // Check content overflow
+        checkContentOverflow();
+      }, 300);
     } catch (error) {
       console.error('Error fetching questions:', error);
       setError(`Error fetching questions: ${error.message}`);
@@ -294,6 +773,12 @@ const CreatePapers = () => {
       // Update questions state
       setQuestions(updatedQuestions);
       
+      // Check content overflow and add image controls after updating
+      setTimeout(() => {
+        addImageDragAndResize();
+        checkContentOverflow();
+      }, 300);
+      
     } catch (error) {
       console.error('Error replacing question:', error);
       alert('There was an error replacing the question. Please try again.');
@@ -306,11 +791,35 @@ const CreatePapers = () => {
   const randomizeQuestions = async () => {
     try {
       setLoading(true);
-      await fetchQuestions(); // Refetch all questions with new randomization
+      
+      // First, make a safe copy of existing questions
+      const existingQuestions = {
+        partA: [...questions.partA],
+        partB: [...questions.partB],
+        partC: [...questions.partC]
+      };
+      
+      // Shuffle existing questions
+      const shuffledQuestions = {
+        partA: shuffleArray(existingQuestions.partA),
+        partB: shuffleArray(existingQuestions.partB),
+        partC: shuffleArray(existingQuestions.partC)
+      };
+      
+      // Update questions state with shuffled questions
+      setQuestions(shuffledQuestions);
+      
+      // Reset image states when randomizing
+      setImageStates({});
+      
+      // Then fetch fresh questions
+      setTimeout(() => {
+        fetchQuestions
+      }, 300);
+      
     } catch (error) {
       console.error('Error randomizing questions:', error);
       alert('There was an error randomizing the questions. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -322,185 +831,452 @@ const CreatePapers = () => {
   };
 
   // Function to save paper (in a real app, this would save to a database)
-  const savePaper = () => {
-    alert('Question paper has been saved successfully!');
+  // Update your savePaper function in CreatePapers.js
+
+const savePaper = async () => {
+  try {
+    // Show loading state
+    setLoading(true);
+    
+    // Try to get token if available, but we don't require it anymore
+    const token = localStorage.getItem('userToken') || 
+                 localStorage.getItem('authToken') || 
+                 localStorage.getItem('token') || 
+                 'no-token-required';  // This will be handled by our middleware
+    
+    // Prepare the paper data in the required format (your existing code)
+    const paperData = {
+      university: {
+        name: paperDetails.university,
+        logoUrl: "/SJU.png"
+      },
+      examDetails: {
+        course: examDetails.course,
+        semester: examDetails.semester,
+        semesterExamination: examDetails.semesterExamination,
+        examinationConducted: examDetails.examinationConducted,
+        subjectCode: examDetails.subjectCode,
+        subjectName: examDetails.subjectName,
+        examTimings: examDetails.examTimings,
+        maxMarks: paperDetails.maxMarks,
+        duration: paperDetails.duration
+      },
+      // Rest of your paperData stays the same...
+    };
+    
+    // Send the paper data to the server with or without token
+    const response = await axios.post('http://localhost:5000/api/endpapers', paperData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    // Handle successful save
+    if (response.status === 201) {
+      alert('Question paper has been saved successfully!');
+    } else {
+      throw new Error('Failed to save paper');
+    }
+  } catch (error) {
+    console.error('Error saving paper:', error);
+    alert(`Failed to save paper: ${error.response?.data?.message || error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Improved PDF generation function with Word-like behavior for images and text flow
+const downloadPaper = () => {
+  // Show loading indicator
+  const loadingOverlay = document.createElement('div');
+  loadingOverlay.className = 'din8-loading-overlay';
+  loadingOverlay.innerHTML = '<div class="din8-loading-spinner"></div><div style="margin-top: 20px;">Generating PDF...</div>';
+  document.body.appendChild(loadingOverlay);
+  
+  // Load jsPDF
+  const jsPDFScript = document.createElement('script');
+  jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  jsPDFScript.async = true;
+  document.body.appendChild(jsPDFScript);
+  
+  // Check if libraries are loaded
+  const checkLibrariesLoaded = () => {
+    if (window.jspdf && window.jspdf.jsPDF) {
+      generatePDF();
+    } else {
+      setTimeout(checkLibrariesLoaded, 100);
+    }
   };
   
-  // Function to download/print the paper as PDF using a third-party library
-  const downloadPaper = () => {
-    // Show loading indicator
-    const loadingOverlay = document.createElement('div');
-    loadingOverlay.className = 'din8-loading-overlay';
-    loadingOverlay.innerHTML = '<div class="din8-loading-spinner"></div><div style="margin-top: 20px;">Generating PDF...</div>';
-    document.body.appendChild(loadingOverlay);
-    
-    // Create a new script element for jsPDF
-    const jsPDFScript = document.createElement('script');
-    jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-    jsPDFScript.async = true;
-    
-    // Create a new script element for html2canvas
-    const html2canvasScript = document.createElement('script');
-    html2canvasScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    html2canvasScript.async = true;
-    
-    // Append both scripts to the document
-    document.body.appendChild(jsPDFScript);
-    document.body.appendChild(html2canvasScript);
-    
-    // Function to create PDF once libraries are loaded
-    const createPDF = () => {
-      // Get the paper element
-      const paperElement = document.querySelector('.din8-a4-paper');
+  // Start checking if libraries are loaded
+  jsPDFScript.onload = checkLibrariesLoaded;
+  
+  // Function to generate the PDF
+  const generatePDF = () => {
+    try {
+      const { jsPDF } = window.jspdf;
       
-      // Create a clone to avoid modifying the original
-      const paperClone = paperElement.cloneNode(true);
-      
-      // Create a container for the clone with specific styling to match the desired output
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '210mm'; // A4 width
-      tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '0';
-      tempContainer.style.margin = '0';
-      tempContainer.appendChild(paperClone);
-      
-      // Append the container to the body
-      document.body.appendChild(tempContainer);
-      
-      // Remove all replace buttons
-      const replaceButtons = tempContainer.querySelectorAll('.din8-replace-btn');
-      replaceButtons.forEach(button => {
-        button.remove();
+      // Create new PDF document
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
       });
       
-      // Remove paper actions
-      const paperActions = tempContainer.querySelector('.din8-paper-actions');
-      if (paperActions) {
-        paperActions.remove();
-      }
+      // Define page dimensions (A4)
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15; // margins in mm
+      const contentWidth = pageWidth - (margin * 2);
       
-      // Adjust the question padding since we removed the buttons
-      const questions = tempContainer.querySelectorAll('.din8-question');
-      questions.forEach(question => {
-        question.style.paddingRight = '0';
-      });
+      // Make sure questions arrays exist
+      const questionsPartA = Array.isArray(questions.partA) ? questions.partA : [];
+      const questionsPartB = Array.isArray(questions.partB) ? questions.partB : [];
+      const questionsPartC = Array.isArray(questions.partC) ? questions.partC : [];
       
-      // Make sure the university logo is properly set
-      const logo = tempContainer.querySelector('.din8-university-logo');
-      if (logo) {
-        logo.crossOrigin = "Anonymous";
-        logo.style.display = 'block';
-        logo.style.width = '120px';
-        logo.style.height = 'auto';
-        
-        // Force the image to be fully loaded
-        if (!logo.complete) {
-          logo.src = logo.src;
-        }
-      }
+      // Current Y position on the page
+      let yPos = margin;
+      let currentPage = 1;
       
-      // Ensure all headers are centered
-      const headerTexts = tempContainer.querySelectorAll('.din8-university-name, .din8-course-details, .din8-paper-title');
-      headerTexts.forEach(text => {
-        text.style.textAlign = 'center';
-        text.style.width = '100%';
-      });
-      
-      // Center all part titles and instructions
-      const partTitles = tempContainer.querySelectorAll('.din8-part-title');
-      partTitles.forEach(title => {
-        title.style.textAlign = 'center';
-        title.style.fontWeight = 'bold';
-        title.style.marginTop = '20px';
-        title.style.marginBottom = '5px';
-      });
-      
-      // Update the page footer to show correct page numbers
-      const pageFooter = tempContainer.querySelector('.din8-page-footer');
-      if (pageFooter) {
-        pageFooter.textContent = 'Page 1 of 1';
-      }
-      
-      // Adjust margins and padding for a cleaner look
-      const a4Page = tempContainer.querySelector('.din8-a4-page');
-      if (a4Page) {
-        a4Page.style.paddingTop = '10mm';
-        a4Page.style.paddingBottom = '10mm';
-      }
-      
-      // Wait for the DOM to update
-      setTimeout(() => {
-        // Use html2canvas to convert to image
-        window.html2canvas(paperClone, {
-          scale: 2, // Higher scale for better quality
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          onclone: (clonedDoc) => {
-            // Further adjustments to cloned document if needed
-            const clonedQuestions = clonedDoc.querySelectorAll('.din8-question');
-            clonedQuestions.forEach(q => {
-              q.style.paddingRight = '0';
-            });
-          }
-        }).then(canvas => {
-          // Create PDF
-          const { jsPDF } = window.jspdf;
-          const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4',
-            compress: true
-          });
+      // Function to add university logo
+      const addLogo = async () => {
+        return new Promise((resolve) => {
+          // Try to load the university logo
+          const logo = new Image();
+          logo.crossOrigin = 'Anonymous';
           
-          // Get dimensions
-          const imgData = canvas.toDataURL('image/png');
-          const imgWidth = 210; // A4 width in mm
-          const pageHeight = 297; // A4 height in mm
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          logo.onload = () => {
+            try {
+              // Calculate dimensions to maintain aspect ratio
+              const imgWidth = 15; // Logo width in mm
+              const imgHeight = (logo.height * imgWidth) / logo.width;
+              
+              // Create temporary canvas to convert image to data URL
+              const canvas = document.createElement('canvas');
+              canvas.width = logo.width;
+              canvas.height = logo.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(logo, 0, 0);
+              
+              // Add logo to PDF at top center
+              const x = (pageWidth - imgWidth) / 2 - 45; // Left of center
+              pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, yPos, imgWidth, imgHeight);
+              
+              // Update yPos but don't add extra space since we'll position the header text
+              // relative to the top of the page, not relative to the logo
+              resolve();
+            } catch (err) {
+              console.error('Failed to add logo to PDF:', err);
+              resolve();
+            }
+          };
           
-          // Add the image to the PDF (first page)
-          pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
+          logo.onerror = () => {
+            console.warn('Failed to load university logo');
+            resolve();
+          };
           
-          // If content overflows to second page
-          if (imgHeight > pageHeight) {
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, -pageHeight, imgWidth, imgHeight);
-          }
+          // Try to load from SJU.png
+          logo.src = '/SJU.png';
           
-          // Save the PDF
-          pdf.save('Question_Paper.pdf');
-          
-          // Clean up
-          document.body.removeChild(tempContainer);
-          document.body.removeChild(loadingOverlay);
-          
-          // Show success message
-          alert('Question paper downloaded as PDF successfully!');
-        }).catch(error => {
-          console.error('Error generating PDF:', error);
-          document.body.removeChild(tempContainer);
-          document.body.removeChild(loadingOverlay);
-          alert('There was an error generating the PDF. Please try again.');
+          // If logo doesn't load in 2 seconds, continue without it
+          setTimeout(() => {
+            if (!logo.complete) {
+              console.warn('Logo loading timed out');
+              resolve();
+            }
+          }, 2000);
         });
-      }, 500);
-    };
-    
-    // Check if libraries are loaded before creating PDF
-    const checkLibrariesLoaded = () => {
-      if (window.jspdf && window.html2canvas) {
-        createPDF();
-      } else {
-        setTimeout(checkLibrariesLoaded, 100);
-      }
-    };
-    
-    // Start checking if libraries are loaded
-    jsPDFScript.onload = checkLibrariesLoaded;
+      };
+      
+      // Function to add page header
+      const addPageHeader = async () => {
+        // Try to add logo
+        await addLogo();
+        
+        // University name - centered and bold
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(paperDetails.university, pageWidth/2, margin + 5, { align: 'center' });
+        
+        // Course details - start 10mm from top
+        yPos = margin + 10;
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`${examDetails.course} - ${examDetails.semester} SEMESTER`, pageWidth/2, yPos, { align: 'center' });
+        yPos += 5;
+        
+        pdf.text(`SEMESTER EXAMINATION: ${examDetails.semesterExamination}`, pageWidth/2, yPos, { align: 'center' });
+        yPos += 5;
+        
+        pdf.text(`(Examination conducted in ${examDetails.examinationConducted})`, pageWidth/2, yPos, { align: 'center' });
+        yPos += 5;
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${examDetails.subjectCode}: ${examDetails.subjectName}`, pageWidth/2, yPos, { align: 'center' });
+        yPos += 5;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.text("( For current batch students only )", pageWidth/2, yPos, { align: 'center' });
+        yPos += 10;
+        
+        // Registration box - positioned correctly to the right
+        const regBoxWidth = 50;
+        const regBoxHeight = 15;
+        const regBoxX = pageWidth - margin - regBoxWidth;
+        const regBoxY = margin; // Top margin
+        
+        pdf.rect(regBoxX, regBoxY, regBoxWidth, regBoxHeight);
+        pdf.setFontSize(9);
+        pdf.text("Registration Number:", regBoxX + 2, regBoxY + 5);
+        pdf.text("Date:", regBoxX + 2, regBoxY + 10);
+        
+        // Exam info
+        yPos += 5;
+        pdf.setFontSize(10);
+        pdf.text(`Time: ${examDetails.examTimings}`, margin, yPos);
+        pdf.text(`Max Marks: ${paperDetails.maxMarks}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 8;
+        
+        // Paper info
+        pdf.setFont('helvetica', 'italic');
+        const totalPages = Math.max(
+          1, 
+          Math.ceil((questionsPartA.length + questionsPartB.length + questionsPartC.length + 20) / 15)
+        );
+        pdf.text(`This paper contains ${totalPages} printed pages and 3 parts`, pageWidth/2, yPos, { align: 'center' });
+        yPos += 10;
+      };
+      
+      // Function to check if we need a new page
+      const checkPageBreak = (neededSpace) => {
+        if (yPos + neededSpace > pageHeight - margin) {
+          pdf.addPage();
+          currentPage++;
+          yPos = margin;
+          
+          // Add minimal header for continuation pages - just the subject code
+          if (currentPage > 1) {
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${examDetails.subjectCode}: ${examDetails.subjectName}`, pageWidth/2, yPos, { align: 'center' });
+            yPos += 8;
+          }
+          
+          return true;
+        }
+        return false;
+      };
+      
+      // Function to render images in PDF
+      const addImage = async (imageUrl, maxWidth) => {
+        // Check if we have enough space for a small image
+        if (checkPageBreak(40)) {
+          // We moved to a new page, recalculate space
+        }
+        
+        try {
+          // Create an image element to load the image
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            
+            img.onload = () => {
+              // Calculate dimensions to fit within maximum width
+              const imgWidth = Math.min(img.width, contentWidth);
+              const imgHeight = (img.height * imgWidth) / img.width;
+              
+              // Check if we need a page break for this image
+              if (yPos + imgHeight > pageHeight - margin) {
+                pdf.addPage();
+                currentPage++;
+                yPos = margin;
+                
+                // Add minimal header for continuation pages
+                pdf.setFontSize(10);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(`${examDetails.subjectCode}: ${examDetails.subjectName}`, pageWidth/2, yPos, { align: 'center' });
+                yPos += 8;
+              }
+              
+              // Add the image
+              const x = margin + (contentWidth - imgWidth) / 2; // Center the image
+              try {
+                // Create canvas to ensure proper image format
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                // Add image to PDF
+                pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, yPos, imgWidth, imgHeight);
+                yPos += imgHeight + 5; // Add space after image
+                resolve();
+              } catch (err) {
+                console.error('Failed to add image to PDF:', err);
+                yPos += 10; // Still add some space even if image fails
+                resolve();
+              }
+            };
+            
+            img.onerror = () => {
+              console.error('Failed to load image:', imageUrl);
+              yPos += 10; // Add some space
+              resolve(); // Continue without the image
+            };
+            
+            img.src = imageUrl;
+          });
+        } catch (err) {
+          console.error('Error processing image:', err);
+          yPos += 10; // Add some space anyway
+          return Promise.resolve(); // Return a resolved promise to continue
+        }
+      };
+      
+      // Add first page header
+      addPageHeader().then(async () => {
+        // Process parts
+        const renderPart = async (partTitle, instructions, questionsList, startNumber) => {
+          // Ensure questionsList is an array
+          const questions = Array.isArray(questionsList) ? questionsList : [];
+          
+          if (questions.length === 0) {
+            // If no questions, just add the part title and a message
+            checkPageBreak(15);
+            
+            pdf.setFontSize(11);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(partTitle, pageWidth/2, yPos, { align: 'center' });
+            yPos += 6;
+            
+            // Add part instructions
+            pdf.setFontSize(10);
+            pdf.text(instructions[0], margin, yPos);
+            pdf.text(instructions[1], pageWidth - margin, yPos, { align: 'right' });
+            yPos += 6;
+            
+            pdf.setFont('helvetica', 'italic');
+            pdf.text("No questions available for this part", margin, yPos);
+            yPos += 6;
+            
+            return Promise.resolve();
+          }
+          
+          // Add part title - check for page break
+          checkPageBreak(20);
+          
+          pdf.setFontSize(11);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(partTitle, pageWidth/2, yPos, { align: 'center' });
+          yPos += 6;
+          
+          // Add part instructions
+          pdf.setFontSize(10);
+          pdf.text(instructions[0], margin, yPos);
+          pdf.text(instructions[1], pageWidth - margin, yPos, { align: 'right' });
+          yPos += 6;
+          
+          // Add questions
+          pdf.setFont('helvetica', 'normal');
+          
+          for (let i = 0; i < questions.length; i++) {
+            const question = questions[i];
+            
+            // Ensure question has properties
+            if (!question || typeof question !== 'object') {
+              console.warn('Invalid question object at index', i, 'in', partTitle);
+              continue;
+            }
+            
+            // Check if we need a page break for this question - reduced space estimate
+            const questionText = question.question || "No question text available";
+            const estimatedQuestionHeight = 10 + (questionText.length / 150) * 5;
+            checkPageBreak(estimatedQuestionHeight);
+            
+            // Question number and text - reduced spacing
+            const questionNumber = `${startNumber + i}.`;
+            
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(questionNumber, margin, yPos);
+            
+            // Handle multi-line question text with reduced spacing
+            const textLines = pdf.splitTextToSize(questionText, contentWidth - 10);
+            pdf.text(textLines, margin + 7, yPos);
+            
+            // Move Y position down based on number of lines - reduced spacing
+            yPos += 4 * textLines.length + 4;
+            
+            // Add image if available
+            if (question.hasImage && question.imageUrl) {
+              await addImage(question.imageUrl, contentWidth - 20);
+            } else {
+              // No image - add smaller space between questions
+              yPos += 3;
+            }
+          }
+          
+          // Add smaller extra space after part
+          yPos += 5;
+          
+          return Promise.resolve();
+        };
+
+        // Determine starting numbers for each part
+        const partAStartNumber = 1;
+        const partBStartNumber = partAStartNumber + questionsPartA.length;
+        const partCStartNumber = partBStartNumber + questionsPartB.length;
+        
+        // Chain the rendering of each part
+        await renderPart(
+          'PART-A', 
+          ['Answer all FIVE questions', '(2 X 5 = 10)'], 
+          questionsPartA,
+          partAStartNumber
+        );
+        
+        await renderPart(
+          'PART-B', 
+          ['Answer any FIVE questions', '(4 X 5 = 20)'], 
+          questionsPartB,
+          partBStartNumber
+        );
+        
+        await renderPart(
+          'PART-C', 
+          ['Answer any THREE questions', '(10 X 3 = 30)'], 
+          questionsPartC,
+          partCStartNumber
+        );
+        
+        // Add page numbers to all pages
+        const totalPages = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          pdf.setPage(i);
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 10);
+        }
+        
+        // Save the PDF
+        pdf.save('Question_Paper.pdf');
+        
+        // Remove loading overlay
+        document.body.removeChild(loadingOverlay);
+      }).catch(error => {
+        console.error('Error generating PDF:', error);
+        document.body.removeChild(loadingOverlay);
+        alert('Error generating PDF: ' + error.message);
+      });
+    } catch (error) {
+      console.error('Error in PDF generation:', error);
+      document.body.removeChild(loadingOverlay);
+      alert('Error generating PDF: ' + error.message);
+    }
   };
+};
   
   // Generate a paper on first load
   useEffect(() => {
@@ -574,14 +1350,99 @@ const CreatePapers = () => {
       margin-top: 10px;
       margin-bottom: 10px;
       text-align: center;
+      position: relative;
+      min-height: 50px;
     }
 
     .din8-question-image {
       max-width: 100%;
-      max-height: 200px;
       border: 1px solid #ddd;
       border-radius: 4px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+    }
+    
+    .din8-a4-paper {
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      margin: 20px auto;
+      position: relative;
+    }
+    
+    .din8-a4-page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 20mm 15mm;
+      position: relative;
+      box-sizing: border-box;
+      overflow: visible;
+      page-break-after: always;
+    }
+    
+    .din8-page-footer {
+      position: absolute;
+      bottom: 10mm;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 10pt;
+      color: #888;
+    }
+    
+    .din8-paper-info {
+      text-align: center;
+      margin: 10px 0;
+      font-weight: normal;
+    }
+    
+    /* Paper container */
+    .din8-paper-container {
+      position: relative;
+    }
+    
+    /* Overflow page styles */
+    .din8-overflow-page {
+      margin-top: 20px;
+    }
+    
+    /* Resize handle */
+    .din8-resize-handle {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: 10px;
+      height: 10px;
+      background-color: #007bff;
+      cursor: nwse-resize;
+      z-index: 10;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+    
+    .din8-resize-handle:hover {
+      transform: scale(1.5);
+    }
+    
+    /* Style for questions that have moved to a new page */
+    .din8-overflow-page .din8-question {
+      page-break-inside: avoid;
+    }
+    
+    /* Improve image dragging visual feedback */
+    .din8-question-image.dragging {
+      opacity: 0.8;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Animated resizing effect */
+    .din8-question-image {
+      transition: width 0.1s ease, height 0.1s ease;
+    }
+    
+    /* Ensure images have proper space */
+    .din8-question-image-container {
+      margin: 15px 0;
+      clear: both;
     }
   `;
   
@@ -654,7 +1515,9 @@ const CreatePapers = () => {
                 <div>Max Marks: {paperDetails.maxMarks}</div>
               </div>
               
-              <div className="din8-course-details">This paper contains 1 printed page and 3 parts</div>
+              <div className="din8-course-details din8-paper-info">
+                This paper contains {totalPages} printed {totalPages === 1 ? 'page' : 'pages'} and 3 parts
+              </div>
               
               {/* Part A */}
               <div className="din8-part-title">PART-A</div>
@@ -677,6 +1540,7 @@ const CreatePapers = () => {
                             src={question.imageUrl} 
                             alt={`Image for question ${index + 1}`}
                             className="din8-question-image"
+                            loading="eager"
                           />
                         </div>
                       )}
@@ -715,6 +1579,7 @@ const CreatePapers = () => {
                             src={question.imageUrl} 
                             alt={`Image for question ${index + 6}`}
                             className="din8-question-image"
+                            loading="eager"
                           />
                         </div>
                       )}
@@ -753,6 +1618,7 @@ const CreatePapers = () => {
                             src={question.imageUrl} 
                             alt={`Image for question ${index + questions.partB.length + 6}`}
                             className="din8-question-image"
+                            loading="eager"
                           />
                         </div>
                       )}
@@ -770,8 +1636,10 @@ const CreatePapers = () => {
                 )}
               </div>
               
-              <div className="din8-page-footer">Page 1 of 1</div>
+              <div className="din8-page-footer">Page 1 of {totalPages}</div>
             </div>
+            
+            {/* Additional pages will be created dynamically by the checkContentOverflow function */}
           </div>
           
           {/* Action buttons outside the paper */}
