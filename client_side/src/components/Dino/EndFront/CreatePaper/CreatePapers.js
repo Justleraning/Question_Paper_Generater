@@ -23,7 +23,7 @@ const CreatePapers = () => {
   });
   
   // State for paper details
-  const [paperDetails, setPaperDetails] = useState({
+  const [paperDetails] = useState({
     university: "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
     duration: "2",
     maxMarks: "60"
@@ -44,9 +44,6 @@ const CreatePapers = () => {
   
   // State for error messages
   const [error, setError] = useState(null);
-
-  // State for total page count - we'll keep it simple with just one page initially
-  const [totalPages, setTotalPages] = useState(1);
 
   // State to track resized images and their dimensions
   const [imageStates, setImageStates] = useState({});
@@ -95,278 +92,6 @@ const CreatePapers = () => {
     return shuffled;
   };
 
-  // Improved content overflow detection that considers image states
-  const checkContentOverflow = () => {
-    setTimeout(() => {
-      const paperContainer = document.querySelector('.din8-a4-paper');
-      const firstPage = document.querySelector('.din8-a4-page');
-      
-      if (!paperContainer || !firstPage) return;
-      
-      // A4 size in pixels (approximate)
-      const a4Height = 1123; // 297mm at 96dpi
-      
-      // Check if content overflows the first page
-      if (firstPage.scrollHeight > a4Height) {
-        // Calculate how many pages we need
-        const totalContentHeight = firstPage.scrollHeight;
-        const pagesNeeded = Math.ceil(totalContentHeight / a4Height);
-        
-        // Create additional pages if needed
-        const existingPages = document.querySelectorAll('.din8-a4-page').length;
-        if (existingPages < pagesNeeded) {
-          // Remove any existing overflow pages
-          const existingOverflowPages = document.querySelectorAll('.din8-overflow-page');
-          existingOverflowPages.forEach(page => {
-            if (page.parentNode) {
-              page.parentNode.removeChild(page);
-            }
-          });
-          
-          // Create new pages as needed
-          for (let i = existingPages; i < pagesNeeded; i++) {
-            const newPage = document.createElement('div');
-            newPage.className = 'din8-a4-page din8-overflow-page';
-            
-            // Add footer to new page
-            const newFooter = document.createElement('div');
-            newFooter.className = 'din8-page-footer';
-            newFooter.textContent = `Page ${i + 1} of ${pagesNeeded}`;
-            newPage.appendChild(newFooter);
-            
-            paperContainer.appendChild(newPage);
-          }
-          
-          // Update total pages count
-          setTotalPages(pagesNeeded);
-          
-          // Update paper info text
-          const paperInfoText = document.querySelector('.din8-paper-info');
-          if (paperInfoText) {
-            paperInfoText.textContent = `This paper contains ${pagesNeeded} printed pages and 3 parts`;
-          }
-          
-          // Update all page footers
-          const pageFooters = paperContainer.querySelectorAll('.din8-page-footer');
-          pageFooters.forEach((footer, index) => {
-            footer.textContent = `Page ${index + 1} of ${pagesNeeded}`;
-          });
-          
-          // Now distribute content across pages - improved algorithm
-          balanceContentAcrossPages(paperContainer, pagesNeeded, a4Height);
-        }
-      } else {
-        // No overflow, ensure we only have one page
-        const extraPages = document.querySelectorAll('.din8-overflow-page');
-        extraPages.forEach(page => {
-          if (page.parentNode) {
-            page.parentNode.removeChild(page);
-          }
-        });
-        
-        setTotalPages(1);
-        
-        // Update paper info text
-        const paperInfoText = document.querySelector('.din8-paper-info');
-        if (paperInfoText) {
-          paperInfoText.textContent = 'This paper contains 1 printed page and 3 parts';
-        }
-        
-        // Update page footer
-        const pageFooter = document.querySelector('.din8-page-footer');
-        if (pageFooter) {
-          pageFooter.textContent = 'Page 1 of 1';
-        }
-      }
-    }, 500); // Small delay to ensure content is rendered
-  };
-
-  // Improved function to distribute content across pages
-  const balanceContentAcrossPages = (paperContainer, pagesNeeded, a4Height) => {
-    const firstPage = document.querySelector('.din8-a4-page');
-    const pages = paperContainer.querySelectorAll('.din8-a4-page');
-    
-    if (!firstPage || pages.length <= 1) return;
-    
-    // Get all question elements from the first page
-    const allQuestions = Array.from(firstPage.querySelectorAll('.din8-question'));
-    
-    // Get all part elements
-    const allParts = Array.from(firstPage.querySelectorAll('.din8-part-title, .din8-part-instructions, .din8-question-list'));
-    
-    // Keep track of which page we're currently filling
-    let currentPageIndex = 0;
-    let currentPageHeight = 0;
-    const pageHeightLimit = a4Height - 50; // Leave some margin
-    
-    // Header content that should always stay on the first page
-    const headerContent = firstPage.querySelector('.din8-university-header');
-    const registrationBox = firstPage.querySelector('.din8-registration-box');
-    const examInfo = firstPage.querySelector('.din8-exam-info');
-    const paperInfo = firstPage.querySelector('.din8-paper-info');
-    
-    // Calculate header height
-    let headerHeight = 0;
-    if (headerContent) headerHeight += headerContent.offsetHeight;
-    if (registrationBox) headerHeight += registrationBox.offsetHeight;
-    if (examInfo) headerHeight += examInfo.offsetHeight;
-    if (paperInfo) headerHeight += paperInfo.offsetHeight;
-    
-    currentPageHeight = headerHeight;
-    
-    // First, hide all content in overflow pages
-    for (let i = 1; i < pages.length; i++) {
-      const pageContent = pages[i].querySelectorAll('*:not(.din8-page-footer)');
-      pageContent.forEach(el => {
-        if (el !== pages[i] && !el.classList.contains('din8-page-footer')) {
-          el.remove();
-        }
-      });
-    }
-    
-    // Function to check if an element is a part title
-    const isPartTitle = (element) => element.classList.contains('din8-part-title');
-    const isPartInstructions = (element) => element.classList.contains('din8-part-instructions');
-    
-    // Now distribute content
-    let currentPart = null;
-    let partInstructions = null;
-    
-    allParts.forEach(element => {
-      // Clone the element
-      const clone = element.cloneNode(true);
-      
-      // Check if this is a part title
-      if (isPartTitle(element)) {
-        currentPart = clone;
-        
-        // If we're not on the first page, we need to add this part title to the current overflow page
-        if (currentPageIndex > 0) {
-          // Hide original
-          element.style.display = 'none';
-          
-          // Add to current page
-          pages[currentPageIndex].appendChild(clone);
-          currentPageHeight += clone.offsetHeight;
-        } else {
-          // On first page, just measure height
-          currentPageHeight += element.offsetHeight;
-        }
-      } 
-      // Check if this is part instructions
-      else if (isPartInstructions(element)) {
-        partInstructions = clone;
-        
-        // If we're not on the first page, add these instructions too
-        if (currentPageIndex > 0) {
-          // Hide original
-          element.style.display = 'none';
-          
-          // Add to current page
-          pages[currentPageIndex].appendChild(clone);
-          currentPageHeight += clone.offsetHeight;
-        } else {
-          // On first page, just measure height
-          currentPageHeight += element.offsetHeight;
-        }
-      }
-      // This is a question list
-      else {
-        // Get all questions in this list
-        const questions = Array.from(element.querySelectorAll('.din8-question'));
-        
-        questions.forEach(question => {
-          // Check if adding this question would overflow the current page
-          const questionHeight = question.offsetHeight;
-          
-          if (currentPageHeight + questionHeight > pageHeightLimit) {
-            // Move to next page
-            currentPageIndex++;
-            currentPageHeight = 0;
-            
-            // If this is the first element on a new page and we have a current part title,
-            // add the part title and instructions first
-            if (currentPart && !pages[currentPageIndex].querySelector('.din8-part-title')) {
-              const partClone = currentPart.cloneNode(true);
-              pages[currentPageIndex].appendChild(partClone);
-              currentPageHeight += partClone.offsetHeight;
-              
-              if (partInstructions) {
-                const instructionsClone = partInstructions.cloneNode(true);
-                pages[currentPageIndex].appendChild(instructionsClone);
-                currentPageHeight += instructionsClone.offsetHeight;
-              }
-            }
-          }
-          
-          // If we're not on the first page, we need to move this question
-          if (currentPageIndex > 0) {
-            // Clone the question
-            const questionClone = question.cloneNode(true);
-            
-            // Add event listeners to any replace buttons
-            const replaceBtn = questionClone.querySelector('.din8-replace-btn');
-            if (replaceBtn) {
-              const questionId = question.id;
-              const part = getPartFromQuestion(question);
-              const unit = getUnitFromQuestion(question);
-              const bloomLevel = getBloomLevelFromQuestion(question);
-              
-              replaceBtn.addEventListener('click', () => replaceQuestion(questionId, part, unit, bloomLevel));
-            }
-            
-            // Add draggable functionality to images
-            const images = questionClone.querySelectorAll('.din8-question-image');
-            images.forEach(img => {
-              initializeImageControls(img);
-            });
-            
-            // Hide original
-            question.style.display = 'none';
-            
-            // Add to current page
-            pages[currentPageIndex].appendChild(questionClone);
-          }
-          
-          // Update current page height
-          currentPageHeight += questionHeight;
-        });
-      }
-    });
-  };
-  
-  // Helper functions to get question metadata
-  const getPartFromQuestion = (question) => {
-    // Search up the DOM tree to find the part
-    let current = question;
-    while (current && current.parentElement) {
-      current = current.parentElement;
-      
-      // Check if we found a part section
-      if (current.previousElementSibling && current.previousElementSibling.classList.contains('din8-part-title')) {
-        const partTitle = current.previousElementSibling.textContent;
-        if (partTitle.includes('PART-A')) return 'A';
-        if (partTitle.includes('PART-B')) return 'B';
-        if (partTitle.includes('PART-C')) return 'C';
-      }
-    }
-    
-    // Default
-    return 'A';
-  };
-  
-  const getUnitFromQuestion = (question) => {
-    // In a real implementation, this would extract the unit from the question
-    // This is a placeholder - you would need to implement this based on your data structure
-    return 1;
-  };
-  
-  const getBloomLevelFromQuestion = (question) => {
-    // In a real implementation, this would extract the bloom level from the question
-    // This is a placeholder - you would need to implement this based on your data structure
-    return 1;
-  };
-  
   // Enhanced image handling with improved drag and resize
   const initializeImageControls = (img) => {
     if (!img || img.getAttribute('data-initialized')) return;
@@ -471,9 +196,6 @@ const CreatePapers = () => {
           }
         }));
         
-        // Dynamic reflow
-        requestAnimationFrame(checkContentOverflow);
-        
       } else if (isResizing) {
         // Calculate the new size while maintaining aspect ratio
         const aspectRatio = startHeight / startWidth;
@@ -493,9 +215,6 @@ const CreatePapers = () => {
             height: newHeight
           }
         }));
-        
-        // Dynamic reflow as the image is being resized
-        requestAnimationFrame(checkContentOverflow);
       }
     };
     
@@ -507,9 +226,6 @@ const CreatePapers = () => {
       if (isDragging || isResizing) {
         isDragging = false;
         isResizing = false;
-        
-        // Final check for overflow
-        checkContentOverflow();
       }
     };
     
@@ -547,19 +263,42 @@ const CreatePapers = () => {
   // Monitor for changes that might affect page layout
   useEffect(() => {
     if (showPaper) {
-      // Check for overflow and add image controls
-      checkContentOverflow();
+      // Add image controls
       addImageDragAndResize();
-      
-      // Add window resize listener
-      window.addEventListener('resize', checkContentOverflow);
-      
-      // Clean up
-      return () => {
-        window.removeEventListener('resize', checkContentOverflow);
-      };
     }
   }, [questions, showPaper]);
+  
+  // Helper functions to get question metadata
+  const getPartFromQuestion = (question) => {
+    // Search up the DOM tree to find the part
+    let current = question;
+    while (current && current.parentElement) {
+      current = current.parentElement;
+      
+      // Check if we found a part section
+      if (current.previousElementSibling && current.previousElementSibling.classList.contains('din8-part-title')) {
+        const partTitle = current.previousElementSibling.textContent;
+        if (partTitle.includes('PART-A')) return 'A';
+        if (partTitle.includes('PART-B')) return 'B';
+        if (partTitle.includes('PART-C')) return 'C';
+      }
+    }
+    
+    // Default
+    return 'A';
+  };
+  
+  const getUnitFromQuestion = (question) => {
+    // In a real implementation, this would extract the unit from the question
+    // This is a placeholder - you would need to implement this based on your data structure
+    return 1;
+  };
+  
+  const getBloomLevelFromQuestion = (question) => {
+    // In a real implementation, this would extract the bloom level from the question
+    // This is a placeholder - you would need to implement this based on your data structure
+    return 1;
+  };
   
   // Function to fetch questions from the backend
   const fetchQuestions = async () => {
@@ -702,9 +441,6 @@ const CreatePapers = () => {
         
         // Add drag and resize functionality to images after paper is shown
         addImageDragAndResize();
-        
-        // Check content overflow
-        checkContentOverflow();
       }, 300);
     } catch (error) {
       console.error('Error fetching questions:', error);
@@ -773,10 +509,9 @@ const CreatePapers = () => {
       // Update questions state
       setQuestions(updatedQuestions);
       
-      // Check content overflow and add image controls after updating
+      // Add image controls after updating
       setTimeout(() => {
         addImageDragAndResize();
-        checkContentOverflow();
       }, 300);
       
     } catch (error) {
@@ -831,459 +566,497 @@ const CreatePapers = () => {
   };
 
   // Function to save paper (in a real app, this would save to a database)
-  // Update your savePaper function in CreatePapers.js
-
-const savePaper = async () => {
-  try {
-    // Show loading state
-    setLoading(true);
-    
-    // Try to get token if available, but we don't require it anymore
-    const token = localStorage.getItem('userToken') || 
+  const savePaper = async () => {
+    try {
+      // Show loading state
+      setLoading(true);
+      
+      // Try to get token if available, but we don't require it anymore
+      const token = localStorage.getItem('userToken') || 
                  localStorage.getItem('authToken') || 
                  localStorage.getItem('token') || 
                  'no-token-required';  // This will be handled by our middleware
-    
-    // Prepare the paper data in the required format (your existing code)
-    const paperData = {
-      university: {
-        name: paperDetails.university,
-        logoUrl: "/SJU.png"
-      },
-      examDetails: {
-        course: examDetails.course,
-        semester: examDetails.semester,
-        semesterExamination: examDetails.semesterExamination,
-        examinationConducted: examDetails.examinationConducted,
-        subjectCode: examDetails.subjectCode,
-        subjectName: examDetails.subjectName,
-        examTimings: examDetails.examTimings,
-        maxMarks: paperDetails.maxMarks,
-        duration: paperDetails.duration
-      },
-      // Rest of your paperData stays the same...
-    };
-    
-    // Send the paper data to the server with or without token
-    const response = await axios.post('http://localhost:5000/api/endpapers', paperData, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    // Handle successful save
-    if (response.status === 201) {
-      alert('Question paper has been saved successfully!');
-    } else {
-      throw new Error('Failed to save paper');
-    }
-  } catch (error) {
-    console.error('Error saving paper:', error);
-    alert(`Failed to save paper: ${error.response?.data?.message || error.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
-
-// Improved PDF generation function with Word-like behavior for images and text flow
-const downloadPaper = () => {
-  // Show loading indicator
-  const loadingOverlay = document.createElement('div');
-  loadingOverlay.className = 'din8-loading-overlay';
-  loadingOverlay.innerHTML = '<div class="din8-loading-spinner"></div><div style="margin-top: 20px;">Generating PDF...</div>';
-  document.body.appendChild(loadingOverlay);
-  
-  // Load jsPDF
-  const jsPDFScript = document.createElement('script');
-  jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-  jsPDFScript.async = true;
-  document.body.appendChild(jsPDFScript);
-  
-  // Check if libraries are loaded
-  const checkLibrariesLoaded = () => {
-    if (window.jspdf && window.jspdf.jsPDF) {
-      generatePDF();
-    } else {
-      setTimeout(checkLibrariesLoaded, 100);
-    }
-  };
-  
-  // Start checking if libraries are loaded
-  jsPDFScript.onload = checkLibrariesLoaded;
-  
-  // Function to generate the PDF
-  const generatePDF = () => {
-    try {
-      const { jsPDF } = window.jspdf;
       
-      // Create new PDF document
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
+      // Prepare the paper data in the required format
+      const paperData = {
+        university: {
+          name: paperDetails.university,
+          logoUrl: "/SJU.png"
+        },
+        examDetails: {
+          course: examDetails.course,
+          semester: examDetails.semester,
+          semesterExamination: examDetails.semesterExamination,
+          examinationConducted: examDetails.examinationConducted,
+          subjectCode: examDetails.subjectCode,
+          subjectName: examDetails.subjectName,
+          examTimings: examDetails.examTimings,
+          maxMarks: paperDetails.maxMarks,
+          duration: paperDetails.duration
+        },
+        questions: {
+          partA: questions.partA.map(q => q._id),
+          partB: questions.partB.map(q => q._id),
+          partC: questions.partC.map(q => q._id)
+        },
+        status: 'draft',
+        createdAt: new Date()
+      };
+      
+      // Send the paper data to the server with or without token
+      const response = await axios.post('http://localhost:5000/api/endpapers', paperData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
       
-      // Define page dimensions (A4)
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 15; // margins in mm
-      const contentWidth = pageWidth - (margin * 2);
-      
-      // Make sure questions arrays exist
-      const questionsPartA = Array.isArray(questions.partA) ? questions.partA : [];
-      const questionsPartB = Array.isArray(questions.partB) ? questions.partB : [];
-      const questionsPartC = Array.isArray(questions.partC) ? questions.partC : [];
-      
-      // Current Y position on the page
-      let yPos = margin;
-      let currentPage = 1;
-      
-      // Function to add university logo
-      const addLogo = async () => {
-        return new Promise((resolve) => {
-          // Try to load the university logo
-          const logo = new Image();
-          logo.crossOrigin = 'Anonymous';
-          
-          logo.onload = () => {
-            try {
-              // Calculate dimensions to maintain aspect ratio
-              const imgWidth = 15; // Logo width in mm
-              const imgHeight = (logo.height * imgWidth) / logo.width;
-              
-              // Create temporary canvas to convert image to data URL
-              const canvas = document.createElement('canvas');
-              canvas.width = logo.width;
-              canvas.height = logo.height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(logo, 0, 0);
-              
-              // Add logo to PDF at top center
-              const x = (pageWidth - imgWidth) / 2 - 45; // Left of center
-              pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, yPos, imgWidth, imgHeight);
-              
-              // Update yPos but don't add extra space since we'll position the header text
-              // relative to the top of the page, not relative to the logo
-              resolve();
-            } catch (err) {
-              console.error('Failed to add logo to PDF:', err);
-              resolve();
-            }
-          };
-          
-          logo.onerror = () => {
-            console.warn('Failed to load university logo');
-            resolve();
-          };
-          
-          // Try to load from SJU.png
-          logo.src = '/SJU.png';
-          
-          // If logo doesn't load in 2 seconds, continue without it
-          setTimeout(() => {
-            if (!logo.complete) {
-              console.warn('Logo loading timed out');
-              resolve();
-            }
-          }, 2000);
+      // Handle successful save
+      if (response.status === 201) {
+        alert('Question paper has been saved successfully!');
+      } else {
+        throw new Error('Failed to save paper');
+      }
+    } catch (error) {
+      console.error('Error saving paper:', error);
+      alert(`Failed to save paper: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadPaper = () => {
+    // Show loading indicator
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'din8-loading-overlay';
+    loadingOverlay.innerHTML = '<div class="din8-loading-spinner"></div><div style="margin-top: 20px;">Generating PDF...</div>';
+    document.body.appendChild(loadingOverlay);
+    
+    // Load jsPDF
+    const jsPDFScript = document.createElement('script');
+    jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    jsPDFScript.async = true;
+    document.body.appendChild(jsPDFScript);
+    
+    // Check if libraries are loaded
+    const checkLibrariesLoaded = () => {
+      if (window.jspdf && window.jspdf.jsPDF) {
+        generatePDF();
+      } else {
+        setTimeout(checkLibrariesLoaded, 100);
+      }
+    };
+    
+    // Start checking if libraries are loaded
+    jsPDFScript.onload = checkLibrariesLoaded;
+    
+    // Function to generate the PDF
+    const generatePDF = () => {
+      try {
+        const { jsPDF } = window.jspdf;
+        
+        // Create new PDF document
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
         });
-      };
-      
-      // Function to add page header
-      const addPageHeader = async () => {
-        // Try to add logo
-        await addLogo();
         
-        // University name - centered and bold
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(paperDetails.university, pageWidth/2, margin + 5, { align: 'center' });
+        // Define page dimensions (A4)
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 15; // margins in mm
+        const contentWidth = pageWidth - (margin * 2);
         
-        // Course details - start 10mm from top
-        yPos = margin + 10;
-        pdf.setFontSize(10);
+        // Make sure questions arrays exist
+        const questionsPartA = Array.isArray(questions.partA) ? questions.partA : [];
+        const questionsPartB = Array.isArray(questions.partB) ? questions.partB : [];
+        const questionsPartC = Array.isArray(questions.partC) ? questions.partC : [];
+        
+        // Current Y position on the page
+        let yPos = margin;
+        let currentPage = 1;
+        
+        // Registration Number and Date box in extreme right corner
+        pdf.setDrawColor(0);
+        pdf.setLineWidth(0.1);
+        // Create a smaller box positioned at the extreme right corner
+        const boxWidth = 50;
+        const boxHeight = 15;
+        const boxX = pageWidth - boxWidth - 5; // Only 5mm from right edge
+        const boxY = margin;
+        pdf.rect(boxX, boxY, boxWidth, boxHeight);
+        pdf.setFontSize(8); // Smaller font size
         pdf.setFont('helvetica', 'normal');
-        pdf.text(`${examDetails.course} - ${examDetails.semester} SEMESTER`, pageWidth/2, yPos, { align: 'center' });
-        yPos += 5;
+        // Add the text with proper alignment and positioning
+        pdf.text("Registration Number:", boxX + 2, boxY + 5);
+        pdf.text("Date:", boxX + 2, boxY + 11);
         
-        pdf.text(`SEMESTER EXAMINATION: ${examDetails.semesterExamination}`, pageWidth/2, yPos, { align: 'center' });
-        yPos += 5;
-        
-        pdf.text(`(Examination conducted in ${examDetails.examinationConducted})`, pageWidth/2, yPos, { align: 'center' });
-        yPos += 5;
-        
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`${examDetails.subjectCode}: ${examDetails.subjectName}`, pageWidth/2, yPos, { align: 'center' });
-        yPos += 5;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.text("( For current batch students only )", pageWidth/2, yPos, { align: 'center' });
-        yPos += 10;
-        
-        // Registration box - positioned correctly to the right
-        const regBoxWidth = 50;
-        const regBoxHeight = 15;
-        const regBoxX = pageWidth - margin - regBoxWidth;
-        const regBoxY = margin; // Top margin
-        
-        pdf.rect(regBoxX, regBoxY, regBoxWidth, regBoxHeight);
-        pdf.setFontSize(9);
-        pdf.text("Registration Number:", regBoxX + 2, regBoxY + 5);
-        pdf.text("Date:", regBoxX + 2, regBoxY + 10);
-        
-        // Exam info
-        yPos += 5;
-        pdf.setFontSize(10);
-        pdf.text(`Time: ${examDetails.examTimings}`, margin, yPos);
-        pdf.text(`Max Marks: ${paperDetails.maxMarks}`, pageWidth - margin, yPos, { align: 'right' });
-        yPos += 8;
-        
-        // Paper info
-        pdf.setFont('helvetica', 'italic');
-        const totalPages = Math.max(
-          1, 
-          Math.ceil((questionsPartA.length + questionsPartB.length + questionsPartC.length + 20) / 15)
-        );
-        pdf.text(`This paper contains ${totalPages} printed pages and 3 parts`, pageWidth/2, yPos, { align: 'center' });
-        yPos += 10;
-      };
-      
-      // Function to check if we need a new page
-      const checkPageBreak = (neededSpace) => {
-        if (yPos + neededSpace > pageHeight - margin) {
-          pdf.addPage();
-          currentPage++;
-          yPos = margin;
-          
-          // Add minimal header for continuation pages - just the subject code
-          if (currentPage > 1) {
-            pdf.setFontSize(10);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(`${examDetails.subjectCode}: ${examDetails.subjectName}`, pageWidth/2, yPos, { align: 'center' });
-            yPos += 8;
-          }
-          
-          return true;
-        }
-        return false;
-      };
-      
-      // Function to render images in PDF
-      const addImage = async (imageUrl, maxWidth) => {
-        // Check if we have enough space for a small image
-        if (checkPageBreak(40)) {
-          // We moved to a new page, recalculate space
-        }
-        
-        try {
-          // Create an image element to load the image
-          return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
+        // Function to add university logo
+        const addLogo = async () => {
+          return new Promise((resolve) => {
+            // Try to load the university logo
+            const logo = new Image();
+            logo.crossOrigin = 'Anonymous';
             
-            img.onload = () => {
-              // Calculate dimensions to fit within maximum width
-              const imgWidth = Math.min(img.width, contentWidth);
-              const imgHeight = (img.height * imgWidth) / img.width;
-              
-              // Check if we need a page break for this image
-              if (yPos + imgHeight > pageHeight - margin) {
-                pdf.addPage();
-                currentPage++;
-                yPos = margin;
-                
-                // Add minimal header for continuation pages
-                pdf.setFontSize(10);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text(`${examDetails.subjectCode}: ${examDetails.subjectName}`, pageWidth/2, yPos, { align: 'center' });
-                yPos += 8;
-              }
-              
-              // Add the image
-              const x = margin + (contentWidth - imgWidth) / 2; // Center the image
+            logo.onload = () => {
               try {
-                // Create canvas to ensure proper image format
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
+                // Make the logo a square shape with 30mm width and height
+                const imgWidth = 30; // Fixed width 30mm
+                const imgHeight = 30; // Fixed height 30mm to make it square
                 
-                // Add image to PDF
-                pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, yPos, imgWidth, imgHeight);
-                yPos += imgHeight + 5; // Add space after image
+                // Create temporary canvas to convert image to data URL
+                const canvas = document.createElement('canvas');
+                canvas.width = logo.width;
+                canvas.height = logo.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(logo, 0, 0);
+                
+                // Add logo to PDF at left side
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, imgWidth, imgHeight);
+                
                 resolve();
               } catch (err) {
-                console.error('Failed to add image to PDF:', err);
-                yPos += 10; // Still add some space even if image fails
+                console.error('Failed to add logo to PDF:', err);
                 resolve();
               }
             };
             
-            img.onerror = () => {
-              console.error('Failed to load image:', imageUrl);
-              yPos += 10; // Add some space
-              resolve(); // Continue without the image
+            logo.onerror = () => {
+              console.warn('Failed to load university logo');
+              resolve();
             };
             
-            img.src = imageUrl;
+            // Try to load from SJU.png
+            logo.src = '/SJU.png';
+            
+            // If logo doesn't load in 2 seconds, continue without it
+            setTimeout(() => {
+              if (!logo.complete) {
+                console.warn('Logo loading timed out');
+                resolve();
+              }
+            }, 2000);
           });
-        } catch (err) {
-          console.error('Error processing image:', err);
-          yPos += 10; // Add some space anyway
-          return Promise.resolve(); // Return a resolved promise to continue
-        }
-      };
-      
-      // Add first page header
-      addPageHeader().then(async () => {
-        // Process parts
-        const renderPart = async (partTitle, instructions, questionsList, startNumber) => {
-          // Ensure questionsList is an array
-          const questions = Array.isArray(questionsList) ? questionsList : [];
+        };
+        
+        // Function to add page header
+        const addPageHeader = async () => {
+          // Try to add logo
+          await addLogo();
           
-          if (questions.length === 0) {
-            // If no questions, just add the part title and a message
-            checkPageBreak(15);
-            
-            pdf.setFontSize(11);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(partTitle, pageWidth/2, yPos, { align: 'center' });
-            yPos += 6;
-            
-            // Add part instructions
-            pdf.setFontSize(10);
-            pdf.text(instructions[0], margin, yPos);
-            pdf.text(instructions[1], pageWidth - margin, yPos, { align: 'right' });
-            yPos += 6;
-            
-            pdf.setFont('helvetica', 'italic');
-            pdf.text("No questions available for this part", margin, yPos);
-            yPos += 6;
-            
-            return Promise.resolve();
+          // University name - centered and bold
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(paperDetails.university, pageWidth/2, margin + 7, { align: 'center' });
+          
+          // Course details - start with appropriate spacing
+          yPos = margin + 15;
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`${examDetails.course} - ${examDetails.semester} SEMESTER`, pageWidth/2, yPos, { align: 'center' });
+          yPos += 6;
+          
+          pdf.text(`SEMESTER EXAMINATION: ${examDetails.semesterExamination}`, pageWidth/2, yPos, { align: 'center' });
+          yPos += 6;
+          
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`(Examination conducted in ${examDetails.examinationConducted})`, pageWidth/2, yPos, { align: 'center' });
+          yPos += 6;
+          
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`${examDetails.subjectCode}: ${examDetails.subjectName}`, pageWidth/2, yPos, { align: 'center' });
+          yPos += 6;
+          
+          pdf.setFont('helvetica', 'normal');
+          pdf.text("(For Current batch student only)", pageWidth/2, yPos, { align: 'center' });
+          yPos += 10;
+          
+          // Exam info
+          pdf.setFontSize(10);
+          pdf.text(`Time: ${examDetails.examTimings}`, margin, yPos);
+          pdf.text(`Max Marks: ${paperDetails.maxMarks}`, pageWidth - margin, yPos, { align: 'right' });
+          yPos += 6;
+          
+          // Paper info
+          const totalPages = 2; // We'll force exactly 2 pages like in your example
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`This paper contains ${totalPages} printed pages and 3 parts`, pageWidth/2, yPos, { align: 'center' });
+          yPos += 10;
+        };
+        
+        // Function to check if we need a new page
+        const checkPageBreak = (neededSpace) => {
+          if (yPos + neededSpace > pageHeight - margin) {
+            pdf.addPage();
+            currentPage++;
+            yPos = margin;
+            return true;
           }
-          
-          // Add part title - check for page break
-          checkPageBreak(20);
-          
-          pdf.setFontSize(11);
+          return false;
+        };
+        
+        // Function to render Parts A and B with their questions
+        const renderPartAB = (partTitle, instructions, questionsList, startNumber) => {
+          // Add part title
+          pdf.setFontSize(10);
           pdf.setFont('helvetica', 'bold');
           pdf.text(partTitle, pageWidth/2, yPos, { align: 'center' });
-          yPos += 6;
+          yPos += 8;
           
-          // Add part instructions
-          pdf.setFontSize(10);
-          pdf.text(instructions[0], margin, yPos);
+          // Add part instructions - BOLD and CAPITAL LETTERS for the first part
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(instructions[0].toUpperCase(), margin, yPos);
           pdf.text(instructions[1], pageWidth - margin, yPos, { align: 'right' });
-          yPos += 6;
+          yPos += 8;
           
           // Add questions
           pdf.setFont('helvetica', 'normal');
           
-          for (let i = 0; i < questions.length; i++) {
-            const question = questions[i];
+          let prevQuestionType = null;
+          
+          for (let i = 0; i < questionsList.length; i++) {
+            const question = questionsList[i];
             
-            // Ensure question has properties
-            if (!question || typeof question !== 'object') {
-              console.warn('Invalid question object at index', i, 'in', partTitle);
-              continue;
-            }
-            
-            // Check if we need a page break for this question - reduced space estimate
+            // Get question text
             const questionText = question.question || "No question text available";
-            const estimatedQuestionHeight = 10 + (questionText.length / 150) * 5;
-            checkPageBreak(estimatedQuestionHeight);
             
-            // Question number and text - reduced spacing
-            const questionNumber = `${startNumber + i}.`;
+            // Determine question type (you may need to add a type field to your question objects)
+            const currentQuestionType = question.type || 'default';
             
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(questionNumber, margin, yPos);
+            // Question number
+            pdf.text(`${startNumber + i}.`, margin, yPos);
             
-            // Handle multi-line question text with reduced spacing
+            // Handle multi-line question text
             const textLines = pdf.splitTextToSize(questionText, contentWidth - 10);
             pdf.text(textLines, margin + 7, yPos);
             
-            // Move Y position down based on number of lines - reduced spacing
-            yPos += 4 * textLines.length + 4;
+            // Move Y position down based on text length with appropriate line spacing
+            // First line plus any additional lines with 0.4cm (4mm) line spacing
+            if (textLines.length > 1) {
+              yPos += 5; // 0.5cm for first line
+              yPos += 4 * (textLines.length - 1); // 0.4cm for each additional line
+            } else {
+              yPos += 5; // Just 0.5cm for a single line
+            }
             
             // Add image if available
             if (question.hasImage && question.imageUrl) {
-              await addImage(question.imageUrl, contentWidth - 20);
-            } else {
-              // No image - add smaller space between questions
-              yPos += 3;
+              try {
+                // Load image and add to PDF
+                const img = new Image();
+                img.src = question.imageUrl;
+                
+                // If image loads, add it
+                if (img.complete) {
+                  // Calculate dimensions
+                  const imgWidth = Math.min(contentWidth - 20, 100);
+                  const imgHeight = (img.height * imgWidth) / img.width;
+                  
+                  // Check for page break
+                  if (yPos + imgHeight > pageHeight - margin) {
+                    checkPageBreak(imgHeight);
+                  }
+                  
+                  // Add image
+                  const canvas = document.createElement('canvas');
+                  canvas.width = img.width;
+                  canvas.height = img.height;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0);
+                  
+                  pdf.addImage(canvas.toDataURL('image/jpeg'), 'JPEG', margin + 10, yPos, imgWidth, imgHeight);
+                  yPos += imgHeight + 5;
+                }
+              } catch (err) {
+                console.error("Error adding image:", err);
+              }
+            }
+            
+            // Set spacing between questions - always 0.5cm (5mm) between questions
+            yPos += 5; // 0.5cm spacing between questions
+            
+            prevQuestionType = currentQuestionType;
+            
+            // Check if we need a page break
+            if (yPos > pageHeight - margin && i < questionsList.length - 1) {
+              checkPageBreak(20);
             }
           }
           
-          // Add smaller extra space after part
+          // Add minimal space after part
           yPos += 5;
-          
-          return Promise.resolve();
         };
-
-        // Determine starting numbers for each part
-        const partAStartNumber = 1;
-        const partBStartNumber = partAStartNumber + questionsPartA.length;
-        const partCStartNumber = partBStartNumber + questionsPartB.length;
         
-        // Chain the rendering of each part
-        await renderPart(
-          'PART-A', 
-          ['Answer all FIVE questions', '(2 X 5 = 10)'], 
-          questionsPartA,
-          partAStartNumber
-        );
-        
-        await renderPart(
-          'PART-B', 
-          ['Answer any FIVE questions', '(4 X 5 = 20)'], 
-          questionsPartB,
-          partBStartNumber
-        );
-        
-        await renderPart(
-          'PART-C', 
-          ['Answer any THREE questions', '(10 X 3 = 30)'], 
-          questionsPartC,
-          partCStartNumber
-        );
-        
-        // Add page numbers to all pages
-        const totalPages = pdf.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          pdf.setPage(i);
-          pdf.setFontSize(8);
+        // Function to render Part C with special handling
+        const renderPartC = (partTitle, instructions, questionsList, startNumber) => {
+          // Start with checking how much space is left on the current page
+          const spaceLeft = pageHeight - margin - yPos;
+          
+          // Add part title
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(partTitle, pageWidth/2, yPos, { align: 'center' });
+          yPos += 8;
+          
+          // Add part instructions
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(instructions[0].toUpperCase(), margin, yPos);
+          pdf.text(instructions[1], pageWidth - margin, yPos, { align: 'right' });
+          yPos += 8;
+          
+          // Add questions
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 10);
-        }
+          
+          let prevQuestionType = null;
+          
+          // First try to print as many questions as will fit on the current page
+          for (let i = 0; i < questionsList.length; i++) {
+            const question = questionsList[i];
+            
+            // Get question text
+            const questionText = question.question || "No question text available";
+            
+            // Determine question type (you may need to add a type field to your question objects)
+            const currentQuestionType = question.type || 'default';
+            
+            // Calculate how much space this question will need
+            const textLines = pdf.splitTextToSize(questionText, contentWidth - 10);
+            
+            // Calculate height based on line count: 0.5cm for first line, 0.4cm for each additional line
+            let questionHeight = 5; // 0.5cm for first line
+            if (textLines.length > 1) {
+              questionHeight += 4 * (textLines.length - 1); // 0.4cm for each additional line
+            }
+            
+            // Check if there's enough space for this question on the current page
+            const imageHeight = question.hasImage && question.imageUrl ? 50 : 0; // Estimate image height
+            const neededSpace = questionHeight + imageHeight + 5; // 5mm for spacing
+            
+            // If we need a page break, do it before printing this question
+            // Only break if there's not enough space for this specific question
+            if (yPos + neededSpace > pageHeight - margin) {
+              pdf.addPage();
+              currentPage++;
+              yPos = margin;
+            }
+            
+            // Question number
+            pdf.text(`${startNumber + i}.`, margin, yPos);
+            
+            // Print question text
+            pdf.text(textLines, margin + 7, yPos);
+            
+            // Move Y position down based on text length with appropriate line spacing
+            // First line plus any additional lines with 0.4cm (4mm) line spacing
+            if (textLines.length > 1) {
+              yPos += 5; // 0.5cm for first line
+              yPos += 4 * (textLines.length - 1); // 0.4cm for each additional line
+            } else {
+              yPos += 5; // Just 0.5cm for a single line
+            }
+            
+            // Add image if available
+            if (question.hasImage && question.imageUrl) {
+              try {
+                // Load image and add to PDF
+                const img = new Image();
+                img.src = question.imageUrl;
+                
+                // If image loads, add it
+                if (img.complete) {
+                  // Calculate dimensions
+                  const imgWidth = Math.min(contentWidth - 20, 100);
+                  const imgHeight = (img.height * imgWidth) / img.width;
+                  
+                  // Add image
+                  const canvas = document.createElement('canvas');
+                  canvas.width = img.width;
+                  canvas.height = img.height;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0);
+                  
+                  pdf.addImage(canvas.toDataURL('image/jpeg'), 'JPEG', margin + 10, yPos, imgWidth, imgHeight);
+                  yPos += imgHeight + 5;
+                }
+              } catch (err) {
+                console.error("Error adding image:", err);
+              }
+            }
+            
+            // Set spacing between questions - always 0.5cm (5mm) between questions
+            yPos += 5; // 0.5cm spacing between questions
+            
+            prevQuestionType = currentQuestionType;
+          }
+        };
         
-        // Save the PDF
-        pdf.save('Question_Paper.pdf');
-        
-        // Remove loading overlay
-        document.body.removeChild(loadingOverlay);
-      }).catch(error => {
-        console.error('Error generating PDF:', error);
+        // Add first page header
+        addPageHeader().then(() => {
+          try {
+            // Render Part A
+            renderPartAB(
+              'PART-A', 
+              ['Answer all FIVE questions', '(2 X 5 = 10)'], 
+              questionsPartA,
+              1
+            );
+            
+            // Render Part B
+            renderPartAB(
+              'PART-B', 
+              ['Answer any FIVE questions', '(4 X 5 = 20)'],
+              questionsPartB,
+              questionsPartA.length + 1
+            );
+            
+            // For Part C, we have a special handling to make efficient use of space
+            // If there's enough space on the first page, start there, otherwise start on page 2
+            // For Part C, don't force it to new page - always try to fit as many questions as possible on page 1
+            // Just continue from wherever we are - no special page break handling for Part C start
+            
+            // Don't add excessive space before Part C
+            yPos += 5;
+            
+            // Render Part C
+            renderPartC(
+              'PART-C', 
+              ['Answer any THREE questions', '(10 X 3 = 30)'],
+              questionsPartC,
+              questionsPartA.length + questionsPartB.length + 1
+            );
+            
+            // Save the PDF with both subject code and subject name in the filename
+            const sanitizedSubjectName = examDetails.subjectName.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
+            pdf.save(`${examDetails.subjectCode}_${sanitizedSubjectName}_Question_Paper.pdf`);
+            
+            // Remove loading overlay
+            document.body.removeChild(loadingOverlay);
+            
+          } catch (error) {
+            console.error('Error rendering PDF:', error);
+            document.body.removeChild(loadingOverlay);
+            alert('Error generating PDF: ' + error.message);
+          }
+        }).catch(error => {
+          console.error('Error generating PDF:', error);
+          document.body.removeChild(loadingOverlay);
+          alert('Error generating PDF: ' + error.message);
+        });
+      } catch (error) {
+        console.error('Error in PDF generation:', error);
         document.body.removeChild(loadingOverlay);
         alert('Error generating PDF: ' + error.message);
-      });
-    } catch (error) {
-      console.error('Error in PDF generation:', error);
-      document.body.removeChild(loadingOverlay);
-      alert('Error generating PDF: ' + error.message);
-    }
+      }
+    };
   };
-};
   
   // Generate a paper on first load
   useEffect(() => {
     fetchQuestions();
   }, [examDetails.subjectCode]); // Refetch when subject code changes
   
-  // Add CSS for the loading spinner and error message
+  // Add CSS for the loading spinner, error message, and fixed layout
   const additionalStyles = `
     .din8-loading-container {
       display: flex;
@@ -1362,31 +1135,25 @@ const downloadPaper = () => {
       transition: all 0.2s ease;
     }
     
+    /* Modified paper layout styles */
     .din8-a4-paper {
       background-color: white;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       margin: 20px auto;
       position: relative;
+      width: 210mm;
+      height: auto;
+      min-height: auto;
     }
     
     .din8-a4-page {
       width: 210mm;
-      min-height: 297mm;
-      padding: 20mm 15mm;
+      height: auto;
+      min-height: auto;
+      padding: 20mm 15mm 15mm 15mm;
       position: relative;
       box-sizing: border-box;
       overflow: visible;
-      page-break-after: always;
-    }
-    
-    .din8-page-footer {
-      position: absolute;
-      bottom: 10mm;
-      left: 0;
-      width: 100%;
-      text-align: center;
-      font-size: 10pt;
-      color: #888;
     }
     
     .din8-paper-info {
@@ -1398,11 +1165,6 @@ const downloadPaper = () => {
     /* Paper container */
     .din8-paper-container {
       position: relative;
-    }
-    
-    /* Overflow page styles */
-    .din8-overflow-page {
-      margin-top: 20px;
     }
     
     /* Resize handle */
@@ -1423,11 +1185,6 @@ const downloadPaper = () => {
       transform: scale(1.5);
     }
     
-    /* Style for questions that have moved to a new page */
-    .din8-overflow-page .din8-question {
-      page-break-inside: avoid;
-    }
-    
     /* Improve image dragging visual feedback */
     .din8-question-image.dragging {
       opacity: 0.8;
@@ -1443,6 +1200,50 @@ const downloadPaper = () => {
     .din8-question-image-container {
       margin: 15px 0;
       clear: both;
+    }
+    
+    /* Move buttons directly below content with no gap */
+    .din8-paper-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px 0;
+    }
+    
+    .din8-action-btn {
+      padding: 8px 16px;
+      margin: 0 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+    
+    .din8-save-btn {
+      background-color: #4caf50;
+      color: white;
+    }
+    
+    .din8-download-btn {
+      background-color: #2196f3;
+      color: white;
+    }
+    
+    .din8-generate-btn {
+      background-color: #ff9800;
+      color: white;
+    }
+    
+    .din8-approve-btn {
+      background-color: #9c27b0;
+      color: white;
+    }
+    
+    .din8-action-btn:hover {
+      opacity: 0.9;
     }
   `;
   
@@ -1484,7 +1285,7 @@ const downloadPaper = () => {
       {showPaper && (
         <div className="din8-paper-container" id="din8-paper-container">
           <div className="din8-a4-paper" ref={componentRef}>
-            {/* Page 1 */}
+            {/* Page content with auto height instead of fixed height */}
             <div className="din8-a4-page">
               <div className="din8-university-header">
                 <div className="din8-header-flex">
@@ -1516,7 +1317,7 @@ const downloadPaper = () => {
               </div>
               
               <div className="din8-course-details din8-paper-info">
-                This paper contains {totalPages} printed {totalPages === 1 ? 'page' : 'pages'} and 3 parts
+                This paper contains 3 parts
               </div>
               
               {/* Part A */}
@@ -1635,14 +1436,10 @@ const downloadPaper = () => {
                   <div className="din8-no-questions">Not enough questions available for Part C</div>
                 )}
               </div>
-              
-              <div className="din8-page-footer">Page 1 of {totalPages}</div>
             </div>
-            
-            {/* Additional pages will be created dynamically by the checkContentOverflow function */}
           </div>
           
-          {/* Action buttons outside the paper */}
+          {/* Action buttons immediately below the paper content */}
           <div className="din8-paper-actions">
             <button className="din8-action-btn din8-save-btn" onClick={savePaper}>
               Save Paper
@@ -1664,3 +1461,4 @@ const downloadPaper = () => {
 };
 
 export default CreatePapers;
+
