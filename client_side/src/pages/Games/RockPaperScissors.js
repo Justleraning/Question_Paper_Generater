@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-const RockPaperScissors = () => {
+const RockPaperScissors = ({ onClose }) => {
   const [playerChoice, setPlayerChoice] = useState(null);
   const [computerChoice, setComputerChoice] = useState(null);
   const [result, setResult] = useState(null);
@@ -9,6 +9,10 @@ const RockPaperScissors = () => {
   const [countdown, setCountdown] = useState(null);
   const [showResult, setShowResult] = useState(false);
   const [gameHistory, setGameHistory] = useState([]);
+  
+  // Using a ref to prevent multiple timer instances
+  const timerRef = useRef(null);
+  const isFirstRender = useRef(true);
 
   const choices = ['rock', 'paper', 'scissors'];
 
@@ -42,13 +46,26 @@ const RockPaperScissors = () => {
   };
 
   const handlePlayerChoice = (choice) => {
-    if (countdown !== null) return; // Prevent selection during countdown
+    // Prevent selection during countdown or while showing results
+    if (countdown !== null || showResult) return;
+    
+    // Clear any existing timers to prevent multiple timers
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     
     setPlayerChoice(choice);
     setCountdown(3);
   };
 
   const resetGame = () => {
+    // Clear any existing timers
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    
     setPlayerChoice(null);
     setComputerChoice(null);
     setResult(null);
@@ -57,45 +74,94 @@ const RockPaperScissors = () => {
   };
 
   const resetScore = () => {
+    // Clear any existing timers
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    
     setScore({ player: 0, computer: 0 });
     setRoundCount(0);
     setGameHistory([]);
     resetGame();
   };
 
+  // Handle countdown separately
   useEffect(() => {
+    // Skip on first render
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    
+    // If countdown is null, don't set up a timer
     if (countdown === null) return;
-
+    
+    // If countdown reached zero, show the result
     if (countdown === 0) {
       const computer = getComputerChoice();
       setComputerChoice(computer);
       const gameResult = determineWinner(playerChoice, computer);
       setResult(gameResult);
       setShowResult(true);
-      setRoundCount(prev => prev + 1);
+      setRoundCount(prevCount => prevCount + 1);
       
       // Update score
       if (gameResult === 'win') {
-        setScore(prev => ({ ...prev, player: prev.player + 1 }));
+        setScore(prevScore => ({ 
+          ...prevScore, 
+          player: prevScore.player + 1 
+        }));
       } else if (gameResult === 'lose') {
-        setScore(prev => ({ ...prev, computer: prev.computer + 1 }));
+        setScore(prevScore => ({ 
+          ...prevScore, 
+          computer: prevScore.computer + 1 
+        }));
       }
-
-      // Update history
-      setGameHistory(prev => [
-        ...prev, 
-        { round: roundCount + 1, player: playerChoice, computer, result: gameResult }
+      
+      // Add to history
+      setGameHistory(prevHistory => [
+        ...prevHistory, 
+        { 
+          round: prevHistory.length + 1, 
+          player: playerChoice, 
+          computer, 
+          result: gameResult 
+        }
       ]);
-
+      
       return;
     }
-
-    const timer = setTimeout(() => {
-      setCountdown(countdown - 1);
+    
+    // Set up a new timer for countdown
+    timerRef.current = setTimeout(() => {
+      setCountdown(prevCount => prevCount - 1);
     }, 500);
+    
+    // Cleanup function
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [countdown, playerChoice]);
 
-    return () => clearTimeout(timer);
-  }, [countdown, playerChoice, roundCount]);
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
 
   const renderChoice = (choice) => {
     return (

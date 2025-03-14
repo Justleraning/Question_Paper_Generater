@@ -9,6 +9,7 @@ const Paper = require("./models/Paper");
 const Course = require("./models/Course");
 const EndQuestion = require("./models/EndQuestion");
 const EndPapers = require("./models/EndPapersModel");
+const OpenElectivePaper = require("./models/OpenElectivePaper");
 
 const users = require("./data/dummyUsers");
 const questions = require("./data/dummyQuestions");
@@ -16,6 +17,7 @@ const papers = require("./data/dummyPapers");
 const courses = require("./data/CourseData");
 const endquestion = require('./data/EndSemQuestionData');
 const endpapers = require('./data/dummyEndPapers');
+const openElectivePapers = require('./data/dummyOpenElectivePapers');
 
 dotenv.config();
 connectDB();
@@ -52,6 +54,7 @@ const importData = async () => {
     await Course.deleteMany();
     await EndQuestion.deleteMany();
     await EndPapers.deleteMany();
+    await OpenElectivePaper.deleteMany();
 
     console.log("🗑 Existing data cleared.");
 
@@ -95,6 +98,19 @@ const importData = async () => {
       if (endPapersError.errors) {
         Object.keys(endPapersError.errors).forEach(key => {
           console.error(`Validation Error for ${key}: ${endPapersError.errors[key].message}`);
+        });
+      }
+    }
+
+    // Insert Open Elective Papers
+    try {
+      await OpenElectivePaper.insertMany(openElectivePapers);
+      console.log("✅ Open Elective Papers inserted.");
+    } catch (openElectiveError) {
+      console.error(`❌ Error inserting Open Elective Papers: ${openElectiveError.message}`);
+      if (openElectiveError.errors) {
+        Object.keys(openElectiveError.errors).forEach(key => {
+          console.error(`Validation Error for ${key}: ${openElectiveError.errors[key].message}`);
         });
       }
     }

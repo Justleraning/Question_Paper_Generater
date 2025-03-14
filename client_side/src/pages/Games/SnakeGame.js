@@ -177,6 +177,11 @@ const SnakeGame = ({ onClose }) => {
 
   // Handle key presses for movement
   const handleKeyDown = (e) => {
+    // Prevent default behavior for arrow keys and space bar when game is active
+    if ((speed !== null && (e.keyCode === 38 || e.keyCode === 40 || e.keyCode === 37 || e.keyCode === 39)) || e.keyCode === 32) {
+      e.preventDefault();
+    }
+    
     if (
       // Prevent the snake from going in the opposite direction
       (e.keyCode === 38 && direction[1] !== 1) || // up
@@ -257,7 +262,7 @@ const SnakeGame = ({ onClose }) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [direction]);
+  }, [direction, speed]);
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto">
