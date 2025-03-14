@@ -281,14 +281,20 @@ export const saveCompletedPaper = async (paperData) => {
   try {
     console.log("📤 Saving completed paper:", JSON.stringify(paperData, null, 2));
     
+    // Use the new OpenPapers endpoint for MCQ papers
     const response = await axios.post(
-      `${API_URL}/save`, 
+      `${API_URL}/openpapers`, 
       paperData, 
-      { headers: authHeaders() }
+      { 
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        } 
+      }
     );
     
     console.log("✅ Paper saved successfully:", response.data);
-    return response.data;
+    return response.data.data;
   } catch (error) {
     console.error("❌ Error saving paper:", error.response?.data || error.message);
     return handleAuthError(error);
@@ -327,6 +333,114 @@ export const fetchGeneralQuestions = async (stream) => {
     const response = await axios.get(`${API_URL}/general-questions/${stream}`, { headers: authHeaders() });
     return response.data;
   } catch (error) {
+    return handleAuthError(error);
+  }
+};
+
+// ✅ OPEN PAPERS FUNCTIONS
+
+/**
+ * Gets all open papers
+ * @returns {Promise<Array>} - Array of open papers
+ */
+export const getAllOpenPapers = async () => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/openpapers`, 
+      { headers: authHeaders() }
+    );
+    
+    console.log("✅ Fetched open papers:", response.data);
+    return response.data.data;
+  } catch (error) {
+    console.error("❌ Error fetching open papers:", error.response?.data || error.message);
+    return handleAuthError(error);
+  }
+};
+
+/**
+ * Gets an open paper by ID
+ * @param {string} paperId - The ID of the paper to fetch
+ * @returns {Promise<Object>} - Paper data object
+ */
+export const getOpenPaperById = async (paperId) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/openpapers/${paperId}`, 
+      { headers: authHeaders() }
+    );
+    
+    console.log("✅ Fetched open paper:", response.data);
+    return response.data.data;
+  } catch (error) {
+    console.error("❌ Error fetching open paper:", error.response?.data || error.message);
+    return handleAuthError(error);
+  }
+};
+
+/**
+ * Gets open papers by subject
+ * @param {string} subjectId - The ID of the subject
+ * @returns {Promise<Array>} - Array of open papers for the subject
+ */
+export const getOpenPapersBySubject = async (subjectId) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/openpapers/subject/${subjectId}`, 
+      { headers: authHeaders() }
+    );
+    
+    console.log("✅ Fetched open papers by subject:", response.data);
+    return response.data.data;
+  } catch (error) {
+    console.error("❌ Error fetching open papers by subject:", error.response?.data || error.message);
+    return handleAuthError(error);
+  }
+};
+
+/**
+ * Deletes an open paper
+ * @param {string} paperId - The ID of the paper to delete
+ * @returns {Promise<Object>} - Response data
+ */
+export const deleteOpenPaper = async (paperId) => {
+  try {
+    const response = await axios.delete(
+      `${API_URL}/openpapers/${paperId}`, 
+      { headers: authHeaders() }
+    );
+    
+    console.log("✅ Deleted open paper:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error deleting open paper:", error.response?.data || error.message);
+    return handleAuthError(error);
+  }
+};
+
+/**
+ * Saves an HTML snapshot of a paper
+ * @param {string} paperId - The ID of the paper
+ * @param {string} htmlContent - The HTML content to save
+ * @returns {Promise<Object>} - Response data
+ */
+export const saveOpenPaperHtmlSnapshot = async (paperId, htmlContent) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/openpapers/${paperId}/snapshot`, 
+      { htmlContent }, 
+      { 
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        } 
+      }
+    );
+    
+    console.log("✅ Saved HTML snapshot:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error saving HTML snapshot:", error.response?.data || error.message);
     return handleAuthError(error);
   }
 };
