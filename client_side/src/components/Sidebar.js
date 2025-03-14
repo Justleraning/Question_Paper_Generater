@@ -119,8 +119,8 @@
                         icon={<LuBriefcase />}
                         label="Open Electives"
                         isOpen={isSidebarOpen || isHovered}
-                        onClick={() => navigate("/mypapers/open-electives")}
-                        isActive={location.pathname === "/mypapers/open-electives"}
+                        onClick={() => navigate("/open-electives")}
+                        isActive={location.pathname === "/open-electives"}
                       />
                     </NavItemWithSubmenu>
                     

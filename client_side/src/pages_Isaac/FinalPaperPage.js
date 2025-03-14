@@ -360,68 +360,110 @@ const FinalPaperPage = () => {
   };
 
   // Handle saving the paper
-  const handleSavePaper = async () => {
-    // Prevent double submission
-    if (isSaving) return;
+  // Handle saving the paper
+const handleSavePaper = async () => {
+  // Prevent double submission
+  if (isSaving) return;
+  
+  setIsSaving(true);
+  setSaveError(null);
+  
+  try {
+    console.log("Starting paper save process...");
     
-    setIsSaving(true);
-    setSaveError(null);
-    
-    try {
-      console.log("Starting paper save process...");
-      
-      // Validate input
-      if (!subjectDetails?.id) {
-        throw new Error("Subject details are missing. Please select a subject.");
-      }
-      
-      if (!finalPaper || finalPaper.length === 0) {
-        throw new Error("No questions available to save. Please add questions first.");
-      }
-      
-      // Prepare the paper data
-      const paperData = {
-        title: `${subjectDetails?.name || 'Untitled'} Question Paper`,
-        subject: subjectDetails?.id,
-        subjectName: subjectDetails?.name,
-        course: 'BCA', // You might want to make this dynamic
-        paperType: marks === 20 ? 'Mid Sem' : 'End Sem', // Based on your marks value
-        questions: finalPaper.map(q => ({
-          text: q.text,
-          options: q.options,
-          correctOption: q.correctOption,
-          marks: marks / finalPaper.length // Distribute marks equally
-        })),
-        totalMarks: marks,
-        status: 'Draft' // Initially save as draft
-      };
-      
-      console.log("Paper Data to Save:", paperData);
-      
-      // Call the API to save the paper
-      const savedPaper = await saveCompletedPaper(paperData);
-      
-      // Show success notification
-      console.log("Paper saved successfully:", savedPaper);
-      
-      // Navigate to My Papers page with state information
-      navigate('/my-papers', { 
-        state: { 
-          fromFinalPaper: true,
-          paperSaved: true,
-          paperId: savedPaper?._id || savedPaper?.id
-        } 
-      });
-      
-    } catch (error) {
-      console.error('❌ Error saving paper:', error);
-      setSaveError(error.message || 'Failed to save paper');
-      alert(`Error saving paper: ${error.message || 'Unknown error'}`);
-    } finally {
-      setIsSaving(false);
+    // Validate input
+    if (!subjectDetails?.id) {
+      throw new Error("Subject details are missing. Please select a subject.");
     }
-  };
-
+    
+    if (!finalPaper || finalPaper.length === 0) {
+      throw new Error("No questions available to save. Please add questions first.");
+    }
+    
+    // Temporarily disable preview mode to get clean content for HTML snapshot
+    setIsPreview(false);
+    
+    // Wait for the DOM to update
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Capture HTML snapshot if ref is available
+    let htmlSnapshot = "";
+    if (paperRef.current) {
+      try {
+        htmlSnapshot = paperRef.current.outerHTML;
+        console.log("📸 HTML snapshot captured successfully");
+      } catch (err) {
+        console.warn("⚠️ Could not capture HTML snapshot:", err);
+        // Continue without snapshot if error occurs
+      }
+    }
+    
+    // Return to preview mode
+    setIsPreview(true);
+    
+    // Prepare paper data
+    const paperData = {
+      title: `${subjectDetails?.name || 'Untitled'} Question Paper`,
+      subject: subjectDetails?.id,
+      subjectName: subjectDetails?.name,
+      subjectCode: subjectDetails?.code || "",
+      course: 'BCA',
+      paperType: marks === 20 ? 'Mid Sem' : 'End Sem',
+      questions: finalPaper.map(q => ({
+        text: q.text,
+        options: q.options,
+        correctOption: q.correctOption,
+        marks: marks / finalPaper.length // Distribute marks equally
+      })),
+      totalMarks: marks,
+      status: 'Draft',
+      paperLayout: {
+        header: true,
+        logo: true,
+        registrationBox: true,
+        university: "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
+        course: "BCA",
+        examType: "SEMESTER EXAMINATION",
+        sessionDate: new Date().toISOString(),
+        timeAllowed: "1 Hours"
+      },
+      htmlSnapshot: htmlSnapshot
+    };
+    
+    console.log("📦 Paper Data to Save:", paperData);
+    
+    // Call saveCompletedPaper from paperService.js
+    const savedPaper = await saveCompletedPaper(paperData);
+    
+    if (!savedPaper) {
+      throw new Error("Failed to save paper. Server returned no data.");
+    }
+    
+    console.log("✅ Paper saved successfully:", savedPaper);
+    
+    // Show success notification
+    alert("Question paper saved successfully!");
+    
+    // Navigate to Open Electives page with state info
+    navigate('/open-electives', { 
+      state: { 
+        fromFinalPaper: true,
+        paperSaved: true,
+        paperId: savedPaper._id || savedPaper.id
+      } 
+    });
+    
+  } catch (error) {
+    console.error('❌ Error saving paper:', error);
+    setSaveError(error.message || 'Failed to save paper');
+    alert(`Error saving paper: ${error.message || 'Unknown error'}`);
+    
+    // Ensure we're back in preview mode
+    setIsPreview(true);
+  } finally {
+    setIsSaving(false);
+  }
+};
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Main content with scrollable area */}
@@ -541,7 +583,7 @@ const FinalPaperPage = () => {
                     isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-600'
                   }`}
                 >
-                  {isSaving ? 'Saving...' : 'SAVE QUESTION PAPER 🧾'}
+                  {isSaving ? 'Saving...' : 'Save Paper'}
                 </button>
               </div>
               
