@@ -9,7 +9,7 @@ const Paper = require("./models/Paper");
 const Course = require("./models/Course");
 const EndQuestion = require("./models/EndQuestion");
 const EndPapers = require("./models/EndPapersModel");
-const OpenElectivePaper = require("./models/OpenElectivePaper");
+const OpenElectivePaper = require("./models/OpenPapersModel");
 
 const users = require("./data/dummyUsers");
 const questions = require("./data/dummyQuestions");
@@ -17,7 +17,7 @@ const papers = require("./data/dummyPapers");
 const courses = require("./data/CourseData");
 const endquestion = require('./data/EndSemQuestionData');
 const endpapers = require('./data/dummyEndPapers');
-const openElectivePapers = require('./data/dummyOpenElectivePapers');
+const openElectivePapers = require('./data/OpenPapersDummy');
 
 dotenv.config();
 connectDB();
