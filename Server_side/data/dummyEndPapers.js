@@ -5,8 +5,8 @@ const mongoose = require('mongoose');
 
 // Generate ObjectIds for references
 const userIds = [
-  mongoose.Types.ObjectId(),
-  mongoose.Types.ObjectId()
+  new mongoose.Types.ObjectId(),
+  new mongoose.Types.ObjectId()
 ];
 
 module.exports = [
