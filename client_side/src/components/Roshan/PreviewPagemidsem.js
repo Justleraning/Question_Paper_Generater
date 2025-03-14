@@ -237,9 +237,6 @@ const PreviewPage = () => {
                         </div>
                       ) : (
                         <div style={{
-                          fontWeight: format.bold ? "bold" : "normal",
-                          fontStyle: format.italic ? "italic" : "normal",
-                          textDecoration: format.underline ? "underline" : "none",
                           margin: '0',
                           fontSize: '14px',
                           width: '100%'
@@ -361,9 +358,6 @@ const PreviewPage = () => {
                       ) : (
                         <>
                           <div style={{
-                            fontWeight: format.bold ? "bold" : "normal",
-                            fontStyle: format.italic ? "italic" : "normal",
-                            textDecoration: format.underline ? "underline" : "none",
                             margin: '0',
                             fontSize: '14px',
                             width: '100%'

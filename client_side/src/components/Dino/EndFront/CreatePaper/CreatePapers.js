@@ -814,7 +814,7 @@ const CreatePapers = () => {
       
       // Then fetch fresh questions
       setTimeout(() => {
-        fetchQuestions
+        fetchQuestions()
       }, 300);
       
     } catch (error) {
