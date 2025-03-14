@@ -647,7 +647,7 @@ const processQuestionsForDOCX = () => {
       marks: q.marks || 1
     }));
 
-    navigate('/answer-key', {
+    navigate('/answer-keys', {
       state: {
         questions:questionsForAnswerKey,
         courseName,

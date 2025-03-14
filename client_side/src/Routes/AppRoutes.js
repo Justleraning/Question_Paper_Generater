@@ -30,7 +30,6 @@ import QuestionEntryPage from "../pages_Isaac/QuestionEntryPage.js";
 import PreviewPage from "../pages_Isaac/PreviewPage.js";
 import FinalPaperPage from "../pages_Isaac/FinalPaperPage.js";
 import AnswerKeyPage from "../pages_Isaac/AnswerKeyPage.js";
-import OpenElectiveSide from "../pages/Papers/OpenElectiveSide.js";
 
 // ✅ Manav Routes and Dashboard routes 
 import LandingPage from "../pages/LandingPage.js";
@@ -90,7 +89,7 @@ const AppRoutes = () => {
         <Route path="/paper-status" element={<PrivateRoute allowedRoles={["Teacher"]}><PaperStatus /></PrivateRoute>} />
         <Route path="/preview/:subjectKey" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPreview /></PrivateRoute>} />
         <Route path="/mypapers" element={<PrivateRoute allowedRoles={["Teacher"]}><MyPapers /></PrivateRoute>} />
-        <Route path="/answer-key" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKey /></PrivateRoute>} />
+        <Route path="/answer-keys" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKey /></PrivateRoute>} />
 
         {/* ✅ Admin & SuperAdmin Routes */}
         <Route path="/admin-dashboard" element={<PrivateRoute allowedRoles={["Admin"]}><AdminDashboard /></PrivateRoute>} />
@@ -109,7 +108,6 @@ const AppRoutes = () => {
         <Route path="/preview" element={<PrivateRoute allowedRoles={["Teacher"]}><PreviewPage /></PrivateRoute>} />
         <Route path="/final-paper" element={<PrivateRoute allowedRoles={["Teacher"]}><FinalPaperPage /></PrivateRoute>} />
         <Route path="/answer-key" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKeyPage /></PrivateRoute>} />
-        <Route path="/open-electives" element={<PrivateRoute allowedRoles={["Teacher"]}><OpenElectiveSide/></PrivateRoute>} />
 
         {/* ✅ Roshan Existing Routes */}
         <Route path="/mainp" element={<PrivateRoute allowedRoles={["Teacher"]}><MainPage /></PrivateRoute>} />
