@@ -30,6 +30,7 @@ import QuestionEntryPage from "../pages_Isaac/QuestionEntryPage.js";
 import PreviewPage from "../pages_Isaac/PreviewPage.js";
 import FinalPaperPage from "../pages_Isaac/FinalPaperPage.js";
 import AnswerKeyPage from "../pages_Isaac/AnswerKeyPage.js";
+import OpenElectiveSide from "../pages/Papers/OpenElectiveSide.js";
 
 // ✅ Manav Routes and Dashboard routes 
 import LandingPage from "../pages/LandingPage.js";
@@ -108,6 +109,7 @@ const AppRoutes = () => {
         <Route path="/preview" element={<PrivateRoute allowedRoles={["Teacher"]}><PreviewPage /></PrivateRoute>} />
         <Route path="/final-paper" element={<PrivateRoute allowedRoles={["Teacher"]}><FinalPaperPage /></PrivateRoute>} />
         <Route path="/answer-key" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKeyPage /></PrivateRoute>} />
+        <Route path="/open-electives" element={<PrivateRoute allowedRoles={["Teacher"]}><OpenElectiveSide/></PrivateRoute>} />
 
         {/* ✅ Roshan Existing Routes */}
         <Route path="/mainp" element={<PrivateRoute allowedRoles={["Teacher"]}><MainPage /></PrivateRoute>} />
