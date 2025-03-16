@@ -161,7 +161,7 @@ const SubjectSelection = () => {
           boxSizing: "border-box"
         }}>
           <a 
-            href="/" 
+            href="/mainp" 
             style={{
               display: "inline-flex",
               alignItems: "center",

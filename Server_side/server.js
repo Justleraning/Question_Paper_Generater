@@ -3,7 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
-const errorHandler = require("./middlewares/errorHandler"); // Unified Error Handler
+const errorHandler = require("./middlewares/errorHandler");
 
 // Initialize Express App
 const app = express();
@@ -17,7 +17,7 @@ app.use(cors({
 }));
 
 // Middleware
-app.use(express.json({ limit: '50mb' })); // Increased limit for large HTML payloads
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Log Incoming Requests
@@ -37,55 +37,161 @@ mongoose.connect(process.env.MONGO_URI, {
   process.exit(1);
 });
 
-// Define Question Paper Schema
-const questionSchema = new mongoose.Schema({
-  semester: String,
-  subject: String,
-  units: [String],
-  questions: [
-    {
-      text: String,
-      marks: Number,
-      image: String, 
-      unit: String,
-    },
-  ],
-});
+// Import Models
+const Question = require("./models/midQuestion");
+const QuestionPaper_midsem = require("./models/QuestionPaper_midsem");
 
-const QuestionPaper = mongoose.model("QuestionPaper", questionSchema);
+// Controller functions for direct routes
+// ✅ Get questions by paper ID
+const getQuestionsByPaperId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("Getting paper with ID:", id);
+    
+    const paper = await Question.findById(id);
+    
+    if (!paper) {
+      console.log("Paper not found with ID:", id);
+      return res.status(404).json({ message: 'Paper not found' });
+    }
+    
+    console.log("Paper found:", paper);
+    res.json(paper);
+  } catch (error) {
+    console.error("Error in getQuestionsByPaperId:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
-// Import Routes
-const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
-const questionRoutes = require("./routes/questionRoutes");
-const paperRoutes = require("./routes/paperRoutes");
-const courseRoutes = require("./routes/CourseRoutes");
-const subjectRoutes = require("./routes/subjectRoutes");
-const unitRoutes = require("./routes/unitRoutes");
-const questionRoutesIsaac = require("./routes/questionRoutes_Isaac");
-const randomizationRoutes = require("./routes/randomizationRoutes");
-const endSemQuestionRoutes = require("./routes/EndSemQuestionRoutes"); // Added EndSem Question Routes
-const endPapersRoutes = require("./routes/EndPapersRoutes");
-const openPapersRoutes = require("./routes/OpenPaperRoutes"); // Added OpenPaper Routes
-const { endPapersAuth } = require('./middlewares/EndPapersMiddleware');
+// ✅ Create/Save Paper
+const createPaper = async (req, res) => {
+  try {
+    console.log("📥 Received paper data:", JSON.stringify(req.body, null, 2));
+    
+    const { subject, semester, questions } = req.body;
+    
+    // Validate input
+    if (!subject || !semester || !questions || questions.length === 0) {
+      console.log("❌ Validation failed: Missing required fields");
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    
+    // Pre-process questions to ensure they meet schema requirements
+    const processedQuestions = questions.filter(q => {
+      // Filter out questions without text
+      if (!q.text || q.text.trim() === '') {
+        console.log("⚠️ Skipping question with empty text");
+        return false;
+      }
+      return true;
+    }).map(q => ({
+      text: q.text,
+      marks: parseInt(q.marks) || 2, // Ensure marks is a number
+      image: q.image || null,
+      unit: q.unit || "Default Unit" // Ensure unit is present
+    }));
+    
+    if (processedQuestions.length === 0) {
+      console.log("❌ No valid questions after filtering");
+      return res.status(400).json({ message: 'No valid questions provided' });
+    }
+    
+    console.log(`✅ Validation passed. Processing ${processedQuestions.length} questions...`);
+    
+    // Create new paper with the required fields at the top level AND in the questions
+    const newPaper = new Question({
+      text: `${subject} - ${semester}`, // Add required field at root level
+      marks: 100, // Add required field at root level
+      subject: subject, // Add subject at root level (required)
+      semester: semester, // Add semester at root level (required)
+      unit: processedQuestions[0].unit || "Default Unit", // Add unit at root level (required)
+      questions: processedQuestions // Add questions as before
+    });
+    
+    console.log("📋 Paper object created:", JSON.stringify(newPaper, null, 2));
+    
+    // Save paper
+    const savedPaper = await newPaper.save();
+    console.log("💾 Paper saved successfully with ID:", savedPaper._id);
+    res.status(201).json(savedPaper);
+  } catch (error) {
+    console.error("❌❌❌ Error in createPaper:", error);
+    
+    // Check for MongoDB validation errors
+    if (error.name === 'ValidationError') {
+      // Handle validation errors more specifically
+      const validationErrors = Object.keys(error.errors).map(key => {
+        return `${key}: ${error.errors[key].message}`;
+      });
+      
+      return res.status(400).json({ 
+        error: error.message,
+        validationErrors
+      });
+    }
+    
+    res.status(500).json({ error: error.message });
+  }
+};
 
-// Route Handlers
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/questions", questionRoutes);
-app.use("/api/questions-isaac", questionRoutesIsaac);
-app.use("/api/papers", paperRoutes);
-app.use("/api/courses", courseRoutes);
-app.use("/api/subjects", subjectRoutes);
-app.use("/api/units", unitRoutes);
-app.use("/api/randomize", randomizationRoutes);
-app.use("/api/endsem-questions", endSemQuestionRoutes); // Added EndSem Question Routes
-app.use("/api/endpapers", endPapersRoutes);
-app.use("/api/openpapers", openPapersRoutes); // Added OpenPaper Routes
+// ✅ Randomize questions
+const randomizeQuestions = async (req, res) => {
+  try {
+    const { subject } = req.body;
+    const questions = await Question.find({ subject });
+    
+    if (questions.length < 19) {
+      return res.status(400).json({ message: 'Not enough questions to randomize.' });
+    }
+    
+    // Shuffle questions
+    const shuffledQuestions = questions.sort(() => Math.random() - 0.5);
+    res.json({ subject, questions: shuffledQuestions });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
-// Additional Question Paper Routes
-// ✅ Route: Save Questions
-app.post("/save-questions", async (req, res) => {
+// ✅ Delete paper
+const deletePaper = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedPaper = await Question.findByIdAndDelete(id);
+    
+    if (!deletedPaper) {
+      return res.status(404).json({ message: 'Paper not found' });
+    }
+    
+    res.json({ message: 'Paper deleted successfully', deletedPaper });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ✅ Send for approval (mock)
+const sendForApproval = async (req, res) => {
+  try {
+    // Mock action - You can implement actual logic
+    res.json({ message: 'Paper sent for approval' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ✅ Get all questions
+const getAllQuestions = async (req, res) => {
+  try {
+    const questions = await Question.find({}).sort({ createdAt: -1 });
+    console.log(`Found ${questions.length} papers`);
+    res.json(questions);
+  } catch (error) {
+    console.error("Error in getAllQuestions:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ✅ Save questions (for QuestionPaper_midsem)
+const saveQuestions = async (req, res) => {
   try {
     console.log("📥 Received request:", req.body);
     const { semester, subject, units, questions } = req.body;
@@ -101,36 +207,36 @@ app.post("/save-questions", async (req, res) => {
 
     console.log("📥 Saving Data to MongoDB:", JSON.stringify(formattedQuestions, null, 2));
 
-    const newPaper = new QuestionPaper({ semester, subject, units, questions: formattedQuestions });
+    const newPaper = new QuestionPaper_midsem({ semester, subject, units, questions: formattedQuestions });
     await newPaper.save();
     console.log("✅ Questions saved successfully");
 
-    res.status(201).json({ message: "Questions saved successfully" });
+    res.status(201).json({ message: "Questions saved successfully", paper: newPaper });
   } catch (error) {
     console.error("❌ Error saving questions:", error);
     res.status(500).json({ error: error.message });
   }
-});
+};
 
-// ✅ Route: Get All Question Papers
-app.get("/get-questions", async (req, res) => {
+// ✅ Get all question papers (for QuestionPaper_midsem)
+const getAllQuestionPapers = async (req, res) => {
   try {
     console.log("📌 Fetching all question papers...");
 
-    const papers = await QuestionPaper.find();
+    const papers = await QuestionPaper_midsem.find().sort({ createdAt: -1 });
     res.status(200).json(papers);
   } catch (error) {
     console.error("❌ Error fetching questions:", error);
     res.status(500).json({ error: "Failed to fetch questions" });
   }
-});
+};
 
-// ✅ Route: Get a Single Question Paper by ID
-app.get("/get-questions/:id", async (req, res) => {
+// ✅ Get question paper by ID (for QuestionPaper_midsem)
+const getQuestionPaperById = async (req, res) => {
   try {
     console.log("📌 Fetching paper with ID:", req.params.id);
     
-    const paper = await QuestionPaper.findById(req.params.id);
+    const paper = await QuestionPaper_midsem.findById(req.params.id);
     
     if (!paper) {
       return res.status(404).json({ error: "Paper not found" });
@@ -141,13 +247,13 @@ app.get("/get-questions/:id", async (req, res) => {
     console.error("❌ Error fetching paper:", error);
     res.status(500).json({ error: "Failed to fetch paper" });
   }
-});
+};
 
-// ✅ Route: Randomize Questions
-app.post("/api/questions/randomize", async (req, res) => {
+// ✅ Randomize questions (for QuestionPaper_midsem)
+const randomizeQuestionPaper = async (req, res) => {
   try {
     const { subject } = req.body;
-    const papers = await QuestionPaper.find({ subject });
+    const papers = await QuestionPaper_midsem.find({ subject });
 
     if (!papers.length) {
       return res.status(404).json({ error: "No questions available for this subject" });
@@ -175,26 +281,74 @@ app.post("/api/questions/randomize", async (req, res) => {
     console.error("❌ Error randomizing questions:", error);
     res.status(500).json({ error: "Failed to randomize questions" });
   }
-});
+};
 
-// ✅ Route: Delete Paper
-app.delete("/delete-paper/:id", async (req, res) => {
+// ✅ Delete paper (for QuestionPaper_midsem)
+const deleteQuestionPaper = async (req, res) => {
   try {
     const { id } = req.params;
     console.log(`🗑 Deleting paper with ID: ${id}`);
 
-    const deletedPaper = await QuestionPaper.findByIdAndDelete(id);
+    const deletedPaper = await QuestionPaper_midsem.findByIdAndDelete(id);
     if (!deletedPaper) {
       return res.status(404).json({ message: "Paper not found" });
     }
 
     console.log("✅ Paper deleted successfully");
-    res.json({ message: "Paper deleted successfully" });
+    res.json({ message: "Paper deleted successfully", deletedPaper });
   } catch (error) {
     console.error("❌ Error deleting paper:", error);
     res.status(500).json({ error: "Server error while deleting paper" });
   }
-});
+};
+
+// Import Routes
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const questionRoutes = require("./routes/questionRoutes");
+const paperRoutes = require("./routes/paperRoutes");
+const courseRoutes = require("./routes/courseRoutes"); // Fixed case to match file
+const subjectRoutes = require("./routes/subjectRoutes");
+const unitRoutes = require("./routes/unitRoutes");
+const questionRoutesIsaac = require("./routes/questionRoutes_Isaac");
+const randomizationRoutes = require("./routes/randomizationRoutes");
+const endSemQuestionRoutes = require("./routes/EndSemQuestionRoutes");
+const endPapersRoutes = require("./routes/EndPapersRoutes");
+const openPapersRoutes = require("./routes/OpenPaperRoutes");
+const midquestions = require("./routes/midquestions");
+const questionsmidsem = require("./routes/questionsmidsem");
+const { endPapersAuth } = require('./middlewares/EndPapersMiddleware');
+
+// Route Handlers
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/questions", questionRoutes);
+app.use("/api/questions-isaac", questionRoutesIsaac);
+app.use("/api/papers", paperRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/subjects", subjectRoutes);
+app.use("/api/units", unitRoutes);
+app.use("/api/randomize", randomizationRoutes);
+app.use("/api/endsem-questions", endSemQuestionRoutes);
+app.use("/api/endpapers", endPapersRoutes);
+app.use("/api/openpapers", openPapersRoutes);
+app.use("/api/midquestions", midquestions);
+app.use("/api/questionsmidsem", questionsmidsem);
+
+// Direct routes using the controller functions defined above
+app.get('/get-questions/:id', getQuestionsByPaperId);
+app.post('/api/papers/save', createPaper);
+app.post('/api/questions/randomize', randomizeQuestions);
+app.delete('/delete-paper/:id', deletePaper);
+app.post('/api/papers/send-for-approval', sendForApproval);
+app.get('/get-questions', getAllQuestions);
+
+// QuestionPaper_midsem routes
+app.post("/api/question-papers/save", saveQuestions);
+app.get("/api/question-papers", getAllQuestionPapers);
+app.get("/api/question-papers/:id", getQuestionPaperById);
+app.post("/api/question-papers/randomize", randomizeQuestionPaper);
+app.delete("/api/question-papers/:id", deleteQuestionPaper);
 
 // Error handling middleware
 app.use(errorHandler);
@@ -214,3 +368,5 @@ if (process.env.NODE_ENV === "production") {
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+module.exports = app;

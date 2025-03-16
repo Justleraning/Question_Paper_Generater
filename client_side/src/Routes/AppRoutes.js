@@ -23,6 +23,8 @@ import SubjectSelection from "../components/Roshan/SubjectSelection.js";
 import UnitChoose from "../components/Roshan/UnitChoose.js";
 import QuestionEntrymidsem from "../components/Roshan/QuestionEntrymidsem.js";
 import PreviewPagemidsem from "../components/Roshan/PreviewPagemidsem.js";
+import ModalRosh from "../components/Roshan/ModalRosh.js";
+import MidSemSide from "../pages/Papers/MidSemSide.js";
 
 // ✅ Isaac Routes
 import IndexPage from "../pages_Isaac/IndexPage.js";
@@ -118,7 +120,9 @@ const AppRoutes = () => {
         <Route path="/questionentrymidsem" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionEntrymidsem /></PrivateRoute>} />
         <Route path="/previewpagemidsem" element={<PrivateRoute allowedRoles={["Teacher"]}><PreviewPagemidsem /></PrivateRoute>} />
         <Route path="/createpapermidsem" element={<PrivateRoute allowedRoles={["Teacher"]}><CreatePapermidsem /></PrivateRoute>} />
-        <Route path="/view-paper/:id" element={<PrivateRoute allowedRoles={["Teacher"]}><ViewPaper /></PrivateRoute>} />
+        <Route path="/viewpaper/:id" element={<PrivateRoute allowedRoles={["Teacher"]}><ViewPaper /></PrivateRoute>} />
+        <Route path="/modalrosh" element={<PrivateRoute allowedRoles={["Teacher"]}><ModalRosh/></PrivateRoute>} />
+        <Route path="/midsemester" element={<PrivateRoute allowedRoles={["Teacher"]}><MidSemSide/></PrivateRoute>} />
 
         {/* ✅ Dino Existing Routes */}
         <Route path="/selected-marks" element={<PrivateRoute allowedRoles={["Teacher"]}><SelectMarks /></PrivateRoute>} />

@@ -110,8 +110,8 @@ const Sidebar = ({
                       icon={<HiOutlineAcademicCap />}
                       label="Mid-Semester"
                       isOpen={isSidebarOpen || isHovered}
-                      onClick={() => navigate("/mypapers/mid-semester")}
-                      isActive={location.pathname === "/mypapers/mid-semester"}
+                      onClick={() => navigate("/midsemester")}
+                      isActive={location.pathname === "/midsemester"}
                     /> 
                     <SubNavItem
                         icon={<HiOutlineBookOpen />}
