@@ -20,6 +20,11 @@ const Navbar = ({
     setIsGamesPanelOpen(!isGamesPanelOpen);
   };
 
+  // Home button click handler
+  const handleHomeClick = () => {
+    window.location.href = "https://www.bing.com/ck/a?!&&p=a3d9c79ec6bf72427bd2e191198521c9dd53db02490b4a13c9984454c7d041f4JmltdHM9MTc0MjA4MzIwMA&ptn=3&ver=2&hsh=4&fclid=0ae445c8-984d-6d02-3bbf-4a96995b6c62&psq=sju&u=a1aHR0cHM6Ly93d3cuc2p1LmVkdS5pbi8&ntb=1";
+  };
+
   return (
     <>
       <div className={`fixed top-0 ${getNavbarLeftPosition()} right-0 z-40 transition-all duration-300 ease-in-out`}>
@@ -46,8 +51,18 @@ const Navbar = ({
             </div>
           </div>
           
-          {/* Right side - games button and logged in status */}
+          {/* Right side - home button, games button and logged in status */}
           <div className="flex items-center">
+            <button 
+              onClick={handleHomeClick}
+              className="mr-4 p-2 bg-white border border-blue-200 hover:bg-blue-50 hover:border-blue-300 text-blue-700 rounded-md flex items-center justify-center shadow-sm transition-all duration-200 transform hover:scale-105"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+            </button>
+
             <button 
               onClick={toggleGamesPanel}
               className="mr-4 p-2 bg-white border border-green-200 hover:bg-green-50 hover:border-green-300 text-white rounded-md flex items-center justify-center shadow-sm transition-all duration-200 transform hover:scale-105"
