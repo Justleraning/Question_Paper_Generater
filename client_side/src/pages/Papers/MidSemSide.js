@@ -109,7 +109,7 @@ const MidSemSide = () => {
                       {paper.subject || "Untitled"} {paper.subjectCode ? `- ${paper.subjectCode}` : ""}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {paper.course || "BCA"} | {paper.semester || "THIRD"} Semester
+                      {paper.course || "BCA"} | {paper.semester || " "}
                     </p>
                     <span 
                       className={`inline-block px-2 py-1 rounded-full text-xs font-bold mt-1
