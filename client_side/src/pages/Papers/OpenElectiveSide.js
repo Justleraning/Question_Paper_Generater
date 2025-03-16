@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Download, Edit, Trash2, Eye, ArrowLeft } from 'lucide-react';
+import { FileText, Trash2, Eye, ArrowLeft, Download } from 'lucide-react';
 import { 
   getAllOpenPapers, 
   getOpenPaperById, 
@@ -81,6 +81,54 @@ export function OpenElectiveSide() {
       console.error("❌ Error viewing paper:", error);
       setError("Failed to load paper details. Please try again.");
     }
+  };
+
+  // Delete Paper
+  const handleDeletePaper = async (paper) => {
+    if (!window.confirm(`Are you sure you want to delete this paper: ${paper.title || paper.subjectName}?`)) {
+      return;
+    }
+    
+    try {
+      await deleteOpenPaper(paper._id);
+      
+      // Update state to remove the deleted paper
+      setPapers(papers.filter(p => p._id !== paper._id));
+      setFilteredPapers(filteredPapers.filter(p => p._id !== paper._id));
+      
+      alert("Paper deleted successfully!");
+    } catch (error) {
+      console.error("❌ Error deleting paper:", error);
+      setError("Failed to delete paper. Please try again.");
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Update the filters state
+    setFilters({
+      ...filters,
+      [name]: value
+    });
+    
+    // Apply filters
+    let filtered = [...papers];
+    
+    // Apply all active filters
+    Object.entries({ ...filters, [name]: value }).forEach(([filterName, filterValue]) => {
+      if (filterValue) {
+        filtered = filtered.filter(paper => {
+          if (filterName === 'subjectName') {
+            return paper.subjectName?.toLowerCase().includes(filterValue.toLowerCase());
+          }
+          return paper[filterName] === filterValue;
+        });
+      }
+    });
+    
+    setFilteredPapers(filtered);
   };
 
   // Download Paper
@@ -200,80 +248,6 @@ export function OpenElectiveSide() {
     }
   };
 
-  // Edit Paper
-  const editPaper = async (paper) => {
-    try {
-      // Get full paper details
-      const paperDetails = await getOpenPaperById(paper._id);
-      
-      navigate('/final-paper', { 
-        state: { 
-          finalPaper: paperDetails.questions,
-          fromOpenPapers: true,
-          paperId: paper._id,
-          editMode: true,
-          subjectDetails: {
-            id: paperDetails.subject,
-            name: paperDetails.subjectName,
-            code: paperDetails.subjectCode
-          },
-          marks: paperDetails.totalMarks
-        } 
-      });
-    } catch (error) {
-      console.error("❌ Error editing paper:", error);
-      setError("Failed to load paper for editing. Please try again.");
-    }
-  };
-
-  // Delete Paper
-  const handleDeletePaper = async (paper) => {
-    if (!window.confirm(`Are you sure you want to delete this paper: ${paper.title || paper.subjectName}?`)) {
-      return;
-    }
-    
-    try {
-      await deleteOpenPaper(paper._id);
-      
-      // Update state to remove the deleted paper
-      setPapers(papers.filter(p => p._id !== paper._id));
-      setFilteredPapers(filteredPapers.filter(p => p._id !== paper._id));
-      
-      alert("Paper deleted successfully!");
-    } catch (error) {
-      console.error("❌ Error deleting paper:", error);
-      setError("Failed to delete paper. Please try again.");
-    }
-  };
-
-  // Handle filter changes
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    
-    // Update the filters state
-    setFilters({
-      ...filters,
-      [name]: value
-    });
-    
-    // Apply filters
-    let filtered = [...papers];
-    
-    // Apply all active filters
-    Object.entries({ ...filters, [name]: value }).forEach(([filterName, filterValue]) => {
-      if (filterValue) {
-        filtered = filtered.filter(paper => {
-          if (filterName === 'subjectName') {
-            return paper.subjectName?.toLowerCase().includes(filterValue.toLowerCase());
-          }
-          return paper[filterName] === filterValue;
-        });
-      }
-    });
-    
-    setFilteredPapers(filtered);
-  };
-
   // Close preview and return to list view
   const closePreview = () => {
     setShowPreview(false);
@@ -315,12 +289,6 @@ export function OpenElectiveSide() {
               }`}
             >
               {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
-            </button>
-            <button
-              onClick={() => editPaper(currentPaper)}
-              className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600"
-            >
-              Edit Paper
             </button>
           </div>
         </div>
@@ -524,20 +492,6 @@ export function OpenElectiveSide() {
                     title="View Paper"
                   >
                     <Eye className="w-5 h-5" />
-                  </button>
-                  <button 
-                    onClick={() => downloadPaper(paper)}
-                    className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors"
-                    title="Download PDF"
-                  >
-                    <Download className="w-5 h-5" />
-                  </button>
-                  <button 
-                    onClick={() => editPaper(paper)}
-                    className="text-yellow-500 hover:bg-yellow-50 p-2 rounded-full transition-colors"
-                    title="Edit Paper"
-                  >
-                    <Edit className="w-5 h-5" />
                   </button>
                   <button 
                     onClick={() => handleDeletePaper(paper)}
