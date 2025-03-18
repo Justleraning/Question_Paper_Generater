@@ -7,10 +7,11 @@ const {
   updateEndPaper,
   deleteEndPaper,
   sendForApproval,
-  processPaperApproval
+  processPaperApproval,
+  updatePaperQuestion
 } = require("../controllers/EndPapersController");
 const { protect, admin } = require("../middlewares/authMiddleware");
-const { endPapersAuth } = require("../middlewares/EndPapersMiddleware");
+const { endPapersAuth, teacherOwnPapersOnly } = require("../middlewares/EndPapersMiddleware");
 
 // Base route - /api/endpapers
 // Use the custom endPapersAuth middleware instead of protect
@@ -19,13 +20,17 @@ router.route("/")
   .post(endPapersAuth, createEndPaper);
 
 router.route("/:id")
-  .get(endPapersAuth, getEndPaperById)
-  .put(endPapersAuth, updateEndPaper)
-  .delete(endPapersAuth, deleteEndPaper);
+  .get(endPapersAuth, teacherOwnPapersOnly, getEndPaperById)
+  .put(endPapersAuth, teacherOwnPapersOnly, updateEndPaper)
+  .delete(endPapersAuth, teacherOwnPapersOnly, deleteEndPaper);
 
-// Approval routes - keep these with standard authentication
+// New route for inline question editing
+router.route("/:id/parts/:partId/questions/:questionId")
+  .put(endPapersAuth, teacherOwnPapersOnly, updatePaperQuestion);
+
+// Approval routes - now using endPapersAuth instead of protect
 router.route("/:id/approval")
-  .post(protect, sendForApproval)
-  .put(protect, processPaperApproval);
+  .post(endPapersAuth, teacherOwnPapersOnly, sendForApproval)
+  .put(endPapersAuth, processPaperApproval);
 
 module.exports = router;

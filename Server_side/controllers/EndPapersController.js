@@ -67,17 +67,28 @@ const getEndPaperById = asyncHandler(async (req, res) => {
 // @access  Private with fallback
 const createEndPaper = asyncHandler(async (req, res) => {
   try {
-    // If metadata is missing, initialize it
+    // Ensure metadata exists
     if (!req.body.metadata) {
       req.body.metadata = {};
     }
     
-    // Add creator information from user (real or placeholder)
+    // Set status to Pending if not provided
+    if (!req.body.status) {
+      req.body.status = 'Pending';
+    }
+    
+    // Fallback to placeholder user ID if not present
+    console.log('One' + req.user);
+    console.log('One' + req.user._id);
+    const createdBy = req.user && req.user._id 
+      ? req.user._id 
+      : mongoose.Types.ObjectId('000000000000000000000000');
+    
     const paperData = {
       ...req.body,
       metadata: {
         ...req.body.metadata,
-        createdBy: req.user._id,
+        createdBy: createdBy,
         status: 'draft'
       }
     };
@@ -90,6 +101,7 @@ const createEndPaper = asyncHandler(async (req, res) => {
       paper
     });
   } catch (error) {
+    console.error('Paper creation error:', error);
     res.status(400);
     throw new Error(`Failed to create paper: ${error.message}`);
   }
@@ -219,6 +231,10 @@ const sendForApproval = asyncHandler(async (req, res) => {
   
   // Update paper status to 'submitted'
   paper.metadata.status = 'submitted';
+  
+  // Also update the main status field
+  paper.status = 'Pending';
+  
   paper.metadata.approvalHistory.push({
     status: 'submitted',
     approvedBy: req.user._id,
@@ -281,6 +297,9 @@ const processPaperApproval = asyncHandler(async (req, res) => {
   // If approved, set to published
   if (status === 'approved') {
     paper.metadata.status = 'published';
+    paper.status = 'Approved';
+  } else if (status === 'rejected') {
+    paper.status = 'Rejected';
   }
   
   await paper.save();
@@ -292,6 +311,85 @@ const processPaperApproval = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Update a specific question in a paper
+// @route   PUT /api/endpapers/:id/parts/:partId/questions/:questionId
+// @access  Private with fallback
+const updatePaperQuestion = asyncHandler(async (req, res) => {
+  try {
+    const { id, partId, questionId } = req.params;
+    const { questionText, unit, bloomLevel, marks } = req.body;
+    
+    // Find the paper
+    const paper = await EndPapers.findById(id);
+    
+    if (!paper) {
+      res.status(404);
+      throw new Error("Paper not found");
+    }
+    
+    // Check if user is authorized
+    const isUsingPlaceholder = isPlaceholderUser(req.user._id);
+    const isAuthorized = isUsingPlaceholder || 
+                       req.user._id.toString() === paper.metadata.createdBy.toString() || 
+                       req.user.role === 'admin';
+    
+    if (!isAuthorized) {
+      res.status(403);
+      throw new Error("Not authorized to update this paper's questions");
+    }
+    
+    // Find the part
+    const partIndex = paper.paperStructure.parts.findIndex(p => p.partId === partId);
+    
+    if (partIndex === -1) {
+      res.status(404);
+      throw new Error(`Part ${partId} not found`);
+    }
+    
+    // Find the question
+    const questionIndex = paper.paperStructure.parts[partIndex].questions.findIndex(
+      q => q.questionId === questionId
+    );
+    
+    if (questionIndex === -1) {
+      res.status(404);
+      throw new Error(`Question ${questionId} not found in part ${partId}`);
+    }
+    
+    // Update question fields
+    if (questionText) {
+      paper.paperStructure.parts[partIndex].questions[questionIndex].questionText = questionText;
+    }
+    
+    if (unit) {
+      paper.paperStructure.parts[partIndex].questions[questionIndex].unit = unit;
+    }
+    
+    if (bloomLevel) {
+      paper.paperStructure.parts[partIndex].questions[questionIndex].bloomLevel = bloomLevel;
+    }
+    
+    if (marks) {
+      paper.paperStructure.parts[partIndex].questions[questionIndex].marks = marks;
+    }
+    
+    // Save changes
+    await paper.save();
+    
+    res.status(200).json({
+      success: true,
+      message: "Question updated successfully",
+      question: paper.paperStructure.parts[partIndex].questions[questionIndex]
+    });
+  } catch (error) {
+    console.error("Error updating question:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 module.exports = {
   getAllEndPapers,
   getEndPaperById,
@@ -299,5 +397,6 @@ module.exports = {
   updateEndPaper,
   deleteEndPaper,
   sendForApproval,
-  processPaperApproval
+  processPaperApproval,
+  updatePaperQuestion
 };

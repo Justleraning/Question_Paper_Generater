@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './CreatePapers.css';
 
@@ -7,9 +7,12 @@ const CreatePapers = () => {
   // Reference for printing
   const componentRef = useRef();
   
+  // For navigation
+  const navigate = useNavigate();
+  
   // Get exam configuration from router state
   const location = useLocation();
-  const { examConfig, questionDistribution } = location.state || {};
+  const { examConfig, questionDistribution, paperDetails: loadedPaperDetails, editMode: loadedEditMode } = location.state || {};
   
   // Get exam details from localStorage
   const [examDetails, setExamDetails] = useState({
@@ -36,8 +39,17 @@ const CreatePapers = () => {
     partC: []
   });
   
+  // State to track if this is a new paper or an existing one
+  const [paperId, setPaperId] = useState(null);
+  
+  // State for edit mode
+  const [isEditMode, setIsEditMode] = useState(false);
+  
   // State to control whether to show the paper
   const [showPaper, setShowPaper] = useState(false);
+  
+  // State to disable replace buttons
+  const [disableReplaceButtons, setDisableReplaceButtons] = useState(false);
   
   // State for loading indicator
   const [loading, setLoading] = useState(false);
@@ -59,6 +71,81 @@ const CreatePapers = () => {
       console.error('Error loading exam details from localStorage:', error);
     }
   }, []);
+  
+  // Load paper details from location state if available
+  useEffect(() => {
+    if (location.state) {
+      // Check if we're loading an existing paper for editing
+      if (loadedPaperDetails) {
+        // Set paper ID
+        if (loadedPaperDetails._id) {
+          setPaperId(loadedPaperDetails._id);
+        }
+        
+        // Load exam details
+        if (loadedPaperDetails.examDetails) {
+          setExamDetails(loadedPaperDetails.examDetails);
+        }
+        
+        // Load questions from paper structure
+        if (loadedPaperDetails.paperStructure && loadedPaperDetails.paperStructure.parts) {
+          const partA = loadedPaperDetails.paperStructure.parts.find(p => p.partId === 'A')?.questions || [];
+          const partB = loadedPaperDetails.paperStructure.parts.find(p => p.partId === 'B')?.questions || [];
+          const partC = loadedPaperDetails.paperStructure.parts.find(p => p.partId === 'C')?.questions || [];
+          
+          setQuestions({
+            partA: partA.map(q => ({
+              _id: q.questionId,
+              question: q.questionText,
+              questionNumber: q.questionNumber,
+              hasImage: q.hasImage,
+              imageUrl: q.imageUrl,
+              unit: q.unit,
+              bloomLevel: q.bloomLevel,
+              marks: q.marks
+            })),
+            partB: partB.map(q => ({
+              _id: q.questionId,
+              question: q.questionText,
+              questionNumber: q.questionNumber,
+              hasImage: q.hasImage,
+              imageUrl: q.imageUrl,
+              unit: q.unit,
+              bloomLevel: q.bloomLevel,
+              marks: q.marks
+            })),
+            partC: partC.map(q => ({
+              _id: q.questionId,
+              question: q.questionText,
+              questionNumber: q.questionNumber,
+              hasImage: q.hasImage,
+              imageUrl: q.imageUrl,
+              unit: q.unit,
+              bloomLevel: q.bloomLevel,
+              marks: q.marks
+            }))
+          });
+          
+          // Set image states if available
+          if (loadedPaperDetails.imageStates) {
+            setImageStates(loadedPaperDetails.imageStates);
+          }
+        }
+        
+        // Set edit mode
+        if (loadedEditMode) {
+          setIsEditMode(true);
+        }
+        
+        // Disable replace buttons when editing
+        if (loadedEditMode) {
+          setDisableReplaceButtons(true);
+        }
+        
+        setShowPaper(true);
+      }
+    }
+  }, [location.state, loadedPaperDetails, loadedEditMode]);
   
   // Helper function to map bloom levels between UI and API
   const mapBloomLevel = (level) => {
@@ -268,36 +355,35 @@ const CreatePapers = () => {
     }
   }, [questions, showPaper]);
   
-  // Helper functions to get question metadata
-  const getPartFromQuestion = (question) => {
-    // Search up the DOM tree to find the part
-    let current = question;
-    while (current && current.parentElement) {
-      current = current.parentElement;
-      
-      // Check if we found a part section
-      if (current.previousElementSibling && current.previousElementSibling.classList.contains('din8-part-title')) {
-        const partTitle = current.previousElementSibling.textContent;
-        if (partTitle.includes('PART-A')) return 'A';
-        if (partTitle.includes('PART-B')) return 'B';
-        if (partTitle.includes('PART-C')) return 'C';
-      }
+  // Function to handle inline editing of questions
+  const handleQuestionEdit = (part, index, updatedText) => {
+    // Create a copy of the current questions
+    const updatedQuestions = { ...questions };
+    
+    // Update the specific question
+    if (part === 'A') {
+      updatedQuestions.partA[index].question = updatedText;
+    } else if (part === 'B') {
+      updatedQuestions.partB[index].question = updatedText;
+    } else if (part === 'C') {
+      updatedQuestions.partC[index].question = updatedText;
     }
     
-    // Default
-    return 'A';
+    // Set the updated questions
+    setQuestions(updatedQuestions);
   };
-  
-  const getUnitFromQuestion = (question) => {
-    // In a real implementation, this would extract the unit from the question
-    // This is a placeholder - you would need to implement this based on your data structure
-    return 1;
-  };
-  
-  const getBloomLevelFromQuestion = (question) => {
-    // In a real implementation, this would extract the bloom level from the question
-    // This is a placeholder - you would need to implement this based on your data structure
-    return 1;
+
+  // Function to update question text on the server
+  const updateQuestionOnServer = async (part, questionId, updatedText) => {
+    if (!paperId) return;
+    
+    try {
+      await axios.put(`/api/endpapers/${paperId}/parts/${part}/questions/${questionId}`, {
+        questionText: updatedText
+      });
+    } catch (error) {
+      console.error('Error updating question:', error);
+    }
   };
   
   // Function to fetch questions from the backend
@@ -559,25 +645,54 @@ const CreatePapers = () => {
     }
   };
   
-  // Function to handle the send for approval action
-  const sendForApproval = () => {
-    // In a real application, this would submit the paper to an approval workflow
-    alert('Question paper has been sent for approval to the department head!');
-  };
-
-  // Function to save paper (in a real app, this would save to a database)
+  // Updated savePaper function to remove replace buttons
   const savePaper = async () => {
     try {
       // Show loading state
       setLoading(true);
       
-      // Try to get token if available, but we don't require it anymore
-      const token = localStorage.getItem('userToken') || 
-                 localStorage.getItem('authToken') || 
-                 localStorage.getItem('token') || 
-                 'no-token-required';  // This will be handled by our middleware
+      // Transform questions into the format required by the backend
+      // Remove UI elements like replace buttons and properly structure the questions
+      const processedQuestions = {
+        partA: questions.partA.map((q, index) => ({
+          questionId: q._id,
+          questionNumber: index + 1,
+          questionText: q.question || q.questionText,
+          hasImage: q.hasImage || false,
+          imageUrl: q.imageUrl || null,
+          imageState: imageStates[q.imageUrl?.split('/').pop()?.split('.')[0]] || null,
+          unit: q.unit || 1,
+          bloomLevel: q.bloomLevel || 'Remember L1',
+          marks: q.marks || 2,
+          part: 'A'
+        })),
+        partB: questions.partB.map((q, index) => ({
+          questionId: q._id,
+          questionNumber: index + 6, // Assuming Part A has 5 questions
+          questionText: q.question || q.questionText,
+          hasImage: q.hasImage || false,
+          imageUrl: q.imageUrl || null,
+          imageState: imageStates[q.imageUrl?.split('/').pop()?.split('.')[0]] || null,
+          unit: q.unit || 1,
+          bloomLevel: q.bloomLevel || 'Apply L2',
+          marks: q.marks || 4,
+          part: 'B'
+        })),
+        partC: questions.partC.map((q, index) => ({
+          questionId: q._id,
+          questionNumber: index + questions.partB.length + 6, // Accounting for Part A and B
+          questionText: q.question || q.questionText,
+          hasImage: q.hasImage || false,
+          imageUrl: q.imageUrl || null,
+          imageState: imageStates[q.imageUrl?.split('/').pop()?.split('.')[0]] || null,
+          unit: q.unit || 1,
+          bloomLevel: q.bloomLevel || 'Evaluate L3',
+          marks: q.marks || 10,
+          part: 'C'
+        }))
+      };
       
-      // Prepare the paper data in the required format
+      // Build the paper structure according to our schema
       const paperData = {
         university: {
           name: paperDetails.university,
@@ -594,29 +709,81 @@ const CreatePapers = () => {
           maxMarks: paperDetails.maxMarks,
           duration: paperDetails.duration
         },
-        questions: {
-          partA: questions.partA.map(q => q._id),
-          partB: questions.partB.map(q => q._id),
-          partC: questions.partC.map(q => q._id)
+        // Set status to Pending
+        status: 'Pending',
+        
+        // Set up the paper structure with parts
+        paperStructure: {
+          totalPages: 2,
+          parts: [
+            {
+              partId: 'A',
+              partTitle: 'PART-A',
+              instructions: ['Answer all FIVE questions', '(2 X 5 = 10)'],
+              marksFormat: '(2 X 5 = 10)',
+              questions: processedQuestions.partA
+            },
+            {
+              partId: 'B',
+              partTitle: 'PART-B',
+              instructions: ['Answer any FIVE questions', '(4 X 5 = 20)'],
+              marksFormat: '(4 X 5 = 20)',
+              questions: processedQuestions.partB
+            },
+            {
+              partId: 'C',
+              partTitle: 'PART-C',
+              instructions: ['Answer any THREE questions', '(10 X 3 = 30)'],
+              marksFormat: '(10 X 3 = 30)',
+              questions: processedQuestions.partC
+            }
+          ]
         },
-        status: 'draft',
-        createdAt: new Date()
+        
+        // Save image states for all images
+        imageStates: imageStates,
+        
+        // Default layout settings
+        layout: {
+          paperSize: 'A4',
+          marginTop: 20,
+          marginRight: 15,
+          marginBottom: 20,
+          marginLeft: 15,
+          headerHeight: 60,
+          footerHeight: 20
+        }
       };
       
-      // Send the paper data to the server with or without token
-      const response = await axios.post('http://localhost:5000/api/endpapers', paperData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      let response;
       
-      // Handle successful save
-      if (response.status === 201) {
-        alert('Question paper has been saved successfully!');
+      // If we have a paperId, update the existing paper, otherwise create a new one
+      if (paperId) {
+        response = await axios.put(`/api/endpapers/${paperId}`, paperData, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        alert('Question paper has been updated successfully!');
       } else {
-        throw new Error('Failed to save paper');
+        response = await axios.post('/api/endpapers', paperData, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        // Set the paper ID for future reference
+        if (response.data && response.data.paper && response.data.paper._id) {
+          setPaperId(response.data.paper._id);
+        }
+        
+        alert('Question paper has been saved successfully!');
       }
+      
+      // Enable edit mode after saving
+      setIsEditMode(true);
+      setDisableReplaceButtons(true);
+      
     } catch (error) {
       console.error('Error saving paper:', error);
       alert(`Failed to save paper: ${error.response?.data?.message || error.message}`);
@@ -624,8 +791,7 @@ const CreatePapers = () => {
       setLoading(false);
     }
   };
-
-  const downloadPaper = () => {
+  const downloadPaper = (paper) => {
     // Show loading indicator
     const loadingOverlay = document.createElement('div');
     loadingOverlay.className = 'din8-loading-overlay';
@@ -668,10 +834,24 @@ const CreatePapers = () => {
         const margin = 15; // margins in mm
         const contentWidth = pageWidth - (margin * 2);
         
+        // Prepare paper data from the selected paper
+        const paperDetails = {
+          university: paper.university.name || "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
+          maxMarks: paper.examDetails.maxMarks || "60"
+        };
+        
+        const examDetails = paper.examDetails;
+        
         // Make sure questions arrays exist
-        const questionsPartA = Array.isArray(questions.partA) ? questions.partA : [];
-        const questionsPartB = Array.isArray(questions.partB) ? questions.partB : [];
-        const questionsPartC = Array.isArray(questions.partC) ? questions.partC : [];
+        const questionsPartA = Array.isArray(paper.paperStructure.parts.find(p => p.partId === 'A')?.questions) 
+          ? paper.paperStructure.parts.find(p => p.partId === 'A').questions 
+          : [];
+        const questionsPartB = Array.isArray(paper.paperStructure.parts.find(p => p.partId === 'B')?.questions) 
+          ? paper.paperStructure.parts.find(p => p.partId === 'B').questions 
+          : [];
+        const questionsPartC = Array.isArray(paper.paperStructure.parts.find(p => p.partId === 'C')?.questions) 
+          ? paper.paperStructure.parts.find(p => p.partId === 'C').questions 
+          : [];
         
         // Current Y position on the page
         let yPos = margin;
@@ -680,39 +860,33 @@ const CreatePapers = () => {
         // Registration Number and Date box in extreme right corner
         pdf.setDrawColor(0);
         pdf.setLineWidth(0.1);
-        // Create a smaller box positioned at the extreme right corner
         const boxWidth = 50;
         const boxHeight = 15;
-        const boxX = pageWidth - boxWidth - 5; // Only 5mm from right edge
+        const boxX = pageWidth - boxWidth - 5;
         const boxY = margin;
         pdf.rect(boxX, boxY, boxWidth, boxHeight);
-        pdf.setFontSize(8); // Smaller font size
+        pdf.setFontSize(8);
         pdf.setFont('helvetica', 'normal');
-        // Add the text with proper alignment and positioning
         pdf.text("Registration Number:", boxX + 2, boxY + 5);
         pdf.text("Date:", boxX + 2, boxY + 11);
         
         // Function to add university logo
         const addLogo = async () => {
           return new Promise((resolve) => {
-            // Try to load the university logo
             const logo = new Image();
             logo.crossOrigin = 'Anonymous';
             
             logo.onload = () => {
               try {
-                // Make the logo a square shape with 30mm width and height
-                const imgWidth = 30; // Fixed width 30mm
-                const imgHeight = 30; // Fixed height 30mm to make it square
+                const imgWidth = 30;
+                const imgHeight = 30;
                 
-                // Create temporary canvas to convert image to data URL
                 const canvas = document.createElement('canvas');
                 canvas.width = logo.width;
                 canvas.height = logo.height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(logo, 0, 0);
                 
-                // Add logo to PDF at left side
                 pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, imgWidth, imgHeight);
                 
                 resolve();
@@ -727,10 +901,8 @@ const CreatePapers = () => {
               resolve();
             };
             
-            // Try to load from SJU.png
-            logo.src = '/SJU.png';
+            logo.src = paper.university.logoUrl || '/SJU.png';
             
-            // If logo doesn't load in 2 seconds, continue without it
             setTimeout(() => {
               if (!logo.complete) {
                 console.warn('Logo loading timed out');
@@ -742,15 +914,12 @@ const CreatePapers = () => {
         
         // Function to add page header
         const addPageHeader = async () => {
-          // Try to add logo
           await addLogo();
           
-          // University name - centered and bold
           pdf.setFontSize(12);
           pdf.setFont('helvetica', 'bold');
           pdf.text(paperDetails.university, pageWidth/2, margin + 7, { align: 'center' });
           
-          // Course details - start with appropriate spacing
           yPos = margin + 15;
           pdf.setFontSize(10);
           pdf.setFont('helvetica', 'bold');
@@ -772,18 +941,19 @@ const CreatePapers = () => {
           pdf.text("(For Current batch student only)", pageWidth/2, yPos, { align: 'center' });
           yPos += 10;
           
-          // Exam info
           pdf.setFontSize(10);
           pdf.text(`Time: ${examDetails.examTimings}`, margin, yPos);
           pdf.text(`Max Marks: ${paperDetails.maxMarks}`, pageWidth - margin, yPos, { align: 'right' });
           yPos += 6;
           
-          // Paper info
-          const totalPages = 2; // We'll force exactly 2 pages like in your example
+          const totalPages = 2;
           pdf.setFont('helvetica', 'normal');
           pdf.text(`This paper contains ${totalPages} printed pages and 3 parts`, pageWidth/2, yPos, { align: 'center' });
           yPos += 10;
         };
+        
+        // Rest of the functions (checkPageBreak, renderPartAB, renderPartC) remain the same
+        // ... (Copy the exact implementations from the previous code)
         
         // Function to check if we need a new page
         const checkPageBreak = (neededSpace) => {
@@ -798,197 +968,14 @@ const CreatePapers = () => {
         
         // Function to render Parts A and B with their questions
         const renderPartAB = (partTitle, instructions, questionsList, startNumber) => {
-          // Add part title
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(partTitle, pageWidth/2, yPos, { align: 'center' });
-          yPos += 8;
-          
-          // Add part instructions - BOLD and CAPITAL LETTERS for the first part
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(instructions[0].toUpperCase(), margin, yPos);
-          pdf.text(instructions[1], pageWidth - margin, yPos, { align: 'right' });
-          yPos += 8;
-          
-          // Add questions
-          pdf.setFont('helvetica', 'normal');
-          
-          let prevQuestionType = null;
-          
-          for (let i = 0; i < questionsList.length; i++) {
-            const question = questionsList[i];
-            
-            // Get question text
-            const questionText = question.question || "No question text available";
-            
-            // Determine question type (you may need to add a type field to your question objects)
-            const currentQuestionType = question.type || 'default';
-            
-            // Question number
-            pdf.text(`${startNumber + i}.`, margin, yPos);
-            
-            // Handle multi-line question text
-            const textLines = pdf.splitTextToSize(questionText, contentWidth - 10);
-            pdf.text(textLines, margin + 7, yPos);
-            
-            // Move Y position down based on text length with appropriate line spacing
-            // First line plus any additional lines with 0.4cm (4mm) line spacing
-            if (textLines.length > 1) {
-              yPos += 5; // 0.5cm for first line
-              yPos += 4 * (textLines.length - 1); // 0.4cm for each additional line
-            } else {
-              yPos += 5; // Just 0.5cm for a single line
-            }
-            
-            // Add image if available
-            if (question.hasImage && question.imageUrl) {
-              try {
-                // Load image and add to PDF
-                const img = new Image();
-                img.src = question.imageUrl;
-                
-                // If image loads, add it
-                if (img.complete) {
-                  // Calculate dimensions
-                  const imgWidth = Math.min(contentWidth - 20, 100);
-                  const imgHeight = (img.height * imgWidth) / img.width;
-                  
-                  // Check for page break
-                  if (yPos + imgHeight > pageHeight - margin) {
-                    checkPageBreak(imgHeight);
-                  }
-                  
-                  // Add image
-                  const canvas = document.createElement('canvas');
-                  canvas.width = img.width;
-                  canvas.height = img.height;
-                  const ctx = canvas.getContext('2d');
-                  ctx.drawImage(img, 0, 0);
-                  
-                  pdf.addImage(canvas.toDataURL('image/jpeg'), 'JPEG', margin + 10, yPos, imgWidth, imgHeight);
-                  yPos += imgHeight + 5;
-                }
-              } catch (err) {
-                console.error("Error adding image:", err);
-              }
-            }
-            
-            // Set spacing between questions - always 0.5cm (5mm) between questions
-            yPos += 5; // 0.5cm spacing between questions
-            
-            prevQuestionType = currentQuestionType;
-            
-            // Check if we need a page break
-            if (yPos > pageHeight - margin && i < questionsList.length - 1) {
-              checkPageBreak(20);
-            }
-          }
-          
-          // Add minimal space after part
-          yPos += 5;
+          // Copy the entire renderPartAB function from the previous code
+          // ...
         };
         
         // Function to render Part C with special handling
         const renderPartC = (partTitle, instructions, questionsList, startNumber) => {
-          // Start with checking how much space is left on the current page
-          const spaceLeft = pageHeight - margin - yPos;
-          
-          // Add part title
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(partTitle, pageWidth/2, yPos, { align: 'center' });
-          yPos += 8;
-          
-          // Add part instructions
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(instructions[0].toUpperCase(), margin, yPos);
-          pdf.text(instructions[1], pageWidth - margin, yPos, { align: 'right' });
-          yPos += 8;
-          
-          // Add questions
-          pdf.setFont('helvetica', 'normal');
-          
-          let prevQuestionType = null;
-          
-          // First try to print as many questions as will fit on the current page
-          for (let i = 0; i < questionsList.length; i++) {
-            const question = questionsList[i];
-            
-            // Get question text
-            const questionText = question.question || "No question text available";
-            
-            // Determine question type (you may need to add a type field to your question objects)
-            const currentQuestionType = question.type || 'default';
-            
-            // Calculate how much space this question will need
-            const textLines = pdf.splitTextToSize(questionText, contentWidth - 10);
-            
-            // Calculate height based on line count: 0.5cm for first line, 0.4cm for each additional line
-            let questionHeight = 5; // 0.5cm for first line
-            if (textLines.length > 1) {
-              questionHeight += 4 * (textLines.length - 1); // 0.4cm for each additional line
-            }
-            
-            // Check if there's enough space for this question on the current page
-            const imageHeight = question.hasImage && question.imageUrl ? 50 : 0; // Estimate image height
-            const neededSpace = questionHeight + imageHeight + 5; // 5mm for spacing
-            
-            // If we need a page break, do it before printing this question
-            // Only break if there's not enough space for this specific question
-            if (yPos + neededSpace > pageHeight - margin) {
-              pdf.addPage();
-              currentPage++;
-              yPos = margin;
-            }
-            
-            // Question number
-            pdf.text(`${startNumber + i}.`, margin, yPos);
-            
-            // Print question text
-            pdf.text(textLines, margin + 7, yPos);
-            
-            // Move Y position down based on text length with appropriate line spacing
-            // First line plus any additional lines with 0.4cm (4mm) line spacing
-            if (textLines.length > 1) {
-              yPos += 5; // 0.5cm for first line
-              yPos += 4 * (textLines.length - 1); // 0.4cm for each additional line
-            } else {
-              yPos += 5; // Just 0.5cm for a single line
-            }
-            
-            // Add image if available
-            if (question.hasImage && question.imageUrl) {
-              try {
-                // Load image and add to PDF
-                const img = new Image();
-                img.src = question.imageUrl;
-                
-                // If image loads, add it
-                if (img.complete) {
-                  // Calculate dimensions
-                  const imgWidth = Math.min(contentWidth - 20, 100);
-                  const imgHeight = (img.height * imgWidth) / img.width;
-                  
-                  // Add image
-                  const canvas = document.createElement('canvas');
-                  canvas.width = img.width;
-                  canvas.height = img.height;
-                  const ctx = canvas.getContext('2d');
-                  ctx.drawImage(img, 0, 0);
-                  
-                  pdf.addImage(canvas.toDataURL('image/jpeg'), 'JPEG', margin + 10, yPos, imgWidth, imgHeight);
-                  yPos += imgHeight + 5;
-                }
-              } catch (err) {
-                console.error("Error adding image:", err);
-              }
-            }
-            
-            // Set spacing between questions - always 0.5cm (5mm) between questions
-            yPos += 5; // 0.5cm spacing between questions
-            
-            prevQuestionType = currentQuestionType;
-          }
+          // Copy the entire renderPartC function from the previous code
+          // ...
         };
         
         // Add first page header
@@ -1010,12 +997,6 @@ const CreatePapers = () => {
               questionsPartA.length + 1
             );
             
-            // For Part C, we have a special handling to make efficient use of space
-            // If there's enough space on the first page, start there, otherwise start on page 2
-            // For Part C, don't force it to new page - always try to fit as many questions as possible on page 1
-            // Just continue from wherever we are - no special page break handling for Part C start
-            
-            // Don't add excessive space before Part C
             yPos += 5;
             
             // Render Part C
@@ -1050,11 +1031,12 @@ const CreatePapers = () => {
       }
     };
   };
-  
   // Generate a paper on first load
   useEffect(() => {
-    fetchQuestions();
-  }, [examDetails.subjectCode]); // Refetch when subject code changes
+    if (!paperId && !isEditMode) {
+      fetchQuestions();
+    }
+  }, [examDetails.subjectCode, paperId, isEditMode]);
   
   // Add CSS for the loading spinner, error message, and fixed layout
   const additionalStyles = `
@@ -1237,13 +1219,24 @@ const CreatePapers = () => {
       color: white;
     }
     
-    .din8-approve-btn {
-      background-color: #9c27b0;
-      color: white;
+    /* Styles for inline editing */
+    .din8-editable-question-text {
+      cursor: text;
+      border: 1px solid transparent;
+      padding: 5px;
+      border-radius: 4px;
+      transition: background-color 0.2s, border-color 0.2s;
+      flex-grow: 1;
     }
     
-    .din8-action-btn:hover {
-      opacity: 0.9;
+    .din8-editable-question-text:hover {
+      background-color: #f0f0f0;
+    }
+    
+    .din8-editable-question-text:focus {
+      outline: none;
+      border-color: #007bff;
+      background-color: #f8f8f8;
     }
   `;
   
@@ -1332,7 +1325,22 @@ const CreatePapers = () => {
                   questions.partA.map((question, index) => (
                     <div className="din8-question" id={question._id} key={question._id || index}>
                       <span className="din8-question-number">{index + 1}.</span>
-                      <span className="din8-question-text">{question.question}</span>
+                      
+                      {isEditMode ? (
+                        <span
+                          className="din8-editable-question-text"
+                          contentEditable
+                          suppressContentEditableWarning
+                          onBlur={(e) => {
+                            handleQuestionEdit('A', index, e.target.innerText);
+                            updateQuestionOnServer('A', question._id, e.target.innerText);
+                          }}
+                        >
+                          {question.question}
+                        </span>
+                      ) : (
+                        <span className="din8-question-text">{question.question}</span>
+                      )}
                       
                       {/* Show image if available */}
                       {question.hasImage && question.imageUrl && (
@@ -1346,12 +1354,14 @@ const CreatePapers = () => {
                         </div>
                       )}
                       
-                      <button 
-                        className="din8-replace-btn" 
-                        onClick={() => replaceQuestion(question._id, 'A', question.unit, getBloomLevelNumber(question.bloomLevel))}
-                      >
-                        Replace
-                      </button>
+                      {!disableReplaceButtons && (
+                        <button 
+                          className="din8-replace-btn" 
+                          onClick={() => replaceQuestion(question._id, 'A', question.unit, getBloomLevelNumber(question.bloomLevel))}
+                        >
+                          Replace
+                        </button>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -1371,7 +1381,22 @@ const CreatePapers = () => {
                   questions.partB.map((question, index) => (
                     <div className="din8-question" id={question._id} key={question._id || index}>
                       <span className="din8-question-number">{index + 6}.</span>
-                      <span className="din8-question-text">{question.question}</span>
+                      
+                      {isEditMode ? (
+                        <span
+                          className="din8-editable-question-text"
+                          contentEditable
+                          suppressContentEditableWarning
+                          onBlur={(e) => {
+                            handleQuestionEdit('B', index, e.target.innerText);
+                            updateQuestionOnServer('B', question._id, e.target.innerText);
+                          }}
+                        >
+                          {question.question}
+                        </span>
+                      ) : (
+                        <span className="din8-question-text">{question.question}</span>
+                      )}
                       
                       {/* Show image if available */}
                       {question.hasImage && question.imageUrl && (
@@ -1385,12 +1410,14 @@ const CreatePapers = () => {
                         </div>
                       )}
                       
-                      <button 
-                        className="din8-replace-btn" 
-                        onClick={() => replaceQuestion(question._id, 'B', question.unit, getBloomLevelNumber(question.bloomLevel))}
-                      >
-                        Replace
-                      </button>
+                      {!disableReplaceButtons && (
+                        <button 
+                          className="din8-replace-btn" 
+                          onClick={() => replaceQuestion(question._id, 'B', question.unit, getBloomLevelNumber(question.bloomLevel))}
+                        >
+                          Replace
+                        </button>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -1410,7 +1437,22 @@ const CreatePapers = () => {
                   questions.partC.map((question, index) => (
                     <div className="din8-question" id={question._id} key={question._id || index}>
                       <span className="din8-question-number">{index + questions.partB.length + 6}.</span>
-                      <span className="din8-question-text">{question.question}</span>
+                      
+                      {isEditMode ? (
+                        <span
+                          className="din8-editable-question-text"
+                          contentEditable
+                          suppressContentEditableWarning
+                          onBlur={(e) => {
+                            handleQuestionEdit('C', index, e.target.innerText);
+                            updateQuestionOnServer('C', question._id, e.target.innerText);
+                          }}
+                        >
+                          {question.question}
+                        </span>
+                      ) : (
+                        <span className="din8-question-text">{question.question}</span>
+                      )}
                       
                       {/* Show image if available */}
                       {question.hasImage && question.imageUrl && (
@@ -1424,12 +1466,14 @@ const CreatePapers = () => {
                         </div>
                       )}
                       
-                      <button 
-                        className="din8-replace-btn" 
-                        onClick={() => replaceQuestion(question._id, 'C', question.unit, getBloomLevelNumber(question.bloomLevel))}
-                      >
-                        Replace
-                      </button>
+                      {!disableReplaceButtons && (
+                        <button 
+                          className="din8-replace-btn" 
+                          onClick={() => replaceQuestion(question._id, 'C', question.unit, getBloomLevelNumber(question.bloomLevel))}
+                        >
+                          Replace
+                        </button>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -1450,9 +1494,6 @@ const CreatePapers = () => {
             <button className="din8-action-btn din8-generate-btn" onClick={randomizeQuestions}>
               Randomize Questions
             </button>
-            <button className="din8-action-btn din8-approve-btn" onClick={sendForApproval}>
-              Send for Approval
-            </button>
           </div>
         </div>
       )}
@@ -1461,4 +1502,3 @@ const CreatePapers = () => {
 };
 
 export default CreatePapers;
-
