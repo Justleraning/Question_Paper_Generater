@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../Contexts/AuthContext.js"; 
 import MainLayout from "../components/MainLayout.js"; 
 import { QPProvider } from "../Contexts/QPContext.js"
+import PaperApprovals from "../pages/Papers/PaperApprovals_OpenElectiveSide.js";
+import PaperApprovalTypes from "../pages/Papers/PaperApprovalTypes.js";
 
 // ✅ Dino Routes
 import SelectMarks from "../components/Dino/EndFront/SelectedMarks.js";
@@ -98,8 +100,8 @@ const AppRoutes = () => {
         <Route path="/admin-dashboard" element={<PrivateRoute allowedRoles={["Admin"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/view-reset-requests" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><ResetRequests /></PrivateRoute>} />
         <Route path="/manage-users" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><ManageUsers /></PrivateRoute>} />
-        
-
+        <Route path="/paper-approvals" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovals /></PrivateRoute>} />
+        <Route path="/paper-approval-types" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovalTypes /></PrivateRoute>} />
         {/* ✅ SuperAdmin Routes */}
         <Route path="/super-admin-panel" element={<PrivateRoute allowedRoles={["SuperAdmin"]}><SuperAdminPanel /></PrivateRoute>} />
         <Route path="/view-all-users" element={<PrivateRoute allowedRoles={["SuperAdmin"]}><ViewAllUsers /></PrivateRoute>} />

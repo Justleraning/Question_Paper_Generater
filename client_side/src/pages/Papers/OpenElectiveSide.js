@@ -1,16 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from "../../Contexts/AuthContext.js";
 import { useNavigate } from 'react-router-dom';
-import { FileText, Trash2, Eye, ArrowLeft, Download } from 'lucide-react';
+import { FileText, Trash2, Eye, ArrowLeft, Download, Edit, Save, X, ArrowUpCircle } from 'lucide-react';
 import { 
   getAllOpenPapers, 
   getOpenPaperById, 
-  deleteOpenPaper 
+  deleteOpenPaper,
+  saveCompletedPaper,
+  updatePaperStatus 
 } from '../../services/paperService.js';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import logo from '../../assets/image.png'; // Adjust path as needed
 
 export function OpenElectiveSide() {
+  const { authState } = useAuth(); // Get auth state
+  const isAdmin = authState?.user?.role === "Admin" || authState?.user?.role === "SuperAdmin";
+  
   const [papers, setPapers] = useState([]);
   const [filteredPapers, setFilteredPapers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +30,8 @@ export function OpenElectiveSide() {
   const [showPreview, setShowPreview] = useState(false);
   const [currentPaper, setCurrentPaper] = useState(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedQuestions, setEditedQuestions] = useState([]);
   const paperRef = useRef(null);
   const navigate = useNavigate();
 
@@ -54,32 +62,51 @@ export function OpenElectiveSide() {
     fetchPapers();
   }, []);
 
-  // Helper function to strip HTML tags
+  // Helper function to strip HTML tags and properly decode HTML entities
   const stripHtmlTags = (input) => {
     if (!input) return "";
     
-    // First decode any HTML entities
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = input;
-    const decodedInput = textarea.value;
+    // Create a temporary element to properly decode HTML entities
+    const tempElement = document.createElement('div');
+    tempElement.innerHTML = input;
     
-    // Then remove any HTML tags
-    return decodedInput.replace(/<[^>]*>/g, "").trim();
+    // Get the text content which automatically removes HTML tags and decodes entities
+    return tempElement.textContent || tempElement.innerText || "";
   };
 
-  // View/Preview Paper
+  // View/Preview Paper - Show only the paper without edit capability
   const viewPaper = async (paper) => {
     try {
       // Get full paper details
       const paperDetails = await getOpenPaperById(paper._id);
       setCurrentPaper(paperDetails);
+      setEditedQuestions(paperDetails.questions || []); // Initialize the edited questions
       setShowPreview(true);
+      setIsEditing(false); // Ensure edit mode is off
       
       // Scroll to top when preview is shown
       window.scrollTo(0, 0);
     } catch (error) {
       console.error("❌ Error viewing paper:", error);
       setError("Failed to load paper details. Please try again.");
+    }
+  };
+
+  // Edit Paper - Directly show paper in edit mode
+  const editPaper = async (paper) => {
+    try {
+      // Get full paper details
+      const paperDetails = await getOpenPaperById(paper._id);
+      setCurrentPaper(paperDetails);
+      setEditedQuestions(paperDetails.questions || []); // Initialize the edited questions
+      setShowPreview(true);
+      setIsEditing(true); // Automatically enter edit mode
+      
+      // Scroll to top when preview is shown
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error("❌ Error editing paper:", error);
+      setError("Failed to load paper details for editing. Please try again.");
     }
   };
 
@@ -100,6 +127,83 @@ export function OpenElectiveSide() {
     } catch (error) {
       console.error("❌ Error deleting paper:", error);
       setError("Failed to delete paper. Please try again.");
+    }
+  };
+
+  // Send for Approval
+  const sendForApproval = async (paper) => {
+    try {
+      const currentStatus = paper.status || 'Draft';
+      let newStatus;
+      
+      if (currentStatus === 'Draft') {
+        newStatus = 'Submitted';
+        if (!window.confirm(`Are you sure you want to submit "${paper.title || paper.subjectName}" for approval? Once submitted, you cannot edit it until it's approved or rejected.`)) {
+          return;
+        }
+      } else if (currentStatus === 'Submitted') {
+        newStatus = 'Approved';
+        if (!window.confirm(`Are you sure you want to approve "${paper.title || paper.subjectName}"? This action represents approval from higher authority.`)) {
+          return;
+        }
+      } else if (currentStatus === 'Approved') {
+        alert("This paper is already approved.");
+        return;
+      } else if (currentStatus === 'Rejected') {
+        newStatus = 'Submitted';
+        if (!window.confirm(`Are you sure you want to resubmit "${paper.title || paper.subjectName}" for approval?`)) {
+          return;
+        }
+      }
+      
+      // Call API to update paper status
+      await updatePaperStatus(paper._id, newStatus);
+      
+      // Update state to reflect the new status
+      const updatedPapers = papers.map(p => 
+        p._id === paper._id ? { ...p, status: newStatus } : p
+      );
+      
+      setPapers(updatedPapers);
+      setFilteredPapers(filteredPapers.map(p => 
+        p._id === paper._id ? { ...p, status: newStatus } : p
+      ));
+      
+      alert(`Paper status changed to ${newStatus}!`);
+    } catch (error) {
+      console.error("❌ Error updating paper status:", error);
+      setError("Failed to update paper status. Please try again.");
+    }
+  };
+
+  // Reject Paper
+  const rejectPaper = async (paper) => {
+    if (paper.status !== 'Submitted') {
+      alert("Only submitted papers can be rejected.");
+      return;
+    }
+    
+    const reason = window.prompt("Please provide a reason for rejection:");
+    if (reason === null) return; // User cancelled
+    
+    try {
+      // Call API to update paper status
+      await updatePaperStatus(paper._id, 'Rejected', reason);
+      
+      // Update state to reflect the new status
+      const updatedPapers = papers.map(p => 
+        p._id === paper._id ? { ...p, status: 'Rejected', rejectionReason: reason } : p
+      );
+      
+      setPapers(updatedPapers);
+      setFilteredPapers(filteredPapers.map(p => 
+        p._id === paper._id ? { ...p, status: 'Rejected', rejectionReason: reason } : p
+      ));
+      
+      alert("Paper has been rejected.");
+    } catch (error) {
+      console.error("❌ Error rejecting paper:", error);
+      setError("Failed to reject paper. Please try again.");
     }
   };
 
@@ -248,10 +352,70 @@ export function OpenElectiveSide() {
     }
   };
 
+  // Toggle edit mode
+  const toggleEditMode = () => {
+    if (isEditing) {
+      // Discard changes and exit edit mode
+      setEditedQuestions(currentPaper.questions || []);
+    }
+    setIsEditing(!isEditing);
+  };
+
+  // Handle question text edit using contentEditable
+  const handleQuestionEdit = (index, field, value) => {
+    const updatedQuestions = [...editedQuestions];
+    
+    if (field === 'text') {
+      updatedQuestions[index].text = value;
+    } else if (field === 'option') {
+      // Check if options is an array or object
+      const [optionIndex, optionValue] = value;
+      if (Array.isArray(updatedQuestions[index].options)) {
+        updatedQuestions[index].options[optionIndex] = optionValue;
+      } else {
+        // Handle object format options
+        const optionKey = String.fromCharCode(65 + optionIndex);
+        updatedQuestions[index].options[optionKey] = optionValue;
+      }
+    }
+    
+    setEditedQuestions(updatedQuestions);
+  };
+  
+  // Save edited questions
+  const saveEdits = async () => {
+    try {
+      if (!currentPaper || !currentPaper._id) {
+        throw new Error("Cannot save: Paper ID is missing");
+      }
+      
+      // Create updated paper object
+      const updatedPaper = {
+        ...currentPaper,
+        questions: editedQuestions
+      };
+      
+      // Call API to update the paper using saveCompletedPaper function
+      await saveCompletedPaper(updatedPaper);
+      
+      // Update the current paper with edited questions
+      setCurrentPaper(updatedPaper);
+      
+      // Exit edit mode
+      setIsEditing(false);
+      
+      alert("Paper updated successfully!");
+    } catch (error) {
+      console.error("❌ Error saving paper:", error);
+      setError("Failed to save changes. Please try again.");
+    }
+  };
+
   // Close preview and return to list view
   const closePreview = () => {
     setShowPreview(false);
     setCurrentPaper(null);
+    setIsEditing(false);
   };
 
   // Get unique values for filter dropdowns
@@ -262,11 +426,28 @@ export function OpenElectiveSide() {
     return values;
   };
 
+  // Get the status badge color
+  const getStatusBadgeColor = (status) => {
+    switch(status) {
+      case 'Draft':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Submitted':
+        return 'bg-blue-100 text-blue-800';
+      case 'Approved':
+        return 'bg-green-100 text-green-800';
+      case 'Rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   // Render the paper preview
   const renderPaperPreview = () => {
     if (!currentPaper) return null;
 
     const currentDate = new Date().toLocaleDateString();
+    const questions = isEditing ? editedQuestions : currentPaper.questions;
     
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -281,17 +462,99 @@ export function OpenElectiveSide() {
           </button>
           
           <div className="flex space-x-4">
-            <button
-              onClick={() => downloadPaper(currentPaper)}
-              disabled={isGeneratingPDF}
-              className={`bg-green-500 text-white px-4 py-2 rounded-lg ${
-                isGeneratingPDF ? 'opacity-70 cursor-not-allowed' : 'hover:bg-green-600'
-              }`}
-            >
-              {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
-            </button>
+            {/* Status indicator */}
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(currentPaper.status || 'Draft')}`}>
+              {currentPaper.status || 'Draft'}
+            </span>
+            
+            {isEditing ? (
+              <>
+                <button
+                  onClick={saveEdits}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-600"
+                  disabled={currentPaper.status === 'Submitted' || currentPaper.status === 'Approved'}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </button>
+                <button
+                  onClick={toggleEditMode}
+                  className="bg-gray-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-gray-600"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => downloadPaper(currentPaper)}
+                  disabled={isGeneratingPDF}
+                  className={`bg-green-500 text-white px-4 py-2 rounded-lg flex items-center ${
+                    isGeneratingPDF ? 'opacity-70 cursor-not-allowed' : 'hover:bg-green-600'
+                  }`}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
+                </button>
+                
+                {/* Only show Edit button for Draft papers */}
+                {currentPaper.status === 'Draft' && (
+                  <button
+                    onClick={toggleEditMode}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-600"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </button>
+                )}
+                
+                {/* Send for Approval - only for teachers with Draft/Rejected papers */}
+                {!isAdmin && (currentPaper.status === 'Draft' || currentPaper.status === 'Rejected') && (
+                  <button
+                    onClick={() => sendForApproval(currentPaper)}
+                    className="bg-purple-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-purple-600"
+                  >
+                    <ArrowUpCircle className="w-4 h-4 mr-2" />
+                    Send for Approval
+                  </button>
+                )}
+                
+                {/* Approve - only for admins with Submitted papers */}
+                {isAdmin && currentPaper.status === 'Submitted' && (
+                  <>
+                    <button
+                      onClick={() => sendForApproval(currentPaper)}
+                      className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-600"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => rejectPaper(currentPaper)}
+                      className="bg-red-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Reject
+                    </button>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
+        
+        {/* Rejection reason if applicable */}
+        {currentPaper.status === 'Rejected' && currentPaper.rejectionReason && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4">
+            <div className="flex">
+              <div>
+                <p className="text-sm text-red-700 font-medium">Rejection Reason:</p>
+                <p className="text-sm text-red-700 mt-1">{currentPaper.rejectionReason}</p>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Paper content */}
         <div className="flex-1 overflow-auto p-4 flex flex-col items-center">
@@ -335,32 +598,77 @@ export function OpenElectiveSide() {
             <p className="mb-3 font-medium text-center text-sm">Answer all questions</p>
           
             {/* Questions section */}
-            {currentPaper.questions && currentPaper.questions.map((question, index) => (
+            {questions && questions.map((question, index) => (
               <div key={index} className="mb-6 text-left">
-                <p className="font-medium break-words">
-                  {index + 1}. {stripHtmlTags(question.text)}
-                </p>
+                {isEditing ? (
+                  <div className="mb-4">
+                    <div 
+                      className="font-medium break-words border border-blue-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => handleQuestionEdit(index, 'text', e.target.innerText)}
+                      dangerouslySetInnerHTML={{ __html: question.text }}
+                    />
 
-                {/* Options display with proper handling for both array and object formats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 ml-6">
-                  {Array.isArray(question.options) ? (
-                    question.options.map((option, i) => (
-                      <div key={`option-${index}-${i}`}>
-                        <p className="break-words">
-                          {String.fromCharCode(65 + i)}. {stripHtmlTags(option)}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    Object.entries(question.options || {}).map(([key, value]) => (
-                      <div key={`option-${index}-${key}`}>
-                        <p className="break-words">
-                          {key}. {stripHtmlTags(value)}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
+                    {/* Options editing - directly editable spans */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 ml-6">
+                      {Array.isArray(question.options) ? (
+                        question.options.map((option, i) => (
+                          <div key={`edit-option-${index}-${i}`} className="flex">
+                            <span className="mr-2 font-medium">{String.fromCharCode(65 + i)}.</span>
+                            <div 
+                              className="flex-1 border border-gray-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              contentEditable
+                              suppressContentEditableWarning
+                              onBlur={(e) => handleQuestionEdit(index, 'option', [i, e.target.innerText])}
+                              dangerouslySetInnerHTML={{ __html: option }}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        Object.entries(question.options || {}).map(([key, value], i) => (
+                          <div key={`edit-option-${index}-${key}`} className="flex">
+                            <span className="mr-2 font-medium">{key}.</span>
+                            <div 
+                              className="flex-1 border border-gray-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              contentEditable
+                              suppressContentEditableWarning
+                              onBlur={(e) => handleQuestionEdit(index, 'option', [i, e.target.innerText])}
+                              dangerouslySetInnerHTML={{ __html: value }}
+                            />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="font-medium break-words">
+                      {index + 1}. {stripHtmlTags(question.text)}
+                    </p>
+
+                    {/* Options display with proper handling for both array and object formats */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 ml-6">
+                      {Array.isArray(question.options) ? (
+                        question.options.map((option, i) => (
+                          <div key={`option-${index}-${i}`}>
+                            <p className="break-words">
+                              {String.fromCharCode(65 + i)}. {stripHtmlTags(option)}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        Object.entries(question.options || {}).map(([key, value]) => (
+                          <div key={`option-${index}-${key}`}>
+                            <p className="break-words">
+                              {key}. {stripHtmlTags(value)}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -438,8 +746,9 @@ export function OpenElectiveSide() {
           >
             <option value="">All Statuses</option>
             <option value="Draft">Draft</option>
-            <option value="Published">Published</option>
-            <option value="Archived">Archived</option>
+            <option value="Submitted">Submitted</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
           </select>
         </div>
   
@@ -467,12 +776,7 @@ export function OpenElectiveSide() {
                     </p>
                     <div className="flex items-center mt-1 space-x-2">
                       <span 
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-bold 
-                          ${paper.status === 'Draft' 
-                            ? 'bg-yellow-100 text-yellow-800' 
-                            : paper.status === 'Published' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'}`}
+                        className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusBadgeColor(paper.status || 'Draft')}`}
                       >
                         {paper.status || 'Draft'}
                       </span>
@@ -482,10 +786,49 @@ export function OpenElectiveSide() {
                       <span className="text-xs text-gray-500">
                         {paper.questions?.length || 0} questions
                       </span>
+                      {paper.status === 'Rejected' && paper.rejectionReason && (
+                        <span className="text-xs text-red-600">
+                          Rejected: {paper.rejectionReason}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
                 <div className="flex space-x-2">
+                  {/* Approval workflow buttons with role-based conditions */}
+                  
+                  {/* Send for Approval - only show to teachers for Draft/Rejected papers */}
+                  {!isAdmin && (paper.status === 'Draft' || paper.status === 'Rejected') && (
+                    <button 
+                      onClick={() => sendForApproval(paper)}
+                      className="text-purple-500 hover:bg-purple-50 p-2 rounded-full transition-colors"
+                      title="Send for Approval"
+                    >
+                      <ArrowUpCircle className="w-5 h-5" />
+                    </button>
+                  )}
+                  
+                  {/* Approve/Reject buttons - only show to admins for Submitted papers */}
+                  {isAdmin && paper.status === 'Submitted' && (
+                    <>
+                      <button 
+                        onClick={() => sendForApproval(paper)}
+                        className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors"
+                        title="Approve Paper"
+                      >
+                        <ArrowUpCircle className="w-5 h-5" />
+                      </button>
+                      <button 
+                        onClick={() => rejectPaper(paper)}
+                        className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                        title="Reject Paper"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                  
+                  {/* View Paper - available to everyone */}
                   <button 
                     onClick={() => viewPaper(paper)}
                     className="text-blue-500 hover:bg-blue-50 p-2 rounded-full transition-colors"
@@ -493,12 +836,26 @@ export function OpenElectiveSide() {
                   >
                     <Eye className="w-5 h-5" />
                   </button>
+                  
+                  {/* Edit Paper - only available for Draft papers */}
+                  {paper.status === 'Draft' && (
+                    <button 
+                      onClick={() => editPaper(paper)}
+                      className="text-yellow-500 hover:bg-yellow-50 p-2 rounded-full transition-colors"
+                      title="Edit Paper"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                  )}
+                  
+                  {/* Delete Paper - only available for Draft and Rejected papers */}
                   <button 
                     onClick={() => handleDeletePaper(paper)}
                     className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
                     title="Delete Paper"
+                    disabled={paper.status !== 'Draft' && paper.status !== 'Rejected'}
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className={`w-5 h-5 ${paper.status !== 'Draft' && paper.status !== 'Rejected' ? 'opacity-50 cursor-not-allowed' : ''}`} />
                   </button>
                 </div>
               </div>

@@ -444,3 +444,41 @@ export const saveOpenPaperHtmlSnapshot = async (paperId, htmlContent) => {
     return handleAuthError(error);
   }
 };
+// Add this function to your paperService.js file
+
+/**
+ * Update the status of a paper
+ * @param {string} paperId - The ID of the paper to update
+ * @param {string} newStatus - The new status to set (Draft, Submitted, Approved, Rejected)
+ * @param {string} rejectionReason - Optional reason for rejection
+ * @returns {Promise<Object>} The updated paper data
+ */
+export const updatePaperStatus = async (paperId, newStatus, rejectionReason = null) => {
+  try {
+    const requestBody = {
+      status: newStatus
+    };
+    
+    // If rejection reason is provided, add it to the request
+    if (rejectionReason !== null && newStatus === 'Rejected') {
+      requestBody.rejectionReason = rejectionReason;
+    }
+    
+    const response = await axios.patch(
+      `${API_URL}/openpapers/${paperId}/status`, 
+      requestBody,
+      { 
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        } 
+      }
+    );
+    
+    console.log("✅ Updated paper status:", response.data);
+    return response.data.data;
+  } catch (error) {
+    console.error("❌ Error updating paper status:", error.response?.data || error.message);
+    return handleAuthError(error);
+  }
+};

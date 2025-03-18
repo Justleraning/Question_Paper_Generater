@@ -151,12 +151,12 @@ const Sidebar = ({
                     isActive={location.pathname === "/view-reset-requests"}
                   />
                   <NavItem 
-                    icon={<FaCheckCircle />} 
-                    label="View Approval Papers" 
-                    isOpen={isSidebarOpen || isHovered} 
-                    onClick={() => navigate("/view-approval-papers")} 
-                    isActive={location.pathname === "/view-approval-papers"}
-                  />
+  icon={<FaCheckCircle />} 
+  label="Paper Approvals" 
+  isOpen={isSidebarOpen || isHovered} 
+  onClick={() => navigate("/paper-approval-types")} 
+  isActive={location.pathname === "/paper-approval-types" || location.pathname.startsWith("/paper-approvals")}
+/>
                 </NavItemGroup>
               </>
             )}
