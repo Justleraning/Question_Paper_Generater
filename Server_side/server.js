@@ -133,20 +133,6 @@ const createPaper = async (req, res) => {
   }
 };
 
-// Route Handlers
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/questions", questionRoutes);
-app.use("/api/questions-isaac", questionRoutesIsaac);
-app.use("/api/papers", paperRoutes);
-app.use("/api", paperRoutes);
-app.use("/api/courses", courseRoutes);
-app.use("/api/subjects", subjectRoutes);
-app.use("/api/units", unitRoutes);
-app.use("/api/randomize", randomizationRoutes);
-app.use("/api/endsem-questions", endSemQuestionRoutes); // Added EndSem Question Routes
-app.use("/api/endpapers", endPapersRoutes);
-app.use("/api/openpapers", openPapersRoutes); // Added OpenPaper Routes
 // ✅ Randomize questions
 const randomizeQuestions = async (req, res) => {
   try {
