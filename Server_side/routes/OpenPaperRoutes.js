@@ -8,7 +8,8 @@ const {
   updateOpenPaper,
   deleteOpenPaper,
   getOpenPapersBySubject,
-  saveHtmlSnapshot
+  saveHtmlSnapshot,
+  updatePaperStatus // Make sure this is imported
 } = require("../controllers/OpenPapersController");
 
 const {
@@ -31,5 +32,6 @@ router.delete("/:id", deleteOpenPaper);
 
 // Special route for saving HTML snapshot
 router.post("/:id/snapshot", saveHtmlSnapshot);
+router.patch("/:id/status", updatePaperStatus);
 
 module.exports = router;

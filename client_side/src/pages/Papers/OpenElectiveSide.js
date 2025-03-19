@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from "../../Contexts/AuthContext.js";
 import { useNavigate } from 'react-router-dom';
-import { FileText, Trash2, Eye, ArrowLeft, Download, Edit, Save, X, ArrowUpCircle } from 'lucide-react';
+import { FileText, Trash2, Eye, ArrowLeft, Download, Edit, Save, X, ArrowUpCircle, Check } from 'lucide-react';
 import { 
   getAllOpenPapers, 
   getOpenPaperById, 
@@ -472,7 +472,6 @@ export function OpenElectiveSide() {
                 <button
                   onClick={saveEdits}
                   className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-600"
-                  disabled={currentPaper.status === 'Submitted' || currentPaper.status === 'Approved'}
                 >
                   <Save className="w-4 h-4 mr-2" />
                   Save Changes
@@ -498,8 +497,8 @@ export function OpenElectiveSide() {
                   {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
                 </button>
                 
-                {/* Only show Edit button for Draft papers */}
-                {currentPaper.status === 'Draft' && (
+                {/* Show Edit button for Draft and Rejected papers */}
+                {(currentPaper.status === 'Draft' || currentPaper.status === 'Rejected') && (
                   <button
                     onClick={toggleEditMode}
                     className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-600"
@@ -816,7 +815,7 @@ export function OpenElectiveSide() {
                         className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors"
                         title="Approve Paper"
                       >
-                        <ArrowUpCircle className="w-5 h-5" />
+                        <Check className="w-5 h-5" />
                       </button>
                       <button 
                         onClick={() => rejectPaper(paper)}
@@ -837,8 +836,8 @@ export function OpenElectiveSide() {
                     <Eye className="w-5 h-5" />
                   </button>
                   
-                  {/* Edit Paper - only available for Draft papers */}
-                  {paper.status === 'Draft' && (
+                  {/* Edit Paper - available for Draft and Rejected papers */}
+                  {(paper.status === 'Draft' || paper.status === 'Rejected') && (
                     <button 
                       onClick={() => editPaper(paper)}
                       className="text-yellow-500 hover:bg-yellow-50 p-2 rounded-full transition-colors"
@@ -849,14 +848,15 @@ export function OpenElectiveSide() {
                   )}
                   
                   {/* Delete Paper - only available for Draft and Rejected papers */}
-                  <button 
-                    onClick={() => handleDeletePaper(paper)}
-                    className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
-                    title="Delete Paper"
-                    disabled={paper.status !== 'Draft' && paper.status !== 'Rejected'}
-                  >
-                    <Trash2 className={`w-5 h-5 ${paper.status !== 'Draft' && paper.status !== 'Rejected' ? 'opacity-50 cursor-not-allowed' : ''}`} />
-                  </button>
+                  {(paper.status === 'Draft' || paper.status === 'Rejected') && (
+                    <button 
+                      onClick={() => handleDeletePaper(paper)}
+                      className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                      title="Delete Paper"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -865,7 +865,6 @@ export function OpenElectiveSide() {
       </div>
     );
   };
-
   // Main render method to switch between preview and list views
   return showPreview ? renderPaperPreview() : renderPapersList();
 }

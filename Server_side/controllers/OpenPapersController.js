@@ -264,7 +264,60 @@ const saveHtmlSnapshot = async (req, res) => {
     });
   }
 };
+// Add this to your OpenPapersController.js file
 
+// Update paper status
+const updatePaperStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, submittedAt, approvedAt, rejectionReason } = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid paper ID format"
+      });
+    }
+    
+    // Create update object with only the fields that were provided
+    const updateData = { status };
+    if (submittedAt) updateData.submittedAt = submittedAt;
+    if (approvedAt) updateData.approvedAt = approvedAt;
+    if (rejectionReason) updateData.rejectionReason = rejectionReason;
+    
+    console.log(`🔄 Updating paper ${id} status to ${status}`);
+    
+    // Update the document and get the updated version
+    const updatedPaper = await OpenPapers.findByIdAndUpdate(
+      id, 
+      updateData,
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedPaper) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Paper not found' 
+      });
+    }
+    
+    console.log(`✅ Successfully updated paper status to ${status}`);
+    
+    return res.status(200).json({
+      success: true,
+      data: updatedPaper
+    });
+  } catch (error) {
+    console.error('❌ Error updating paper status:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update paper status', 
+      error: error.message 
+    });
+  }
+};
+
+// Don't forget to update the exports at the bottom of the file
 module.exports = {
   createOpenPaper,
   getAllOpenPapers,
@@ -272,5 +325,6 @@ module.exports = {
   updateOpenPaper,
   deleteOpenPaper,
   getOpenPapersBySubject,
-  saveHtmlSnapshot
+  saveHtmlSnapshot,
+  updatePaperStatus // Add this export
 };

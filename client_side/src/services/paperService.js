@@ -453,20 +453,23 @@ export const saveOpenPaperHtmlSnapshot = async (paperId, htmlContent) => {
  * @param {string} rejectionReason - Optional reason for rejection
  * @returns {Promise<Object>} The updated paper data
  */
+// Fix for the updatePaperStatus function
 export const updatePaperStatus = async (paperId, newStatus, rejectionReason = null) => {
   try {
-    const requestBody = {
-      status: newStatus
+    const payload = { 
+      status: newStatus,
+      // Include timestamps based on status
+      ...(newStatus === 'Submitted' && { submittedAt: new Date().toISOString() }),
+      ...(newStatus === 'Approved' && { approvedAt: new Date().toISOString() }),
+      ...(rejectionReason && { rejectionReason }),
     };
     
-    // If rejection reason is provided, add it to the request
-    if (rejectionReason !== null && newStatus === 'Rejected') {
-      requestBody.rejectionReason = rejectionReason;
-    }
+    console.log(`📤 Updating paper status to ${newStatus}: ${paperId}`);
     
+    // Ensure the API endpoint is correctly formed with the base URL
     const response = await axios.patch(
       `${API_URL}/openpapers/${paperId}/status`, 
-      requestBody,
+      payload,
       { 
         headers: {
           ...authHeaders(),
@@ -475,10 +478,15 @@ export const updatePaperStatus = async (paperId, newStatus, rejectionReason = nu
       }
     );
     
-    console.log("✅ Updated paper status:", response.data);
-    return response.data.data;
+    console.log("✅ Status updated successfully:", response.data);
+    return response.data.data || response.data;
   } catch (error) {
-    console.error("❌ Error updating paper status:", error.response?.data || error.message);
+    console.error("❌ Error updating paper status:", error);
+    if (error.response) {
+      console.error("Response error:", error.response.data);
+    } else if (error.request) {
+      console.error("No response received:", error.request);
+    }
     return handleAuthError(error);
   }
 };
