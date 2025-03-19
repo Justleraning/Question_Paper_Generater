@@ -328,7 +328,7 @@ const FinalPreview = () => {
         totalMarks: markType, 
         examTime: examTime || 1, 
         date: currentDate, 
-        // Remove status field
+        status: 'Not Sent',
         createdBy: user._id, 
         questions: questions.map(q => ({
           subject: q.subject || '', 
@@ -350,7 +350,7 @@ const FinalPreview = () => {
       if (paperResult.success) {
         setNotification("Paper saved successfully!");
         setTimeout(() => {
-          navigate("/entrance-exams");
+          navigate("/entrance-exam");
         }, 3000);
       } else {
         setError(paperResult.message || "Failed to save paper");
