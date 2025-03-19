@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -50,8 +52,9 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const response = await axios.get("http://localhost:5000/api/auth/verify", {
-        headers: { Authorization: `Bearer ${token}` },
+      // Use the API_URL constant for consistency
+      const response = await axios.get(`${API_URL}/auth/verify`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (!response.data || !response.data.user) {
@@ -59,6 +62,12 @@ export const AuthProvider = ({ children }) => {
         triggerLogoutPopup();
       }
     } catch (error) {
+      // Don't force logout for network errors
+      if (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
+        console.warn("⚠️ Network or server error - Ignoring forced logout.");
+        return;
+      }
+
       if (error.response) {
         if (error.response.status === 404) {
           console.warn("🚨 User not found in database. Logging out...");
@@ -75,18 +84,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ Run Periodic Verification Every 5 Seconds
+  // ✅ Run Periodic Verification Every 5 Seconds - but with proper error handling
   useEffect(() => {
     const interval = setInterval(() => {
       if (authState.token) {
-        verifyAuth();
+        verifyAuth().catch(err => {
+          console.warn("Auth verification failed:", err);
+          // Don't log out on network errors
+        });
       }
     }, 5000);
 
     return () => clearInterval(interval);
   }, [authState.token]);
 
-  // ✅ Show Logout Pop-Up Before Logging Out (Forced Logout)
+  // The rest of the code remains unchanged
   const triggerLogoutPopup = () => {
     if (showLogoutModal || logoutTimerRef.current) return; // Prevent multiple timers
 
@@ -107,7 +119,6 @@ export const AuthProvider = ({ children }) => {
     }, 1000);
   };
 
-  // ✅ Reset Logout State (Fixes Ghost Pop-Up Issue)
   const resetLogoutState = () => {
     clearInterval(logoutTimerRef.current);
     logoutTimerRef.current = null;
@@ -115,7 +126,6 @@ export const AuthProvider = ({ children }) => {
     setLogoutCountdown(20);
   };
 
-  // ✅ Handle Forced Logout
   const forceLogout = () => {
     console.warn("🚨 Forced logout triggered!");
 
@@ -128,7 +138,6 @@ export const AuthProvider = ({ children }) => {
     navigate("/login", { replace: true });
   };
 
-  // ✅ Handle Normal Logout (Button Click)
   const logout = () => {
     console.log("👋logout triggered!");
 

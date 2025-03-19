@@ -37,12 +37,13 @@ function MainPage() {
   const containerStyle = {
     display: "flex",
     flexDirection: "column",
-    background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
+    background: "linear-gradient(135deg,rgb(182, 189, 202) 0%,rgb(167, 172, 180) 100%)",
     alignItems: "center",
     justifyContent: "center",
     minHeight: "100vh",
     position: "relative",
     overflow: "hidden",
+    boxShadow: "0 15px 35px rgba(0, 0, 0, 0.2)",
     fontFamily: "'Poppins', sans-serif",
   };
 
@@ -114,8 +115,8 @@ function MainPage() {
 
   const generateButtonStyle = {
     ...createButtonStyle,
-    backgroundColor: "#38ef7d",
-    boxShadow: "0 10px 20px rgba(56, 239, 125, 0.3)",
+    backgroundColor: "rgb(48, 187, 48)",
+    boxShadow: "0 10px 20px rgba(56, 239, 126, 0.2)",
   };
 
   return (
@@ -217,11 +218,11 @@ function MainPage() {
             >
               <div className="shine-effect"></div>
               <span className="button-icon">&#43;</span>
-              Create Questions
+              Create
             </button>
 
             <button
-              onClick={() => navigate("/createpaper")}
+              onClick={() => navigate("/createpapermidsem")}
               style={generateButtonStyle}
               className="action-button"
             >

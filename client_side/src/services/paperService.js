@@ -484,3 +484,50 @@ export const savePaper = async (paperData) => {
   }
 };
 
+
+// Add this function to your paperService.js file
+
+/**
+ * Update the status of a paper
+ * @param {string} paperId - The ID of the paper to update
+ * @param {string} newStatus - The new status to set (Draft, Submitted, Approved, Rejected)
+ * @param {string} rejectionReason - Optional reason for rejection
+ * @returns {Promise<Object>} The updated paper data
+ */
+// Fix for the updatePaperStatus function
+export const updatePaperStatus = async (paperId, newStatus, rejectionReason = null) => {
+  try {
+    const payload = { 
+      status: newStatus,
+      // Include timestamps based on status
+      ...(newStatus === 'Submitted' && { submittedAt: new Date().toISOString() }),
+      ...(newStatus === 'Approved' && { approvedAt: new Date().toISOString() }),
+      ...(rejectionReason && { rejectionReason }),
+    };
+    
+    console.log(`📤 Updating paper status to ${newStatus}: ${paperId}`);
+    
+    // Ensure the API endpoint is correctly formed with the base URL
+    const response = await axios.patch(
+      `${API_URL}/openpapers/${paperId}/status`, 
+      payload,
+      { 
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        } 
+      }
+    );
+    
+    console.log("✅ Status updated successfully:", response.data);
+    return response.data.data || response.data;
+  } catch (error) {
+    console.error("❌ Error updating paper status:", error);
+    if (error.response) {
+      console.error("Response error:", error.response.data);
+    } else if (error.request) {
+      console.error("No response received:", error.request);
+    }
+    return handleAuthError(error);
+  }
+};

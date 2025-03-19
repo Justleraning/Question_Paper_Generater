@@ -8,16 +8,13 @@ const Question = require("./models/Question");
 const Paper = require("./models/Paper");
 const Course = require("./models/Course");
 const EndQuestion = require("./models/EndQuestion");
-const EndPapers = require("./models/EndPapersModel");
-const OpenElectivePaper = require("./models/OpenPapersModel");
-
 const users = require("./data/dummyUsers");
 const questions = require("./data/dummyQuestions");
 const papers = require("./data/dummyPapers");
 const courses = require("./data/CourseData");
 const endquestion = require('./data/EndSemQuestionData');
-const endpapers = require('./data/dummyEndPapers');
-const openElectivePapers = require('./data/OpenPapersDummy');
+
+
 
 dotenv.config();
 connectDB();
@@ -53,9 +50,7 @@ const importData = async () => {
     await Paper.deleteMany();
     await Course.deleteMany();
     await EndQuestion.deleteMany();
-    await EndPapers.deleteMany();
-    await OpenElectivePaper.deleteMany();
-
+   
     console.log("🗑 Existing data cleared.");
 
     // Insert Users with hashed passwords
@@ -88,33 +83,6 @@ const importData = async () => {
         });
       }
     }
-
-    // Insert End Papers
-    try {
-      await EndPapers.insertMany(endpapers);
-      console.log("✅ End Papers inserted.");
-    } catch (endPapersError) {
-      console.error(`❌ Error inserting End Papers: ${endPapersError.message}`);
-      if (endPapersError.errors) {
-        Object.keys(endPapersError.errors).forEach(key => {
-          console.error(`Validation Error for ${key}: ${endPapersError.errors[key].message}`);
-        });
-      }
-    }
-
-    // Insert Open Elective Papers
-    try {
-      await OpenElectivePaper.insertMany(openElectivePapers);
-      console.log("✅ Open Elective Papers inserted.");
-    } catch (openElectiveError) {
-      console.error(`❌ Error inserting Open Elective Papers: ${openElectiveError.message}`);
-      if (openElectiveError.errors) {
-        Object.keys(openElectiveError.errors).forEach(key => {
-          console.error(`Validation Error for ${key}: ${openElectiveError.errors[key].message}`);
-        });
-      }
-    }
-
     console.log("🎉 All data imported successfully!");
     process.exit();
   } catch (error) {

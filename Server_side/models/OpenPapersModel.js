@@ -61,8 +61,25 @@ const OpenPapersSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Draft", "Published", "Archived"],
+      enum: ["Draft", "Submitted", "Approved", "Rejected"],
       default: "Draft",
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    submittedAt: {
+      type: Date,
+      default: null,
     },
     paperLayout: {
       type: Object,

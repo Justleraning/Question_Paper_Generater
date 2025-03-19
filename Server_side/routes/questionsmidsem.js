@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const QuestionPaper = require("../models/QuestionPaper_midsem");
-const QuestionPaper_midsem = require("../models/QuestionPaper_midsem");
 
 // ✅ Get all saved question papers
 router.get("/", async (req, res) => {
@@ -34,7 +33,7 @@ router.get("/:id", async (req, res) => {
 // ✅ Delete a paper by ID
 router.delete("/:id", async (req, res) => {
   try {
-    const deletedPaper = await QuestionPaper_midsem.findByIdAndDelete(req.params.id);  // Fixed model name
+    const deletedPaper = await QuestionPaper.findByIdAndDelete(req.params.id);  // Fixed model name
     if (!deletedPaper) {
       return res.status(404).json({ message: "Paper not found" });
     }
@@ -48,7 +47,7 @@ router.delete("/:id", async (req, res) => {
 router.post("/randomize", async (req, res) => {
   try {
     const { subject } = req.body;
-    const papers = await QuestionPaper_midsem.find({ subject });
+    const papers = await QuestionPaper.find({ subject });
 
     if (!papers.length) {
       return res.status(404).json({ error: "No questions available for this subject" });

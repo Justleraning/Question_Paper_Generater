@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const CreatePaperRosh = () => {
+const CreatePaper = () => {
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
@@ -49,17 +49,42 @@ const CreatePaperRosh = () => {
   };
   
   const handleViewPaper = (paperId) => {
-    navigate(`/view-paper/${paperId}`);
+    navigate(`/viewpaper/${paperId}`);
   };
+
+  // Helper function to extract units from questions
+// Helper function to extract units from questions or use the units array
+const extractUnits = (paper) => {
+  // First check if there's a units array
+  if (paper.units && paper.units.length > 0) {
+    return paper.units.join(", ");
+  }
+  
+  // Fallback to extracting from questions
+  if (paper.questions && paper.questions.length > 0) {
+    const units = paper.questions
+      .map(q => q.unit)
+      .filter((unit, index, self) => 
+        unit && self.indexOf(unit) === index
+      );
+      
+    return units.length > 0 ? units.join(", ") : paper.unit || "Unit 1";
+  }
+  
+  // Last resort, return the top-level unit
+  return paper.unit || "Unit 1";
+};
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "20px", textAlign: "center", background: "#e3e8f0", minHeight: "100vh" }}>
-      <a href="/mainp" style={{ textDecoration: "none", color: "#890f50", fontWeight: "bold", fontSize: "18px", display: "inline-block", borderRadius: "20px", padding: "10px", marginRight: "100%", cursor: "pointer", transition: "color 0.3s ease" }}>
-        &#129092; Back
+      <a href="/mainp" style={{ textDecoration: "none", color: "#4e45a6", background: "lightblue", fontWeight: "bold", fontSize: "18px", display: "inline-block", borderRadius: "20px", padding: "10px", marginRight: "100%", cursor: "pointer", transition: "color 0.3s ease" }}>
+        &#129136; Back
       </a>
-      <h2>Saved Question Papers</h2>
-      {loading ? <p>Loading...</p> : papers.length === 0 ? <p style={{color:'rgb(172, 29, 29)', fontWeight:'bold'}}>-- No saved question sets --</p> :
+      <h1>Mid Semester Examination</h1>
+      <h2 style={{ background:"lightblue", textAlign:"center", display:"inline-block", borderRadius: "15px", padding:"10px 10px 10px 10px", marginBottom: "20px"}}>Saved Question Papers</h2>
+      {loading ? <p>Loading...</p> : papers.length === 0 ? <p style={{color:'#ac1d1d', fontWeight:'bold'}}>-- No saved question papers ⚠️ --</p> :
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "15px" }}>
+          
           {papers.map((paper, index) => (
           <div 
             key={paper._id} 
@@ -76,7 +101,7 @@ const CreatePaperRosh = () => {
             }}
             onMouseOver={() => (e) => (e.target.style.color = "#0056b3")}
             onMouseOut={() => (e) => (e.target.style.color = "#fff")}
-          >
+          > 
             {/* Delete Button */}
             <span onClick={(e) => { e.stopPropagation(); handleDelete(paper._id); }} 
               style={{ position: 'absolute',
@@ -84,6 +109,8 @@ const CreatePaperRosh = () => {
                 right: '-10px',
                 backgroundColor: '#ff5555',
                 color: 'white',
+                fontSize:'22px',
+                fontWeight: 'bolder',
                 borderRadius: '50%',
                 width: '30px',
                 height: '30px',
@@ -92,18 +119,21 @@ const CreatePaperRosh = () => {
                 alignItems: 'center',
                 cursor: 'pointer',
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }}>
-              &#120299;
+              &#10799;
             </span>
 
-            {/* Title Section - Fix Subject and Semester */}
-            <h3 style={{ fontWeight: "bold", color: "#333", textTransform: "uppercase" }}>
+            {/* Title Section */}
+            <h3>
               {paper.subject ? paper.subject : "❌ No Subject"}
               <br />
-              ({paper.semester ? paper.semester : "❌ No Semester"})
+              {paper.semester ? paper.semester : "❌ No Semester"}
             </h3>
 
             {/* Units */}
-            <p>Units: {paper.units && paper.units.length ? paper.units.join(", ") : "❌ No Units"}</p>
+            <h4>Units : {extractUnits(paper)}</h4>
+            
+            {/* Questions Count */}
+            <p>Questions: {paper.questions ? paper.questions.length : 0}</p>
 
             {/* View Paper Button */}
             <button 
@@ -138,4 +168,4 @@ const CreatePaperRosh = () => {
   );
 };
 
-export default CreatePaperRosh;
+export default CreatePaper;

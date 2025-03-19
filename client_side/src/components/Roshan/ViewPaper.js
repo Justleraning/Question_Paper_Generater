@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { ArrowRightLeft, Download, Trash2 } from 'lucide-react';
 
 const ViewPaper = () => {
   const { id } = useParams();
@@ -9,8 +10,13 @@ const ViewPaper = () => {
   const [paper, setPaper] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [url, setUrl] = useState("");
 
   useEffect(() => {
+    // Get the current URL when component mounts
+    setUrl(window.location.href);
+    
     console.log("📌 Fetching paper with ID:", id);
   
     fetch(`http://localhost:5000/get-questions/${id}`)
@@ -26,6 +32,17 @@ const ViewPaper = () => {
       });
   }, [id]);
 
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(url)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(err => {
+        console.error("Failed to copy URL: ", err);
+      });
+  };
+  
   const handleRandomize = async () => {
     if (!paper || !paper.questions || paper.questions.length <= 18) {
       alert("Not enough questions to randomize. A minimum of 19 is required.");
@@ -295,7 +312,7 @@ const ViewPaper = () => {
       }
 
       alert("Paper deleted successfully!");
-      navigate("/createpaper"); // Navigate back after deletion
+      navigate("/createpapermidsem"); // Navigate back after deletion
     } catch (error) {
       console.error("❌ Error deleting paper:", error);
       alert(`Error: ${error.message}`);
@@ -315,61 +332,63 @@ const ViewPaper = () => {
   };
 
   return (
-    <div style={{ fontFamily: "Arial, sans-serif", padding: "20px", textAlign: "center", background: "#f8f9fa", minHeight: "100vh" }}>
-      <a href="/createpapermidsem" style={{ textDecoration: "none", color: "#007bff", fontWeight: "bold", fontSize: "18px", display: "inline-block", padding: "10px" }}>
-        &#129092; Back
+    <div style={{ fontFamily: "Arial, sans-serif", padding: "20px", textAlign: "center", background: "rgb(200, 203, 206)", minHeight: "100vh" }}>
+      <a href="/createpapermidsem" style={{ textDecoration: "none", color: "#072b52", fontWeight: "bold", fontSize: "18px", display: "inline-block", padding: "15px" }}>
+        &#129136; &nbsp; Back
       </a>
 
       <div style={{ marginTop: "20px" }}>
         <button onClick={handleRandomize}style={{
             padding: "10px 15px",
             margin: "5px",
-            background: "#28a745",
+            background: "#1ece03",
             color: "white",
             border: "none",
+            alignItems: "center",
             borderRadius: "5px",
-            marginBottom: '10px',
+            marginBottom: '20px',
             cursor: "pointer",
             fontSize: "17px",
+            display: "inline-flex",
+            gap: '5px'
           }}>
-            Randomize
+            <ArrowRightLeft size={20} />Randomize
         </button>
-        <button onClick={handleDelete} disabled={deleting}style={{
-            padding: "10px 15px",
-            fontSize: "17px",
-            marginBottom: '10px',
-            margin: "5px",
-            background: deleting ? "#a6a6a6" : "#dc3545",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: deleting ? "not-allowed" : "pointer",
-          }}>{deleting ? "Deleting..." : "Delete Paper"}</button>
-        <button onClick={handleDownload}style={{
-            padding: "10px 15px",
-            margin: "5px",
-            marginBottom: '10px',
-            background: "#007bff",
-            fontSize: "17px",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}>
-            Download
+        <button onClick={handleDelete} disabled={deleting} style={{
+          padding: "10px 15px",
+          fontSize: "17px",
+          marginBottom: '20px',
+          margin: "5px",
+          background: deleting ? "#a6a6a6" : "#dc3545",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: deleting ? "not-allowed" : "pointer",
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px' // Space between icon and text
+        }}>
+          {deleting ? "Deleting..." : <>
+            <Trash2 size={20} /> 
+            Delete Paper
+          </>}
         </button>
-        <button onClick={handleApproval}style={{
-            padding: "10px 15px",
-            margin: "5px",
-            fontSize: "17px",
-            background: "#ffc107",
-            color: "black",
-            border: "none",
-            borderRadius: "5px",
-            marginBottom: '10px',
-            cursor: "pointer",
-          }}>
-            Send for Approval
+
+        <button onClick={handleDownload} style={{
+          padding: "10px 15px",
+          margin: "5px",
+          background: "#a600ff",
+          fontSize: "17px",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          marginBottom: '20px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px' // Space between icon and text
+        }}>
+          <Download size={20} /> Download
         </button>
       </div>
 
@@ -379,13 +398,16 @@ const ViewPaper = () => {
         style={{
           maxWidth: "800px",
           marginTop: "80px",
-          margin: "0 auto",
+          margin: 'auto',
           background: "white",
           padding: "10px 20px",
+          boxShadow: '4px 4px 4px 4px rgba(0.2, 0.2, 0.2, 0.2)' 
          }}
       >
         
         <p style={{ marginLeft: "499px", fontSize: "14px", fontFamily: "verdana, sans-serif"}}> Reg No: </p>
+        <p style={{ marginLeft: "499px", fontSize: "14px", fontFamily: "verdana, sans-serif"}}> Date: </p>
+
         <div
           style={{
             textAlign: "center",
@@ -396,9 +418,9 @@ const ViewPaper = () => {
 
           {/* Logo would go here */}
           <img 
-            src="/SJU.png" 
+            src="\sjuniv_logo.png" 
             alt="St. Joseph's University Logo" 
-            style={{ maxWidth: "80px", marginBottom: "5px" }}
+            style={{ maxWidth: "80px", marginBottom: "5px", marginLeft:"330px" }}
           />
           
           <p style={{ fontWeight: "bold", margin: "5px 0", fontSize: "18px" }}>
@@ -427,8 +449,18 @@ const ViewPaper = () => {
               margin: "0 auto",
               background: "white",
               padding: "20px",
+              boxShadow: '4px 4px 0px 4px rgba(0.2, 0.2, 0.2, 0.2)',
             }}
           >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={{ fontSize: "14.5px", fontFamily: "sans-serif", fontWeight: "bolder" }}>
+              Time : 1hr
+            </p>
+            <p style={{ fontSize: "14.5px", fontFamily: "sans-serif", fontWeight: "bold" }}>
+              Max Marks: 30
+            </p>
+            </div>
+            <br></br><br></br>
             <h4 style={{ fontWeight: "bolder", textAlign: "center" }}>PART A</h4>
             <p style={{ fontWeight: "bold", textAlign: "left" }}><em>Answer all FIVE questions (2 * 5 = 10)</em></p>
             {paper.questions.filter(q => q.marks === 2).slice(0, 5).map((q, index) => (
@@ -444,6 +476,53 @@ const ViewPaper = () => {
         ) : (
           <p>No questions available.</p>
         )}
+      </div>
+
+      {/* URL Copy Container */}
+      <div 
+        style={{
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          padding: "10px 15px",
+          backgroundColor: "#007bff",
+          borderRadius: "5px",
+          boxShadow: "6px 4px 4px 4px rgba(0, 0.2, 0.2, 0.2)",
+          display: "flex",
+          alignItems: "center",
+          zIndex: 999,
+          transition: "all 0.3s ease"
+        }}
+      >
+        <div 
+          style={{
+            maxWidth: "300px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            marginRight: "10px",
+            color: "white",
+            fontSize: "15px",
+            fontWeight: "bolder"
+          }}
+        > Copy URL to View your Paper Later!<br></br>
+          {url}
+        </div>
+        <button
+          onClick={handleCopyUrl}
+          style={{
+            backgroundColor: copied ? "#28a745" : "white",
+            color: copied ? "white" : "#007bff",
+            border: "none",
+            borderRadius: "4px",
+            padding: "5px 10px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            transition: "all 0.3s ease"
+          }}
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
       </div>
     </div>
   );
