@@ -315,6 +315,7 @@ const MidSemSide = () => {
                     <button
                       onClick={() => sendForApproval(paper)}
                       className="text-purple-500 hover:bg-purple-50 p-2 rounded-full transition-colors"
+                      title="Send for approval"
                     >
                       <Upload className="w-4 h-4 mr-1" />
                     </button>
@@ -343,7 +344,7 @@ const MidSemSide = () => {
                   <button
                     onClick={() => handleViewPaper(paper._id)}
                     className="text-blue-500 hover:bg-blue-50 p-2 rounded-full transition-colors"
-                    title="View"
+                    title="View Paper"
                   >
                     <Eye className="w-5 h-5" />
                   </button>
@@ -356,7 +357,7 @@ const MidSemSide = () => {
                         handleDelete(paper._id);
                       }}
                       className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
-                      title="Delete"
+                      title="Delete Paper"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
