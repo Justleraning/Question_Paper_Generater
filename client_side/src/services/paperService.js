@@ -33,11 +33,29 @@ const handleAuthError = (error) => {
 };
 
 
-//dashboard papers features
+//dashboard papers for entrance features
 
-export const getMyPapers = async () => {
+export const getMyPapers = async (filters = {}) => {
   try {
-    const response = await axios.get(`${API_URL}/my-papers`, { headers: authHeaders() });
+    // Build query parameters for filtering
+    const queryParams = new URLSearchParams();
+    
+    if (filters.courseName) {
+      queryParams.append('courseName', filters.courseName);
+    }
+    
+    if (filters.customSubjectName) {
+      queryParams.append('customSubjectName', filters.customSubjectName);
+    }
+    
+    if (filters.status) {
+      queryParams.append('status', filters.status);
+    }
+    
+    const queryString = queryParams.toString();
+    const url = `${API_URL}/my-papers${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await axios.get(url, { headers: authHeaders() });
     return response.data;
   } catch (error) {
     return handleAuthError(error);
@@ -62,23 +80,35 @@ export const getApprovalPapers = async () => {
   }
 };
 
-export const approvePaper = async (paperId) => {
+export const sendPaperForApproval = async (paperId) => {
   try {
-    const response = await axios.patch(`${API_URL}/${paperId}/approve`, {}, { headers: authHeaders() });
+    const response = await axios.patch(
+      `${API_URL}/${paperId}/send-for-approval`, 
+      {}, 
+      { headers: authHeaders() }
+    );
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
+  }
+};
+export const rejectPaper = async (paperId, comments) => {
+  try {
+    if (!comments) {
+      throw new Error('Rejection reason is required');
+    }
+    
+    const response = await axios.patch(
+      `${API_URL}/${paperId}/reject`, 
+      { comments }, 
+      { headers: authHeaders() }
+    );
     return response.data;
   } catch (error) {
     return handleAuthError(error);
   }
 };
 
-export const rejectPaper = async (paperId, reason) => {
-  try {
-    const response = await axios.patch(`${API_URL}/${paperId}/reject`, { rejectionReason: reason }, { headers: authHeaders() });
-    return response.data;
-  } catch (error) {
-    return handleAuthError(error);
-  }
-};
 
 export const getStatusOfPapers = async () => {
   try {
@@ -529,5 +559,80 @@ export const updatePaperStatus = async (paperId, newStatus, rejectionReason = nu
       console.error("No response received:", error.request);
     }
     return handleAuthError(error);
+  }
+};
+
+export const getPendingPapers = async (filters = {}) => {
+  try {
+    // Build query parameters for filtering
+    const queryParams = new URLSearchParams();
+    
+    if (filters.courseName) {
+      queryParams.append('courseName', filters.courseName);
+    }
+    
+    if (filters.customSubjectName) {
+      queryParams.append('customSubjectName', filters.customSubjectName);
+    }
+    
+    const queryString = queryParams.toString();
+    const url = `${API_URL}/pending${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await axios.get(url, { headers: authHeaders() });
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
+  }
+};
+
+export const approvePaper = async (paperId, comments = '') => {
+  try {
+    const response = await axios.patch(
+      `${API_URL}/${paperId}/approve`, 
+      { comments }, 
+      { headers: authHeaders() }
+    );
+    return response.data;
+  } catch (error) {
+    return handleAuthError(error);
+  }
+};
+
+export const updatePaper = async (paperId, paperData) => {
+  try {
+    const response = await fetch(`/api/papers/${paperId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(paperData),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating paper:', error);
+    return { success: false, message: 'Failed to update paper' };
+  }
+};
+
+/**
+ * Update the questions for a specific paper
+ * @param {string} paperId - The ID of the paper to update
+ * @param {Array} questions - Array of question objects
+ * @returns {Promise<Object>} - Response from the server
+ */
+export const updatePaperQuestions = async (paperId, questions) => {
+  try {
+    // Use the correct API_URL and match your other functions' pattern
+    const response = await axios.put(
+      `${API_URL}/papers/${paperId}/questions`, 
+      { questions }, 
+      { headers: authHeaders() } // Use your existing authHeaders function
+    );
+    
+    console.log("✅ Questions updated successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error updating paper questions:", error.response?.data || error.message);
+    return handleAuthError(error); // Use your existing error handler
   }
 };

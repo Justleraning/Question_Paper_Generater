@@ -324,6 +324,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/questions-isaac", questionRoutesIsaac);
 app.use("/api/papers", paperRoutes);
+app.use('/api', paperRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/units", unitRoutes);

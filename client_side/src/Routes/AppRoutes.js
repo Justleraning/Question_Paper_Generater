@@ -57,6 +57,7 @@ import SystemSettings from "../pages/SuperAdmin/SystemSettings.js";
 import QuestionPreview from "../pages/Modules/QuestionPreview.js";
 import AnswerKey from "../pages/Modules/AnswerKey.js";
 import EntranceExamSide from "../pages/Papers/EntranceExamSide.js";
+import EntranceAdminApprovalPage from "../pages/Papers/PaperApprovals_Entrance.js";
 
 // ✅ Authentication Wrapper
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -97,6 +98,7 @@ const AppRoutes = () => {
         <Route path="/mypapers" element={<PrivateRoute allowedRoles={["Teacher"]}><MyPapers /></PrivateRoute>} />
         <Route path="/answer-keys" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKey /></PrivateRoute>} />
         <Route path="/entrance-exam" element={<PrivateRoute allowedRoles={["Teacher"]}><EntranceExamSide/></PrivateRoute>} />
+        <Route path="/admin/papers/approval" element={<PrivateRoute allowedRoles={["Admin"]}><EntranceAdminApprovalPage/></PrivateRoute>} />
 
         {/* ✅ Admin & SuperAdmin Routes */}
         <Route path="/admin-dashboard" element={<PrivateRoute allowedRoles={["Admin"]}><AdminDashboard /></PrivateRoute>} />
@@ -104,6 +106,7 @@ const AppRoutes = () => {
         <Route path="/manage-users" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><ManageUsers /></PrivateRoute>} />
         <Route path="/paper-approvals" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovals /></PrivateRoute>} />
         <Route path="/paper-approval-types" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovalTypes /></PrivateRoute>} />
+
         {/* ✅ SuperAdmin Routes */}
         <Route path="/super-admin-panel" element={<PrivateRoute allowedRoles={["SuperAdmin"]}><SuperAdminPanel /></PrivateRoute>} />
         <Route path="/view-all-users" element={<PrivateRoute allowedRoles={["SuperAdmin"]}><ViewAllUsers /></PrivateRoute>} />
