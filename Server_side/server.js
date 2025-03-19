@@ -167,14 +167,75 @@ const deletePaper = async (req, res) => {
   }
 };
 
+// ✅ Update Single Question
+const updateSingleQuestion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+
+    if (!text || text.trim() === '') {
+      return res.status(400).json({ message: 'Question text cannot be empty' });
+    }
+
+    // Find the paper containing the question
+    const paper = await Question.findOne({ 'questions._id': id });
+
+    if (!paper) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    // Update the specific question
+    const updatedQuestions = paper.questions.map(question => 
+      question._id.toString() === id ? { ...question, text: text.trim() } : question
+    );
+
+    // Update the paper with modified questions
+    paper.questions = updatedQuestions;
+    await paper.save();
+
+    console.log("✅ Question updated successfully:", text);
+    res.json(paper);
+  } catch (error) {
+    console.error("❌ Error updating single question:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // ✅ Send for approval (mock)
 const sendForApproval = async (req, res) => {
   try {
-    // Mock action - You can implement actual logic
-    res.json({ message: 'Paper sent for approval' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+      const { paperId, userId } = req.body;
+  
+      if (!paperId) {
+        return res.status(400).json({ error: "Paper ID is required" });
+      }
+  
+      // Find the paper
+      const paper = await QuestionPaper.findById(paperId);
+  
+      if (!paper) {
+        return res.status(404).json({ error: "Paper not found" });
+      }
+  
+      // Update paper status
+      paper.status = 'Submitted';
+      paper.submittedBy = userId;
+      paper.submittedAt = new Date();
+  
+      await paper.save();
+  
+      res.json({ 
+        message: "Paper sent for approval! ✅", 
+        paper: {
+          id: paper._id,
+          subject: paper.subject,
+          status: paper.status
+        }
+      });
+    } catch (error) {
+      console.error("Error sending paper for approval:", error);
+      res.status(500).json({ error: "Failed to send paper for approval" });
+    }
 };
 
 // ✅ Get all questions
@@ -245,6 +306,49 @@ const getQuestionPaperById = async (req, res) => {
   } catch (error) {
     console.error("❌ Error fetching paper:", error);
     res.status(500).json({ error: "Failed to fetch paper" });
+  }
+};
+
+const updateEntirePaper = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const paperData = req.body;
+
+    if (!paperData || !paperData.questions) {
+      return res.status(400).json({ message: 'Invalid paper data' });
+    }
+
+    // Validate questions
+    const validQuestions = paperData.questions.filter(q => 
+      q.text && q.text.trim() !== '' && q.marks
+    );
+
+    if (validQuestions.length === 0) {
+      return res.status(400).json({ message: 'No valid questions provided' });
+    }
+
+    // Update the entire paper
+    const updatedPaper = await Question.findByIdAndUpdate(
+      id, 
+      { 
+        ...paperData,
+        questions: validQuestions 
+      },
+      { 
+        new: true,        // Return the modified document
+        runValidators: true // Run model validation
+      }
+    );
+
+    if (!updatedPaper) {
+      return res.status(404).json({ message: 'Paper not found' });
+    }
+
+    console.log("✅ Paper updated successfully:", updatedPaper);
+    res.json(updatedPaper);
+  } catch (error) {
+    console.error("❌ Error updating entire paper:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -342,6 +446,8 @@ app.post('/api/questions/randomize', randomizeQuestions);
 app.delete('/delete-paper/:id', deletePaper);
 app.post('/api/papers/send-for-approval', sendForApproval);
 app.get('/get-questions', getAllQuestions);
+app.put('/update-question/:id', updateSingleQuestion);
+app.put('/update-paper/:id', updateEntirePaper);
 
 // QuestionPaper_midsem routes
 app.post("/api/question-papers/save", saveQuestions);

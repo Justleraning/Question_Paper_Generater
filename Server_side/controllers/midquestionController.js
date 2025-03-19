@@ -46,12 +46,40 @@ const deletePaper = async (req, res) => {
 // ✅ Send for approval (mock)
 const sendForApproval = async (req, res) => {
   try {
-    // Mock action - You can implement actual logic
-    res.json({ message: 'Paper sent for approval' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+      const { paperId, userId } = req.body;
+  
+      if (!paperId) {
+        return res.status(400).json({ error: "Paper ID is required" });
+      }
+  
+      // Find the paper
+      const paper = await QuestionPaper.findById(paperId);
+  
+      if (!paper) {
+        return res.status(404).json({ error: "Paper not found" });
+      }
+  
+      // Update paper status
+      paper.status = 'Submitted';
+      paper.submittedBy = userId;
+      paper.submittedAt = new Date();
+  
+      await paper.save();
+  
+      res.json({ 
+        message: "Paper sent for approval! ✅", 
+        paper: {
+          id: paper._id,
+          subject: paper.subject,
+          status: paper.status
+        }
+      });
+    } catch (error) {
+      console.error("Error sending paper for approval:", error);
+      res.status(500).json({ error: "Failed to send paper for approval" });
+    }
 };
+
 
 module.exports = {
   getQuestionsByPaperId,
