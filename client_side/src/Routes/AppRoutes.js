@@ -52,6 +52,7 @@ import ViewAllUsers from "../pages/SuperAdmin/ViewAllUsers.js";
 import SystemSettings from "../pages/SuperAdmin/SystemSettings.js";
 import QuestionPreview from "../pages/Modules/QuestionPreview.js";
 import AnswerKey from "../pages/Modules/AnswerKey.js";
+import EntranceExamSide from "../pages/Papers/EntranceExamSide.js";
 
 // ✅ Authentication Wrapper
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -91,6 +92,7 @@ const AppRoutes = () => {
         <Route path="/preview/:subjectKey" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPreview /></PrivateRoute>} />
         <Route path="/mypapers" element={<PrivateRoute allowedRoles={["Teacher"]}><MyPapers /></PrivateRoute>} />
         <Route path="/answer-keys" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKey /></PrivateRoute>} />
+        <Route path="/entrance-exam" element={<PrivateRoute allowedRoles={["Teacher"]}><EntranceExamSide/></PrivateRoute>} />
 
         {/* ✅ Admin & SuperAdmin Routes */}
         <Route path="/admin-dashboard" element={<PrivateRoute allowedRoles={["Admin"]}><AdminDashboard /></PrivateRoute>} />

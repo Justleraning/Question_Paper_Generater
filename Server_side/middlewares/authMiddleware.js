@@ -21,7 +21,7 @@ const protect = async (req, res, next) => {
 
     if (!user) {
       console.log("❌ User not found in database. Triggering forced logout...");
-      return res.status(401).json({ message: "User removed, logging out in 20 seconds.", forceLogout: true });
+      return res.status(401).json({ message: "User removed, logging out" });
     }
 
     req.user = user;
@@ -30,7 +30,10 @@ const protect = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("❌ Token verification failed:", error);
-    res.status(401).json({ message: "Not authorized, invalid token", forceLogout: true });
+    res.status(401).json({ 
+      message: "Not authorized, invalid token", 
+      forceLogout: true 
+    });
   }
 };
 

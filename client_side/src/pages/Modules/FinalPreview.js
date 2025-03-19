@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getAllQuestions } from '../../services/paperService.js';
+import { getAllQuestions ,savePaper} from '../../services/paperService.js';
 import { jsPDF } from 'jspdf';
 import { Document, Packer, Paragraph, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
@@ -94,19 +94,23 @@ const FinalPreview = () => {
       Object.entries(questionsData).forEach(([subjectCode, subjectQuestions]) => {
         if (!Array.isArray(subjectQuestions) || subjectQuestions.length === 0) return;
         
-        // Add subject info to each question
+        // Add subject info to each question and ensure options are text type
         const questionsWithSubject = subjectQuestions.map(q => ({
           id: q.questionId || Math.random().toString(36).substr(2, 9),
           subject: SUBJECT_NAMES[subjectCode],
           question: q.text,
-          options: q.options,
-          correctOption: typeof q.correctOption === 'number' ? q.correctOption - 1 : 0, // Adjust from 1-based to 0-based
+          options: q.options.map(opt => ({
+            type: "Text", // Force all options to be Text type
+            value: opt.value || ""
+          })),
+          correctOption: typeof q.correctOption === 'number' ? q.correctOption - 1 : 0,
           index: q.index || 0,
           marks: 1
         }));
         
         processedQuestions = [...processedQuestions, ...questionsWithSubject];
       });
+      
       
       // Limit questions based on mark type
       const questionLimit = QUESTION_LIMITS[markType];
@@ -299,28 +303,66 @@ const FinalPreview = () => {
     fetchAllQuestions();
   };
 
-  // Save paper and show alert
   const handleSave = async () => {
     try {
-      setLoading(true);
+      // Ensure user is logged in
+      const userString = sessionStorage.getItem('user') || localStorage.getItem('user');
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       
-      // Save to session storage
-      sessionStorage.setItem('savedQuestions', JSON.stringify(questions));
+      if (!userString || !token) {
+        setError("Please log in to save the paper");
+        return;
+      }
+  
+      const user = JSON.parse(userString);
       
-      // Just show alert and return (as requested)
-      setNotification("Paper saved successfully!");
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 3000);
+      // Ensure user._id exists
+      if (!user._id) {
+        setError("Invalid user information. Please log in again.");
+        return;
+      }
+  
+      const paperData = {
+        courseName: courseName || '', 
+        customSubjectName: customSubjectName || '', 
+        totalMarks: markType, 
+        examTime: examTime || 1, 
+        date: currentDate, 
+        // Remove status field
+        createdBy: user._id, 
+        questions: questions.map(q => ({
+          subject: q.subject || '', 
+          question: q.question || '', 
+          options: q.options.map(opt => ({
+            type: opt.type || 'Text', 
+            value: opt.value || '' 
+          })),
+          correctOption: q.correctOption !== undefined ? q.correctOption : 0, 
+          index: q.index || 0, 
+          marks: q.marks || 1 
+        }))
+      };
       
+      console.log("Saving paper with user ID:", user._id);
+      
+      const paperResult = await savePaper(paperData);
+      
+      if (paperResult.success) {
+        setNotification("Paper saved successfully!");
+        setTimeout(() => {
+          navigate("/entrance-exams");
+        }, 3000);
+      } else {
+        setError(paperResult.message || "Failed to save paper");
+      }
     } catch (error) {
-      setError("Failed to save paper. Please try again.");
-      console.error("Error saving paper:", error);
+      console.error("Save paper error:", error);
+      setError(`Failed to save paper: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
-
+ 
   // PDF Generation
   const generatePDF = () => {
     try {
@@ -397,7 +439,7 @@ const FinalPreview = () => {
                 y = 20;
               }
               
-              doc.text(`   ${['A', 'B', 'C', 'D'][optIndex]}. ${opt.type === 'Text' ? opt.value : '[Image]'}`, 30, y);
+              doc.text(`   ${['A', 'B', 'C', 'D'][optIndex]}. ${opt.value}`, 30, y);
               y += 10;
             }
           });
@@ -610,7 +652,7 @@ const processQuestionsForDOCX = () => {
           if (opt && opt.value) {
             docElements.push(
               new Paragraph({
-                text: `   ${['A', 'B', 'C', 'D'][optIdx]}. ${opt.type === 'Text' ? stripHTMLTags(opt.value) : '[Image]'}`,
+                text: `   ${['A', 'B', 'C', 'D'][optIdx]}. ${stripHTMLTags(opt.value)}`,
                 indent: { left: 500 },
                 spacing: { after: 100 }
               })
@@ -724,7 +766,10 @@ const processQuestionsForDOCX = () => {
   // Handle option change in edit mode
   const handleOptionChange = (index, value) => {
     const updatedOptions = [...editedOptions];
-    updatedOptions[index] = { ...updatedOptions[index], value };
+    updatedOptions[index] = { 
+      type: "Text", // Always set type to Text
+      value
+    };
     setEditedOptions(updatedOptions);
   };
 
@@ -834,31 +879,31 @@ const processQuestionsForDOCX = () => {
                             </div>
                             
                             <div className="mb-3">
-                              <label className="block text-sm font-medium mb-1">Options:</label>
-                              {editedOptions.map((opt, optIdx) => (
-                                <div key={optIdx} className="flex items-center mb-2">
-                                  <span className="font-medium mr-2">{['A', 'B', 'C', 'D'][optIdx]}.</span>
-                                  <input
-                                    type="text"
-                                    value={opt?.value || ''}
-                                    onChange={(e) => handleOptionChange(optIdx, e.target.value)}
-                                    className="flex-1 p-2 border rounded"
-                                  />
-                                  <label className="ml-2 flex items-center">
-                                    <input
-                                      type="radio"
-                                      name={`correct-option-${q.id}`}
-                                      checked={editedCorrectOption === optIdx}
-                                      onChange={() => setEditedCorrectOption(optIdx)}
-                                      className="mr-1"
-                                    />
-                                    Correct
-                                  </label>
-                                </div>
-                              ))}
-                            </div>
+  <label className="block text-sm font-medium mb-1">Options:</label>
+  {editedOptions.map((opt, optIdx) => (
+    <div key={optIdx} className="flex items-center mb-2">
+      <span className="font-medium mr-2">{['A', 'B', 'C', 'D'][optIdx]}.</span>
+      <input
+        type="text"
+        value={opt?.value || ''}
+        onChange={(e) => handleOptionChange(optIdx, e.target.value)}
+        className="flex-1 p-2 border rounded"
+      />
+      <label className="ml-2 flex items-center">
+        <input
+          type="radio"
+          name={`correct-option-${q.id}`}
+          checked={editedCorrectOption === optIdx}
+          onChange={() => setEditedCorrectOption(optIdx)}
+          className="mr-1"
+        />
+        Correct
+      </label>
+    </div>
+  ))}
+</div>
                             
-                            <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2">
                               <button
                                 onClick={cancelEditing}
                                 className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
@@ -885,24 +930,23 @@ const processQuestionsForDOCX = () => {
                                 Edit
                               </button>
                             </div>
-                            
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-8">
-                              {q.options && Array.isArray(q.options) && q.options.map((opt, optIdx) => (
-                                <div key={optIdx} className="mb-1">
-                                  <span className="font-medium mr-1">{['A', 'B', 'C', 'D'][optIdx]}.</span>
-                                  <span className={optIdx === q.correctOption ? "text-green-600 font-medium" : ""}>
-                                    {opt.type === 'Text' ? opt.value : '[Image]'}
-                                  </span>
-                                  {optIdx === q.correctOption && (
-                                    <span className="ml-2 text-xs bg-green-100 text-green-800 px-1 py-0.5 rounded">
-                                      Correct
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+  {q.options && Array.isArray(q.options) && q.options.map((opt, optIdx) => (
+    <div key={optIdx} className="mb-1">
+      <span className="font-medium mr-1">{['A', 'B', 'C', 'D'][optIdx]}.</span>
+      <span className={optIdx === q.correctOption ? "text-green-600 font-medium" : ""}>
+        {opt.value}
+      </span>
+      {optIdx === q.correctOption && (
+        <span className="ml-2 text-xs bg-green-100 text-green-800 px-1 py-0.5 rounded">
+          Correct
+        </span>
+      )}
+    </div>
+  ))}
+</div>
+   </div>
+          )}
                       </div>
                     ))}
                   </div>
@@ -971,17 +1015,7 @@ const processQuestionsForDOCX = () => {
         </button>
       </div>
       
-      {/* Warning */}
-      <div className="mt-6 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg text-sm">
-        <p className="font-semibold">Important:</p>
-        <ul className="list-disc pl-5 mt-2">
-          <li>All questions are directly editable on this page. Hover over a question and click "Edit".</li>
-          <li>For {markType} marks paper, each subject will have up to {QUESTION_LIMITS[markType]} questions.</li>
-          <li>Use the "Randomize Questions" button to reorder and select questions.</li>
-          <li>When viewing the answer key, your edits will be preserved when you return.</li>
-          <li>Page will reset on refresh - make sure to save your work!</li>
-        </ul>
-      </div>
+    
     </div>
   );
 };

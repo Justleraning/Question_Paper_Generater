@@ -46,7 +46,7 @@ export const getMyPapers = async () => {
 
 export const deletePaper = async (paperId) => {
   try {
-    const response = await axios.delete(`${API_URL}/${paperId}`, { headers: authHeaders() });
+    const response = await axios.delete(`${API_URL}/papers/${paperId}`, { headers: authHeaders() });
     return response.data;
   } catch (error) {
     return handleAuthError(error);
@@ -444,3 +444,43 @@ export const saveOpenPaperHtmlSnapshot = async (paperId, htmlContent) => {
     return handleAuthError(error);
   }
 };
+
+/**
+ * Saves a new paper
+ * @param {Object} paperData - The paper data to be saved
+ * @returns {Promise<Object>} - Response data from the API
+ */
+export const savePaper = async (paperData) => {
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await axios.post(
+      `${API_URL}/papers/save`, 
+      paperData, 
+      { 
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      }
+    );
+    
+    console.log("✅ Paper saved successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Detailed error saving paper:", 
+      error.response ? JSON.stringify(error.response.data, null, 2) : error.message
+    );
+    
+    return { 
+      success: false, 
+      message: error.response?.data?.message || error.message,
+      error: error.response?.data?.error || {}
+    };
+  }
+};
+

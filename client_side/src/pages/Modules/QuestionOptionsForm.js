@@ -1,82 +1,81 @@
+// QuestionOptionsForm.js
 import React from 'react';
 
-// Component for editing question options
 const QuestionOptionsForm = ({ 
   options, 
   updateOption, 
   correctOption, 
-  setCorrectOption 
+  setCorrectOption, 
+  hideImageOption = false // Default to false for backward compatibility
 }) => {
   return (
     <div className="w-full mt-6">
-      <h3 className="text-lg font-semibold mb-3">Answer Options</h3>
+      <h3 className="text-lg font-medium mb-2">Options</h3>
       
       {options.map((option, index) => (
-        <div key={index} className="mb-4 p-4 border rounded">
-          <div className="flex items-center mb-2">
-            <div className="mr-4">
-              <input
-                type="radio"
-                id={`option-${index+1}`}
-                name="correctOption"
-                checked={correctOption === index+1}
-                onChange={() => setCorrectOption(index+1)}
-                className="mr-2"
-              />
-              <label htmlFor={`option-${index+1}`} className="text-sm font-medium">
-                {String.fromCharCode(65 + index)}. {correctOption === index+1 ? "(Correct Answer)" : ""}
-              </label>
-            </div>
-            
-            <div className="flex-grow">
-              <select
-                value={option.type || "Text"}
-                onChange={(e) => updateOption(index, "type", e.target.value)}
-                className="px-3 py-1 border rounded text-sm"
-              >
-                <option value="Text">Text</option>
-                <option value="Image">Image</option>
-              </select>
-            </div>
+        <div key={index} className="flex items-start mb-4">
+          <div className="flex-shrink-0 mt-1">
+            <input
+              type="radio"
+              name="correctOption"
+              checked={correctOption === index + 1}
+              onChange={() => setCorrectOption(index + 1)}
+              className="mr-2"
+            />
           </div>
           
-          {option.type === "Text" ? (
-            <textarea
-              value={option.value || ""}
-              onChange={(e) => updateOption(index, "value", e.target.value)}
-              placeholder={`Enter option ${String.fromCharCode(65 + index)} text`}
-              className="w-full px-3 py-2 border rounded"
-              rows="2"
-            />
-          ) : (
-            <div className="flex flex-col items-center">
-              {option.value ? (
-                <div className="w-full">
-                  <img 
-                    src={option.value} 
-                    alt={`Option ${String.fromCharCode(65 + index)}`} 
-                    className="max-h-40 mb-2 mx-auto object-contain"
-                  />
-                  <p className="text-sm text-center text-gray-500">{option.fileName || "Uploaded image"}</p>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No image selected</p>
-              )}
+          <div className="flex-grow ml-2">
+            <div className="flex items-center">
+              <span className="font-bold mr-2">{['A', 'B', 'C', 'D'][index]}.</span>
               
+              {/* Always use Text input since we're hiding Image option */}
               <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    updateOption(index, "file", e.target.files[0]);
-                  }
-                }}
-                className="mt-2"
+                type="text"
+                value={option?.value || ''}
+                onChange={(e) => updateOption(index, 'value', e.target.value)}
+                placeholder={`Option ${['A', 'B', 'C', 'D'][index]}`}
+                className="flex-grow p-2 border rounded focus:ring-2 focus:ring-blue-500"
               />
+              
+              {/* Image option toggle - only render if not hidden */}
+              {!hideImageOption && (
+                <select
+                  value={option?.type || 'Text'}
+                  onChange={(e) => updateOption(index, 'type', e.target.value)}
+                  className="ml-2 p-2 border rounded"
+                >
+                  <option value="Text">Text</option>
+                  <option value="Image">Image</option>
+                </select>
+              )}
             </div>
-          )}
+            
+            {/* Image upload UI - only render if not hidden and type is Image */}
+            {!hideImageOption && option?.type === 'Image' && (
+              <div className="mt-2 p-2 border rounded bg-gray-50">
+                <p className="text-sm text-gray-600 mb-2">Upload an image for this option:</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    // Handle image upload logic here
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        updateOption(index, 'value', event.target.result);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full text-sm"
+                />
+              </div>
+            )}
+          </div>
         </div>
       ))}
+      
     </div>
   );
 };
