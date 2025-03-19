@@ -2,7 +2,18 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { ArrowRightLeft, Download, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, Download, Trash2, Edit, Save, X, Upload } from 'lucide-react';
+
+const stripHtmlTags = (input) => {
+  if (!input) return "";
+  
+  // Create a temporary element to properly decode HTML entities
+  const tempElement = document.createElement('div');
+  tempElement.innerHTML = input;
+  
+  // Get the text content which automatically removes HTML tags and decodes entities
+  return tempElement.textContent || tempElement.innerText || "";
+};
 
 const ViewPaper = () => {
   const { id } = useParams();
@@ -10,13 +21,13 @@ const ViewPaper = () => {
   const [paper, setPaper] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [url, setUrl] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedQuestions, setEditedQuestions] = useState([]);
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
+  const [editText, setEditText] = useState("");
 
   useEffect(() => {
-    // Get the current URL when component mounts
-    setUrl(window.location.href);
-    
+
     console.log("📌 Fetching paper with ID:", id);
   
     fetch(`http://localhost:5000/get-questions/${id}`)
@@ -32,15 +43,246 @@ const ViewPaper = () => {
       });
   }, [id]);
 
-  const handleCopyUrl = () => {
-    navigator.clipboard.writeText(url)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch(err => {
-        console.error("Failed to copy URL: ", err);
+  const saveEdits = async () => {
+    try {
+      // Ensure we have the full paper data and ID
+      if (!paper || !paper._id) {
+        throw new Error("Cannot save: Paper ID is missing");
+      }
+  
+      // Create a copy of the paper with updated questions
+      const updatedPaperData = {
+        ...paper,
+        questions: isEditing ? editedQuestions : paper.questions
+      };
+  
+      // Send the entire updated paper to the backend
+      const response = await fetch(`http://localhost:5000/update-paper/${paper._id}`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json" 
+        },
+        body: JSON.stringify(updatedPaperData)
       });
+  
+      // Check if the response is successful
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to save changes");
+      }
+  
+      // Parse the response
+      const updatedPaper = await response.json();
+  
+      // Update the local state with the returned paper
+      setPaper(updatedPaper);
+      
+      // Exit edit mode
+      setIsEditing(false);
+  
+      // Show success message
+      const successMessage = document.createElement('div');
+      successMessage.style.position = 'fixed';
+      successMessage.style.top = '20px';
+      successMessage.style.left = '50%';
+      successMessage.style.transform = 'translateX(-50%)';
+      successMessage.style.padding = '15px 20px';
+      successMessage.style.backgroundColor = '#4CAF50';
+      successMessage.style.color = 'white';
+      successMessage.style.borderRadius = '5px';
+      successMessage.style.zIndex = '9999';
+      successMessage.textContent = 'Paper updated successfully!';
+      document.body.appendChild(successMessage);
+      
+      // Remove success message after 3 seconds
+      setTimeout(() => {
+        document.body.removeChild(successMessage);
+      }, 3000);
+  
+    } catch (error) {
+      console.error("Detailed error saving changes:", error);
+      
+      // Show error message
+      const errorMessage = document.createElement('div');
+      errorMessage.style.position = 'fixed';
+      errorMessage.style.top = '20px';
+      errorMessage.style.left = '50%';
+      errorMessage.style.transform = 'translateX(-50%)';
+      errorMessage.style.padding = '15px 20px';
+      errorMessage.style.backgroundColor = '#dc3545';
+      errorMessage.style.color = 'white';
+      errorMessage.style.borderRadius = '5px';
+      errorMessage.style.zIndex = '9999';
+      errorMessage.textContent = `Failed to save changes: ${error.message}`;
+      document.body.appendChild(errorMessage);
+      
+      // Remove error message after 3 seconds
+      setTimeout(() => {
+        document.body.removeChild(errorMessage);
+      }, 3000);
+    }
+  };
+
+  const toggleEditMode = () => {
+    setIsEditing(!isEditing);
+    // Reset any active editing
+    setEditingQuestionIndex(null);
+    setEditText("");
+  };
+
+  // Start editing a specific question
+  const startEditQuestion = (question, index) => {
+    setEditingQuestionIndex(index);
+    setEditText(question.text);
+  };
+
+  // Cancel edit for a specific question
+  const cancelEdit = () => {
+    setEditingQuestionIndex(null);
+    setEditText("");
+  };
+
+  // Save edited question
+  const saveQuestionEdit = async () => {
+    if (editingQuestionIndex === null || !editText.trim()) {
+      return;
+    }
+
+    try {
+      // Get the specific question being edited
+      const questionToUpdate = paper.questions[editingQuestionIndex];
+      
+      // Send the updated question to the server
+      const response = await fetch(`http://localhost:5000/update-question/${questionToUpdate._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: editText.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update question");
+      }
+
+      // Create a copy of the paper with the updated question
+      const updatedPaper = { ...paper };
+      updatedPaper.questions = updatedPaper.questions.map((q, index) => 
+        index === editingQuestionIndex ? { ...q, text: editText.trim() } : q
+      );
+      
+      // Update the state
+      setPaper(updatedPaper);
+      setEditingQuestionIndex(null);
+      setEditText("");
+      
+      // Show success message
+      const successMessage = document.createElement('div');
+      successMessage.style.position = 'fixed';
+      successMessage.style.top = '20px';
+      successMessage.style.left = '50%';
+      successMessage.style.transform = 'translateX(-50%)';
+      successMessage.style.padding = '15px 20px';
+      successMessage.style.backgroundColor = '#4CAF50';
+      successMessage.style.color = 'white';
+      successMessage.style.borderRadius = '5px';
+      successMessage.style.zIndex = '9999';
+      successMessage.textContent = 'Question updated successfully!';
+      document.body.appendChild(successMessage);
+      
+      // Remove success message after 3 seconds
+      setTimeout(() => {
+        document.body.removeChild(successMessage);
+      }, 3000);
+    } catch (error) {
+      console.error("❌ Error updating question:", error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  // Render a question with edit functionality
+  const renderQuestion = (q, index, questionNumber) => {
+    const isIndividualEditing = editingQuestionIndex === index;
+    
+    return (
+      <div key={index} style={{ 
+        textAlign: "left", 
+        position: "relative",
+        marginBottom: "15px",
+        paddingRight: isIndividualEditing ? "40px" : "0"
+      }}>
+        {isIndividualEditing ? (
+          <div className="edit-controls" style={{ marginBottom: "10px" }}>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px",
+                minHeight: "100px",
+                fontFamily: "Arial, sans-serif",
+                fontSize: "14px",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                resize: "vertical"
+              }}
+            />
+            <div style={{ marginTop: "8px", display: "flex", gap: "8px" }}>
+              <button onClick={saveQuestionEdit} style={{
+                padding: "6px 12px",
+                background: "#28a745",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px"
+              }}>
+                <Save size={16} /> Save
+              </button>
+              <button onClick={cancelEdit} style={{
+                padding: "6px 12px",
+                background: "#dc3545",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px"
+              }}>
+                <X size={16} /> Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p style={{ marginBottom: "10px" }}>
+            <strong>{questionNumber}.</strong> {stripHtmlTags(q.text)}
+            {isEditing && (
+              <button
+                onClick={() => startEditQuestion(q, index)}
+                style={{
+                  position: "absolute",
+                  right: "0",
+                  top: "0",
+                  background: "#007bff",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  width: "30px",
+                  height: "30px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer"
+                }}
+              >
+                <Edit size={16} />
+              </button>
+            )}
+          </p>
+        )}
+      </div>
+    );
   };
   
   const handleRandomize = async () => {
@@ -333,113 +575,151 @@ const ViewPaper = () => {
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "20px", textAlign: "center", background: "rgb(200, 203, 206)", minHeight: "100vh" }}>
-      <a href="/createpapermidsem" style={{ textDecoration: "none", color: "#072b52", fontWeight: "bold", fontSize: "18px", display: "inline-block", padding: "15px" }}>
+      <a href="/midsemester" style={{ textDecoration: "none", color: "#072b52", fontWeight: "bold", fontSize: "18px", display: "inline-block", padding: "15px" }}>
         &#129136; &nbsp; Back
       </a>
 
-      <div style={{ marginTop: "20px" }}>
-        <button onClick={handleRandomize}style={{
+      <div style={{ 
+        marginTop: "20px", 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: '10px' 
+      }}>
+        <button onClick={handleRandomize} style={{
             padding: "10px 15px",
-            margin: "5px",
             background: "#1ece03",
             color: "white",
             border: "none",
             alignItems: "center",
             borderRadius: "5px",
-            marginBottom: '20px',
             cursor: "pointer",
             fontSize: "17px",
             display: "inline-flex",
-            gap: '5px'
+            gap: '5px',
+            marginBottom: '20px'
           }}>
             <ArrowRightLeft size={20} />Randomize
         </button>
-        <button onClick={handleDelete} disabled={deleting} style={{
+        <button onClick={handleDelete} style={{
           padding: "10px 15px",
           fontSize: "17px",
-          marginBottom: '20px',
-          margin: "5px",
-          background: deleting ? "#a6a6a6" : "#dc3545",
+          background: "#dc3545",
           color: "white",
           border: "none",
           borderRadius: "5px",
-          cursor: deleting ? "not-allowed" : "pointer",
+          cursor: "pointer",
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px' // Space between icon and text
+          gap: '5px',
+          marginBottom: '20px'
         }}>
-          {deleting ? "Deleting..." : <>
-            <Trash2 size={20} /> 
-            Delete Paper
-          </>}
+          <Trash2 size={20} /> 
+          Delete Paper
+        </button>
+
+        <button onClick={() => {
+          setIsEditing(true);
+          // Initialize editing state if not already done
+          setEditedQuestions(paper.questions || []);
+        }} style={{
+          padding: "10px 15px",
+          background: "#0275d8",
+          fontSize: "17px",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px',
+          marginBottom: '20px'
+        }}>
+          <Edit size={20} /> Edit Questions
         </button>
 
         <button onClick={handleDownload} style={{
           padding: "10px 15px",
-          margin: "5px",
           background: "#a600ff",
           fontSize: "17px",
           color: "white",
           border: "none",
           borderRadius: "5px",
           cursor: "pointer",
-          marginBottom: '20px',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px' // Space between icon and text
+          gap: '5px',
+          marginBottom: '20px'
         }}>
           <Download size={20} /> Download
         </button>
+
+        <button onClick={handleApproval} style={{
+                padding: "10px 15px",
+                background: "rgba(251, 247, 42, 0.88)",
+                fontSize: "17px",
+                color: "black",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                marginBottom: '20px'
+              }}>
+                <Upload size={20} /> Send for Approval
+          </button>
+
+        {isEditing && (
+          <div style={{ display: 'inline-flex', gap: '10px' }}>
+          </div>
+        )}
       </div>
 
-      {/* Draft Styling */}
       <div id="paper-content">
-      <div
-        style={{
-          maxWidth: "800px",
-          marginTop: "80px",
-          margin: 'auto',
-          background: "white",
-          padding: "10px 20px",
-          boxShadow: '4px 4px 4px 4px rgba(0.2, 0.2, 0.2, 0.2)' 
-         }}
-      >
-        
-        <p style={{ marginLeft: "499px", fontSize: "14px", fontFamily: "verdana, sans-serif"}}> Reg No: </p>
-        <p style={{ marginLeft: "499px", fontSize: "14px", fontFamily: "verdana, sans-serif"}}> Date: </p>
-
         <div
           style={{
-            textAlign: "center",
-            position: "relative",
-            borderBlock: "none",
-          }}
+            maxWidth: "800px",
+            marginTop: "80px",
+            margin: 'auto',
+            background: "white",
+            padding: "10px 20px",
+            boxShadow: '4px 4px 4px 4px rgba(0.2, 0.2, 0.2, 0.2)' 
+           }}
         >
+          <p style={{ marginLeft: "499px", fontSize: "14px", fontFamily: "verdana, sans-serif"}}> Reg No: </p>
+          <p style={{ marginLeft: "499px", fontSize: "14px", fontFamily: "verdana, sans-serif"}}> Date: </p>
 
-          {/* Logo would go here */}
-          <img 
-            src="\sjuniv_logo.png" 
-            alt="St. Joseph's University Logo" 
-            style={{ maxWidth: "80px", marginBottom: "5px", marginLeft:"330px" }}
-          />
-          
-          <p style={{ fontWeight: "bold", margin: "5px 0", fontSize: "18px" }}>
-            ST. JOSEPH'S UNIVERSITY, BENGALURU - 27
-          </p>
-          <p style={{ fontWeight: "bold", margin: "5px 0", fontSize: "16px" }}>
-            BCA - {paper?.semester}
-          </p>
-          <p style={{ fontWeight: "bold", margin: "10px 0", fontSize: "16px" }}>
-            MID SEMESTER EXAMINATION
-          </p>
-          <p style={{ margin: "10px 0", fontWeight: "bold", fontSize: "16px" }}>
-          {paper?.subject}
-          </p>
-          <p style={{ fontWeight: "bolder", fontSize: "14px" }}>
-            ( For current batch students only )
-          </p>
+          <div
+            style={{
+              textAlign: "center",
+              position: "relative",
+              borderBlock: "none",
+            }}
+          >
+            <img 
+              src="\sjuniv_logo.png" 
+              alt="St. Joseph's University Logo" 
+              style={{ maxWidth: "80px", marginBottom: "5px", marginLeft:"330px" }}
+            />
+            
+            <p style={{ fontWeight: "bold", margin: "5px 0", fontSize: "18px" }}>
+              ST. JOSEPH'S UNIVERSITY, BENGALURU - 27
+            </p>
+            <p style={{ fontWeight: "bold", margin: "5px 0", fontSize: "16px" }}>
+              BCA - {paper?.semester}
+            </p>
+            <p style={{ fontWeight: "bold", margin: "10px 0", fontSize: "16px" }}>
+              MID SEMESTER EXAMINATION
+            </p>
+            <p style={{ margin: "10px 0", fontWeight: "bold", fontSize: "16px" }}>
+            {paper?.subject}
+            </p>
+            <p style={{ fontWeight: "bolder", fontSize: "14px" }}>
+              ( For current batch students only )
+            </p>
+          </div>
         </div>
-      </div>
+        
         {loading ? (
           <p>Loading...</p>
         ) : paper && paper.questions && paper.questions.length > 0 ? (
@@ -464,65 +744,18 @@ const ViewPaper = () => {
             <h4 style={{ fontWeight: "bolder", textAlign: "center" }}>PART A</h4>
             <p style={{ fontWeight: "bold", textAlign: "left" }}><em>Answer all FIVE questions (2 * 5 = 10)</em></p>
             {paper.questions.filter(q => q.marks === 2).slice(0, 5).map((q, index) => (
-              <p key={index} style={{ textAlign: "left" }}><strong>{index + 1}.</strong> {q.text} </p>
+              renderQuestion(q, index, index + 1)
             ))}
 
             <h4 style={{ fontWeight: "bolder", textAlign: "center", marginTop: "20px" }}>PART B</h4>
             <p style={{ fontWeight: "bold", textAlign: "left" }}><em>Answer any FIVE questions (4 * 5 = 20)</em></p>
             {paper.questions.filter(q => q.marks === 4).slice(0, 6).map((q, index) => (
-              <p key={index} style={{ textAlign: "left" }}><strong>{index + 6}.</strong> {q.text} </p>
+              renderQuestion(q, index + 5, index + 6)
             ))}
           </div>
         ) : (
           <p>No questions available.</p>
         )}
-      </div>
-
-      {/* URL Copy Container */}
-      <div 
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          padding: "10px 15px",
-          backgroundColor: "#007bff",
-          borderRadius: "5px",
-          boxShadow: "6px 4px 4px 4px rgba(0, 0.2, 0.2, 0.2)",
-          display: "flex",
-          alignItems: "center",
-          zIndex: 999,
-          transition: "all 0.3s ease"
-        }}
-      >
-        <div 
-          style={{
-            maxWidth: "300px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            marginRight: "10px",
-            color: "white",
-            fontSize: "15px",
-            fontWeight: "bolder"
-          }}
-        > Copy URL to View your Paper Later!<br></br>
-          {url}
-        </div>
-        <button
-          onClick={handleCopyUrl}
-          style={{
-            backgroundColor: copied ? "#28a745" : "white",
-            color: copied ? "white" : "#007bff",
-            border: "none",
-            borderRadius: "4px",
-            padding: "5px 10px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            transition: "all 0.3s ease"
-          }}
-        >
-          {copied ? "Copied!" : "Copy"}
-        </button>
       </div>
     </div>
   );
