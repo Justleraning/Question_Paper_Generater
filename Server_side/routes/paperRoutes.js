@@ -4,7 +4,7 @@ const { protect, adminOnly } = require("../middlewares/authMiddleware");
 const router = express.Router();
 
 // Paper creation and management
-router.post("/save", protect, paperController.savePaper);
+router.post("/saves", protect, paperController.savePaper);
 router.get("/my-papers", protect, paperController.getMyPapers);
 router.delete("/:id", protect, paperController.deletePaper);
 router.put("/:id/questions", protect, paperController.updatePaperQuestions); // Add this new route

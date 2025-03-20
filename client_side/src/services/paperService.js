@@ -489,7 +489,7 @@ export const savePaper = async (paperData) => {
     }
 
     const response = await axios.post(
-      `${API_URL}/papers/save`, 
+      `${API_URL}/papers/saves`, 
       paperData, 
       { 
         headers: {
