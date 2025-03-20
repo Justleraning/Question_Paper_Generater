@@ -60,6 +60,53 @@ const CreatePapers = () => {
   // State to track resized images and their dimensions
   const [imageStates, setImageStates] = useState({});
   
+  // Helper function to get creator name consistently throughout the component
+  const getCreatorName = () => {
+    let creatorName = "Unknown";
+    
+    try {
+      // Get user information from sessionStorage instead of localStorage
+      const userJSON = sessionStorage.getItem('user');
+      
+      if (userJSON) {
+        const user = JSON.parse(userJSON);
+        
+        // Check for username which appears to be the main identifier in your auth system
+        if (user && user.username) {
+          creatorName = user.username;
+        }
+        
+        // Try alternative user properties if username is not available
+        if (creatorName === "Unknown") {
+          if (user.name) creatorName = user.name;
+          else if (user.fullName) creatorName = user.fullName;
+          else if (user.displayName) creatorName = user.displayName;
+          else if (user.email) creatorName = user.email.split('@')[0];
+        }
+        
+        console.log("User data found:", user);
+        console.log("Using creator name:", creatorName);
+      } else {
+        console.warn("No user data found in sessionStorage");
+      }
+      
+      return creatorName;
+    } catch (error) {
+      console.error("Error getting creator name:", error);
+      return "Unknown";
+    }
+  };
+  
+  // Helper function to get authenticated axios config - UPDATED for sessionStorage
+  const getAuthConfig = () => {
+    return {
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    };
+  };
+
   // Load exam details from localStorage on component mount
   useEffect(() => {
     try {
@@ -380,7 +427,7 @@ const CreatePapers = () => {
     try {
       await axios.put(`/api/endpapers/${paperId}/parts/${part}/questions/${questionId}`, {
         questionText: updatedText
-      });
+      }, getAuthConfig()); // Use the getAuthConfig to get token from sessionStorage
     } catch (error) {
       console.error('Error updating question:', error);
     }
@@ -430,7 +477,8 @@ const CreatePapers = () => {
                       part: partId,
                       unit: unitId.toString(),
                       bloomLevel: mapBloomLevel(bloomId)
-                    }
+                    },
+                    headers: getAuthConfig().headers // Use the getAuthConfig to get token from sessionStorage
                   });
                   
                   const availableQuestions = response.data.questions || [];
@@ -488,7 +536,8 @@ const CreatePapers = () => {
             params: {
               subjectCode: examDetails.subjectCode,
               part: partId
-            }
+            },
+            headers: getAuthConfig().headers // Use the getAuthConfig to get token from sessionStorage
           });
           
           const availableQuestions = response.data.questions || [];
@@ -553,7 +602,8 @@ const CreatePapers = () => {
           part: part,
           unit: unit.toString(),
           bloomLevel: mapBloomLevel(bloomLevelNumber)
-        }
+        },
+        headers: getAuthConfig().headers // Use the getAuthConfig to get token from sessionStorage
       });
       
       const availableQuestions = response.data.questions || [];
@@ -645,11 +695,14 @@ const CreatePapers = () => {
     }
   };
   
-  // Updated savePaper function to remove replace buttons
+  // Updated savePaper function with creator name and proper auth
   const savePaper = async () => {
     try {
       // Show loading state
       setLoading(true);
+      
+      // Get creator name - Now comes from sessionStorage
+      const creatorName = getCreatorName();
       
       // Transform questions into the format required by the backend
       // Remove UI elements like replace buttons and properly structure the questions
@@ -709,6 +762,11 @@ const CreatePapers = () => {
           maxMarks: paperDetails.maxMarks,
           duration: paperDetails.duration
         },
+        // Add creatorName to metadata
+        metadata: {
+          creatorName: creatorName,
+          status: 'draft'
+        },
         // Set status to Pending
         status: 'Pending',
         
@@ -759,18 +817,10 @@ const CreatePapers = () => {
       
       // If we have a paperId, update the existing paper, otherwise create a new one
       if (paperId) {
-        response = await axios.put(`/api/endpapers/${paperId}`, paperData, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
+        response = await axios.put(`/api/endpapers/${paperId}`, paperData, getAuthConfig());
         alert('Question paper has been updated successfully!');
       } else {
-        response = await axios.post('/api/endpapers', paperData, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
+        response = await axios.post('/api/endpapers', paperData, getAuthConfig());
         
         // Set the paper ID for future reference
         if (response.data && response.data.paper && response.data.paper._id) {
@@ -791,7 +841,8 @@ const CreatePapers = () => {
       setLoading(false);
     }
   };
-  const downloadPaper = (paper) => {
+  
+  const downloadPaper = () => {
     // Show loading indicator
     const loadingOverlay = document.createElement('div');
     loadingOverlay.className = 'din8-loading-overlay';
@@ -834,24 +885,11 @@ const CreatePapers = () => {
         const margin = 15; // margins in mm
         const contentWidth = pageWidth - (margin * 2);
         
-        // Prepare paper data from the selected paper
+        // Prepare paper data
         const paperDetails = {
-          university: paper.university.name || "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
-          maxMarks: paper.examDetails.maxMarks || "60"
+          university: paperDetails.university,
+          maxMarks: paperDetails.maxMarks
         };
-        
-        const examDetails = paper.examDetails;
-        
-        // Make sure questions arrays exist
-        const questionsPartA = Array.isArray(paper.paperStructure.parts.find(p => p.partId === 'A')?.questions) 
-          ? paper.paperStructure.parts.find(p => p.partId === 'A').questions 
-          : [];
-        const questionsPartB = Array.isArray(paper.paperStructure.parts.find(p => p.partId === 'B')?.questions) 
-          ? paper.paperStructure.parts.find(p => p.partId === 'B').questions 
-          : [];
-        const questionsPartC = Array.isArray(paper.paperStructure.parts.find(p => p.partId === 'C')?.questions) 
-          ? paper.paperStructure.parts.find(p => p.partId === 'C').questions 
-          : [];
         
         // Current Y position on the page
         let yPos = margin;
@@ -901,7 +939,7 @@ const CreatePapers = () => {
               resolve();
             };
             
-            logo.src = paper.university.logoUrl || '/SJU.png';
+            logo.src = '/SJU.png';
             
             setTimeout(() => {
               if (!logo.complete) {
@@ -948,12 +986,10 @@ const CreatePapers = () => {
           
           const totalPages = 2;
           pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10);
           pdf.text(`This paper contains ${totalPages} printed pages and 3 parts`, pageWidth/2, yPos, { align: 'center' });
           yPos += 10;
         };
-        
-        // Rest of the functions (checkPageBreak, renderPartAB, renderPartC) remain the same
-        // ... (Copy the exact implementations from the previous code)
         
         // Function to check if we need a new page
         const checkPageBreak = (neededSpace) => {
@@ -968,14 +1004,112 @@ const CreatePapers = () => {
         
         // Function to render Parts A and B with their questions
         const renderPartAB = (partTitle, instructions, questionsList, startNumber) => {
-          // Copy the entire renderPartAB function from the previous code
-          // ...
+          // Add part title
+          checkPageBreak(15);
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(partTitle, margin, yPos);
+          yPos += 8;
+          
+          // Add instructions
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          for (const instruction of instructions) {
+            pdf.text(instruction, margin, yPos);
+            yPos += 5;
+          }
+          yPos += 5;
+          
+          // Add questions
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          
+          questionsList.forEach((question, index) => {
+            const questionNumber = startNumber + index;
+            
+            // Check if we need a new page for this question
+            checkPageBreak(15); // Minimum space for a question
+            
+            // Question number and text
+            const questionText = `${questionNumber}. ${question.questionText || question.question}`;
+            
+            // Split long text into multiple lines
+            const textLines = pdf.splitTextToSize(questionText, contentWidth);
+            
+            // Calculate space needed for text
+            const textHeight = textLines.length * 5; // 5mm per line
+            
+            // Check again with the actual text height
+            if (checkPageBreak(textHeight + 10)) { // 10mm buffer
+              // If we added a new page, reset yPos
+              yPos = margin;
+            }
+            
+            // Add text
+            pdf.text(textLines, margin, yPos);
+            yPos += textHeight + 8; // Space after text
+            
+            // Add image if present
+            if (question.hasImage && question.imageUrl) {
+              // Handle image later - this is complex in jsPDF
+              yPos += 10; // Space for image placeholder
+            }
+          });
         };
         
         // Function to render Part C with special handling
         const renderPartC = (partTitle, instructions, questionsList, startNumber) => {
-          // Copy the entire renderPartC function from the previous code
-          // ...
+          // Add part title
+          checkPageBreak(15);
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(partTitle, margin, yPos);
+          yPos += 8;
+          
+          // Add instructions
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          for (const instruction of instructions) {
+            pdf.text(instruction, margin, yPos);
+            yPos += 5;
+          }
+          yPos += 5;
+          
+          // Add questions
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          
+          questionsList.forEach((question, index) => {
+            const questionNumber = startNumber + index;
+            
+            // Check if we need a new page for this question
+            checkPageBreak(15); // Minimum space for a question
+            
+            // Question number and text
+            const questionText = `${questionNumber}. ${question.questionText || question.question}`;
+            
+            // Split long text into multiple lines
+            const textLines = pdf.splitTextToSize(questionText, contentWidth);
+            
+            // Calculate space needed for text
+            const textHeight = textLines.length * 5; // 5mm per line
+            
+            // Check again with the actual text height
+            if (checkPageBreak(textHeight + 10)) { // 10mm buffer
+              // If we added a new page, reset yPos
+              yPos = margin;
+            }
+            
+            // Add text
+            pdf.text(textLines, margin, yPos);
+            yPos += textHeight + 8; // Space after text
+            
+            // Add image if present
+            if (question.hasImage && question.imageUrl) {
+              // Handle image later - this is complex in jsPDF
+              yPos += 10; // Space for image placeholder
+            }
+          });
         };
         
         // Add first page header
@@ -985,7 +1119,7 @@ const CreatePapers = () => {
             renderPartAB(
               'PART-A', 
               ['Answer all FIVE questions', '(2 X 5 = 10)'], 
-              questionsPartA,
+              questions.partA,
               1
             );
             
@@ -993,8 +1127,8 @@ const CreatePapers = () => {
             renderPartAB(
               'PART-B', 
               ['Answer any FIVE questions', '(4 X 5 = 20)'],
-              questionsPartB,
-              questionsPartA.length + 1
+              questions.partB,
+              questions.partA.length + 1
             );
             
             yPos += 5;
@@ -1003,8 +1137,8 @@ const CreatePapers = () => {
             renderPartC(
               'PART-C', 
               ['Answer any THREE questions', '(10 X 3 = 30)'],
-              questionsPartC,
-              questionsPartA.length + questionsPartB.length + 1
+              questions.partC,
+              questions.partA.length + questions.partB.length + 1
             );
             
             // Save the PDF with both subject code and subject name in the filename
@@ -1031,6 +1165,7 @@ const CreatePapers = () => {
       }
     };
   };
+  
   // Generate a paper on first load
   useEffect(() => {
     if (!paperId && !isEditMode) {
@@ -1263,7 +1398,6 @@ const CreatePapers = () => {
       </div>
     );
   }
-  
   return (
     <div className="din8-app-container">
       {/* Question Paper Generator Title */}
@@ -1483,18 +1617,30 @@ const CreatePapers = () => {
             </div>
           </div>
           
-          {/* Action buttons immediately below the paper content */}
-          <div className="din8-paper-actions">
-            <button className="din8-action-btn din8-save-btn" onClick={savePaper}>
-              Save Paper
-            </button>
-            <button className="din8-action-btn din8-download-btn" onClick={downloadPaper}>
-              Download Paper
-            </button>
-            <button className="din8-action-btn din8-generate-btn" onClick={randomizeQuestions}>
-              Randomize Questions
-            </button>
-          </div>
+          {/* Action buttons - only show if not in edit mode or with conditional rendering */}
+          {!isEditMode && (
+            <div className="din8-paper-actions">
+              <button className="din8-action-btn din8-save-btn" onClick={savePaper}>
+                Save Paper
+              </button>
+              <button className="din8-action-btn din8-download-btn" onClick={downloadPaper}>
+                Download Paper
+              </button>
+              <button className="din8-action-btn din8-generate-btn" onClick={randomizeQuestions}>
+                Randomize Questions
+              </button>
+            </div>
+          )}
+          {isEditMode && (
+            <div className="din8-paper-actions">
+              <button className="din8-action-btn din8-save-btn" onClick={savePaper}>
+                Update Paper
+              </button>
+              <button className="din8-action-btn din8-download-btn" onClick={downloadPaper}>
+                Download Paper
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 const EndPapers = require("../models/EndPapersModel");
 const mongoose = require("mongoose");
 const asyncHandler = require("express-async-handler");
+const User = require("../models/User");
 
 // Helper function to check if using placeholder user
 const isPlaceholderUser = (userId) => {
@@ -16,11 +17,11 @@ const getAllEndPapers = asyncHandler(async (req, res) => {
   // Build filter object
   const filter = {};
   if (subjectCode) filter["examDetails.subjectCode"] = subjectCode;
-  if (status) filter["metadata.status"] = status;
+  if (status) filter.status = status;
   
   // If not placeholder user, only show their papers (unless admin)
   if (req.user && !isPlaceholderUser(req.user._id) && req.user.role !== 'admin') {
-    filter["metadata.createdBy"] = req.user._id;
+    filter.createdBy = req.user._id;
   }
   
   // Get papers with pagination
@@ -53,7 +54,7 @@ const getEndPaperById = asyncHandler(async (req, res) => {
   
   // If not placeholder user, check if they own this paper (unless admin)
   if (req.user && !isPlaceholderUser(req.user._id) && req.user.role !== 'admin') {
-    if (paper.metadata.createdBy.toString() !== req.user._id.toString()) {
+    if (paper.createdBy.toString() !== req.user._id.toString()) {
       res.status(403);
       throw new Error("Not authorized to view this paper");
     }
@@ -78,17 +79,31 @@ const createEndPaper = asyncHandler(async (req, res) => {
     }
     
     // Fallback to placeholder user ID if not present
-    console.log('One' + req.user);
-    console.log('One' + req.user._id);
     const createdBy = req.user && req.user._id 
       ? req.user._id 
       : mongoose.Types.ObjectId('000000000000000000000000');
     
+    // Get user name for metadata
+    let creatorName = "Unknown"; // Default value
+    if (req.user && req.user._id) {
+      // First try to get the name from the request body
+      if (req.body.metadata && req.body.metadata.creatorName) {
+        creatorName = req.body.metadata.creatorName;
+      } else {
+        // If not in request, try to fetch from User model
+        const user = await User.findById(req.user._id).select('name');
+        if (user && user.name) {
+          creatorName = user.name;
+        }
+      }
+    }
+    
     const paperData = {
       ...req.body,
+      createdBy: createdBy, // Root level createdBy
       metadata: {
         ...req.body.metadata,
-        createdBy: createdBy,
+        creatorName: creatorName,
         status: 'draft'
       }
     };
@@ -125,7 +140,7 @@ const updateEndPaper = asyncHandler(async (req, res) => {
   // Always allow if using placeholder user
   const isUsingPlaceholder = isPlaceholderUser(req.user._id);
   const isAuthorized = isUsingPlaceholder || 
-                       req.user._id.toString() === paper.metadata.createdBy.toString() || 
+                       req.user._id.toString() === paper.createdBy.toString() || 
                        req.user.role === 'admin';
   
   if (!isAuthorized) {
@@ -174,7 +189,7 @@ const deleteEndPaper = asyncHandler(async (req, res) => {
   // Always allow if using placeholder user
   const isUsingPlaceholder = isPlaceholderUser(req.user._id);
   const isAuthorized = isUsingPlaceholder || 
-                       req.user._id.toString() === paper.metadata.createdBy.toString() || 
+                       req.user._id.toString() === paper.createdBy.toString() || 
                        req.user.role === 'admin';
   
   if (!isAuthorized) {
@@ -215,7 +230,7 @@ const sendForApproval = asyncHandler(async (req, res) => {
   // Always allow if using placeholder user
   const isUsingPlaceholder = isPlaceholderUser(req.user._id);
   const isAuthorized = isUsingPlaceholder || 
-                       req.user._id.toString() === paper.metadata.createdBy.toString() ||
+                       req.user._id.toString() === paper.createdBy.toString() ||
                        req.user.role === 'admin';
   
   if (!isAuthorized) {
@@ -330,7 +345,7 @@ const updatePaperQuestion = asyncHandler(async (req, res) => {
     // Check if user is authorized
     const isUsingPlaceholder = isPlaceholderUser(req.user._id);
     const isAuthorized = isUsingPlaceholder || 
-                       req.user._id.toString() === paper.metadata.createdBy.toString() || 
+                       req.user._id.toString() === paper.createdBy.toString() || 
                        req.user.role === 'admin';
     
     if (!isAuthorized) {

@@ -6,8 +6,8 @@ const AUTH_API_URL = `${API_URL}/auth`;
 
 console.log("🔍 Backend API URL (AuthService):", AUTH_API_URL); // Debugging
 
-// ✅ Helper: Get Auth Headers
-const getToken = () => localStorage.getItem("token") || null;
+// ✅ Helper: Get Auth Headers - changed to use sessionStorage
+const getToken = () => sessionStorage.getItem("token") || null;
 const authHeaders = () => {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -17,8 +17,8 @@ const authHeaders = () => {
 const handleAuthError = (error) => {
   if (error.response?.status === 401) {
     console.warn("⚠️ Unauthorized request. Logging out...");
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     window.location.href = "/login"; // Force logout
   }
   console.error("❌ API Error:", error.response?.data || error.message);
@@ -37,12 +37,23 @@ export const requestPasswordReset = async (resetForm) => {
   }
 };
 
-// ✅ Login Request
+// ✅ Login Request - Updated to store user info in sessionStorage
 export const loginUser = async (credentials) => {
   try {
     console.log(`🔍 API Call: POST ${AUTH_API_URL}/login with`, credentials);
     const response = await axios.post(`${AUTH_API_URL}/login`, credentials);
     console.log("✅ API Response:", response.data);
+    
+    // Store user data and token in sessionStorage
+    if (response.data && response.data.token) {
+      sessionStorage.setItem("token", response.data.token);
+      
+      // Store the entire user object
+      sessionStorage.setItem("user", JSON.stringify(response.data));
+      
+      console.log("✅ User data saved to sessionStorage:", response.data);
+    }
+    
     return response.data;
   } catch (error) {
     handleAuthError(error);
@@ -54,7 +65,7 @@ export const getResetRequests = async () => {
     const response = await axios.get(`${AUTH_API_URL}/reset-requests`, { headers: authHeaders() });
 
     const requests = response.data;
-    const user = JSON.parse(localStorage.getItem("user"));
+    const user = JSON.parse(sessionStorage.getItem("user"));
 
     if (!user || !user.role) {
       console.error("🚨 No valid user found!");
@@ -79,6 +90,7 @@ export const getResetRequests = async () => {
     handleAuthError(error);
   }
 };
+
 // ✅ Approve Reset Request (Admin/SuperAdmin)
 export const approveResetRequest = async (username) => {
   try {

@@ -90,8 +90,8 @@ const teacherOwnPapersOnly = async (req, res, next) => {
         return res.status(404).json({ message: 'Paper not found' });
       }
       
-      // Check if the user is the creator
-      if (paper.metadata && paper.metadata.createdBy.toString() !== req.user._id.toString()) {
+      // Check if the user is the creator - now using root level createdBy
+      if (paper.createdBy.toString() !== req.user._id.toString()) {
         return res.status(403).json({ message: 'Not authorized to access this paper' });
       }
     } catch (error) {

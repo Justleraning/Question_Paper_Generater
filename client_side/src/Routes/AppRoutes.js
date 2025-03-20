@@ -5,6 +5,7 @@ import MainLayout from "../components/MainLayout.js";
 import { QPProvider } from "../Contexts/QPContext.js"
 import PaperApprovals from "../pages/Papers/PaperApprovals_OpenElectiveSide.js";
 import PaperApprovalTypes from "../pages/Papers/PaperApprovalTypes.js";
+import PaperApprovals_EndSem from "../pages/Papers/PaperApprovals_EndSem.js";
 
 // ✅ Dino Routes
 import SelectMarks from "../components/Dino/EndFront/SelectedMarks.js";
@@ -99,6 +100,7 @@ const AppRoutes = () => {
         <Route path="/answer-keys" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKey /></PrivateRoute>} />
         <Route path="/entrance-exam" element={<PrivateRoute allowedRoles={["Teacher"]}><EntranceExamSide/></PrivateRoute>} />
         <Route path="/admin/papers/approval" element={<PrivateRoute allowedRoles={["Admin"]}><EntranceAdminApprovalPage/></PrivateRoute>} />
+        <Route path="/approvalend" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovals_EndSem /></PrivateRoute>} />
 
         {/* ✅ Admin & SuperAdmin Routes */}
         <Route path="/admin-dashboard" element={<PrivateRoute allowedRoles={["Admin"]}><AdminDashboard /></PrivateRoute>} />

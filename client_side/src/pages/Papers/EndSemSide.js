@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Download, Edit, Trash2, Eye, Send } from 'lucide-react';
+import { FileText, Download, Edit, Trash2, Eye, Send, Calendar, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 
 export function EndSemSide() {
@@ -27,7 +27,7 @@ export function EndSemSide() {
         const response = await axios.get('/api/endpapers', {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
         });
 
@@ -52,7 +52,7 @@ export function EndSemSide() {
     fetchPapers();
   }, []);
 
-  // Apply filters
+  // Apply filters - updated to use root level status
   useEffect(() => {
     let result = papers;
 
@@ -65,19 +65,52 @@ export function EndSemSide() {
     }
 
     if (filters.status) {
-      result = result.filter(p => p.metadata.status === filters.status);
+      // Use the root level status property
+      result = result.filter(p => p.status === filters.status);
     }
 
     setFilteredPapers(result);
   }, [filters, papers]);
 
-  // View/Preview Paper
+  // Format date function
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // View/Preview Paper - No buttons should be displayed (pure view mode)
   const viewPaper = (paper) => {
     navigate('/create-papers', { 
       state: { 
         paperDetails: paper,
         previewMode: true,
-        disableReplaceButtons: true
+        viewOnly: true,
+        disableEditing: true,
+        removeAllButtons: true,
+        removeReplaceButtons: true,
+        hideUIControls: true,        // Add this flag to hide all UI controls
+        cleanViewMode: true,         // Add this flag for a clean paper view
+        hideNavigation: true,        // Hide navigation elements
+        hideActionBar: true,         // Hide action bar
+        paperContentOnly: true       // Only show the paper content
+      } 
+    });
+  };
+
+  // Edit Paper - No replace buttons
+  const editPaper = (paper) => {
+    navigate('/create-papers', { 
+      state: { 
+        paperDetails: paper,
+        editMode: true,
+        enableInlineEditing: true,
+        disableReplaceButtons: true,
+        hideReplaceButtons: true,
+        removeReplaceButtons: true
       } 
     });
   };
@@ -440,19 +473,7 @@ export function EndSemSide() {
     };
   };
 
-  // Edit Paper
-  const editPaper = (paper) => {
-    navigate('/create-papers', { 
-      state: { 
-        paperDetails: paper,
-        editMode: true,
-        enableInlineEditing: true,
-        disableReplaceButtons: true
-      } 
-    });
-  };
-
-  // Delete Paper
+  // Delete Paper - Updated to use sessionStorage
   const deletePaper = async (paper) => {
     const confirmDelete = window.confirm('Are you sure you want to delete this paper?');
     
@@ -460,7 +481,7 @@ export function EndSemSide() {
       try {
         await axios.delete(`/api/endpapers/${paper._id}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
         });
 
@@ -476,51 +497,90 @@ export function EndSemSide() {
     }
   };
 
-  // Send for Approval
-  const sendForApproval = async (paper) => {
-    try {
-      await axios.post(`/api/endpapers/${paper._id}/approval`, {}, {
+  // Send for Approval - Directly updates the database with Submitted status
+  // Replace your current sendForApproval function with this simplified version:
+const sendForApproval = async (paper) => {
+  try {
+    // Call the dedicated approval endpoint directly
+    const approvalResponse = await axios.post(`/api/endpapers/${paper._id}/approval`, 
+      {
+        comments: 'Submitted for approval'
+      }, 
+      {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
-      });
+      }
+    );
 
-      // Update the paper's status locally
+    if (approvalResponse.data.success) {
+      // Update frontend state to match the new status
       const updatedPapers = papers.map(p => 
         p._id === paper._id 
-          ? { ...p, metadata: { ...p.metadata, status: 'submitted' } } 
+          ? { 
+              ...p, 
+              status: 'Submitted',
+              metadata: { 
+                ...p.metadata, 
+                status: 'submitted'
+              },
+              reviewComments: ''
+            } 
           : p
       );
 
       setPapers(updatedPapers);
-      setFilteredPapers(updatedPapers);
+      setFilteredPapers(
+        filteredPapers.map(p => 
+          p._id === paper._id 
+            ? { 
+                ...p, 
+                status: 'Submitted',
+                metadata: { 
+                  ...p.metadata, 
+                  status: 'submitted'
+                },
+                reviewComments: ''
+              } 
+            : p
+        )
+      );
 
       alert('Paper sent for approval successfully');
-    } catch (error) {
-      console.error('Error sending paper for approval:', error);
-      alert('Failed to send paper for approval');
+    } else {
+      alert('Error: ' + (approvalResponse.data.message || 'Failed to send paper for approval'));
     }
-  };
+  } catch (error) {
+    console.error('Error sending paper for approval:', error);
+    alert('Failed to send paper for approval: ' + (error.response?.data?.message || error.message));
+  }
+};
 
-  // Status color mapping
+  // Status color mapping - Updated to include Submitted status
   const getStatusColor = (status) => {
     switch(status) {
-      case 'draft': return 'bg-yellow-100 text-yellow-800';
-      case 'submitted': return 'bg-blue-100 text-blue-800';
+      case 'Pending': return 'bg-blue-100 text-blue-800';       // Pending (blue)
+      case 'Submitted': return 'bg-yellow-100 text-yellow-800'; // Submitted papers (yellow)
+      case 'Approved': return 'bg-green-100 text-green-800';    // Approved papers (green)
+      case 'Rejected': return 'bg-red-100 text-red-800';        // Rejected papers (red)
+      // Keep supporting metadata.status values for backward compatibility
+      case 'pending': return 'bg-gray-100 text-gray-800';         // Draft papers (gray)
+      case 'submitted': return 'bg-yellow-100 text-yellow-800'; // Same as 'Submitted'
       case 'approved': return 'bg-green-100 text-green-800';
       case 'rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  if (error) return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Question Papers</h1>
 
-      {/* Filters */}
+      {/* Filters - Updated to include both status types */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <select 
           name="semester"
@@ -553,69 +613,77 @@ export function EndSemSide() {
           className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Statuses</option>
-          <option value="draft">Draft</option>
-          <option value="submitted">Submitted</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
+          <option value="Pending">Pending</option>
+          <option value="Submitted">Submitted</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
         </select>
       </div>
 
-      {/* Papers List */}
+      {/* Papers List - Updated to use the paper's root status and include creation date */}
       <div className="grid gap-4">
         {filteredPapers.map((paper, index) => (
           <div 
             key={paper._id} 
-            className="bg-white shadow-md rounded-lg p-4 flex items-center justify-between"
+            className="bg-white shadow-md rounded-lg p-4"
           >
-            <div className="flex items-center space-x-4 flex-grow">
-              <div className="flex-shrink-0">
-                <span className="font-bold text-gray-500 mr-2">
-                  {filteredPapers.length - index}.
-                </span>
-                <FileText className="text-blue-500 w-10 h-10" />
-              </div>
-              <div className="flex-grow">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  {paper.examDetails.subjectName} - {paper.examDetails.subjectCode}
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {paper.examDetails.course} | {paper.examDetails.semester} Semester
-                </p>
-                <div className="flex items-center space-x-2">
-                  <span 
-                    className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(paper.metadata.status)}`}
-                  >
-                    {paper.metadata.status}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4 flex-grow">
+                <div className="flex-shrink-0">
+                  <span className="font-bold text-gray-500 mr-2">
+                    {filteredPapers.length - index}.
                   </span>
-                  <span className="text-xs text-gray-500">
-                    Created by: {paper.metadata.createdBy}
-                  </span>
+                  <FileText className="text-blue-500 w-10 h-10" />
+                </div>
+                <div className="flex-grow">
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    {paper.examDetails.subjectName} - {paper.examDetails.subjectCode}
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    {paper.examDetails.course} | {paper.examDetails.semester} Semester
+                  </p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span 
+                      className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(paper.status)}`}
+                    >
+                      {paper.status}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Created by: {paper.metadata.creatorName || "Unknown"}
+                    </span>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      Created: {formatDate(paper.metadata.createdAt)}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex space-x-2">
-              <button 
-                onClick={() => viewPaper(paper)}
-                className="text-blue-500 hover:bg-blue-50 p-2 rounded-full transition-colors"
-                title="View"
-              >
-                <Eye className="w-5 h-5" />
-              </button>
-              <button 
-                onClick={() => downloadPaper(paper)}
-                className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors"
-                title="Download"
-              >
-                <Download className="w-5 h-5" />
-              </button>
-              <button 
-                onClick={() => editPaper(paper)}
-                className="text-yellow-500 hover:bg-yellow-50 p-2 rounded-full transition-colors"
-                title="Edit"
-              >
-                <Edit className="w-5 h-5" />
-              </button>
-              {paper.metadata.status === 'draft' && (
+              <div className="flex space-x-2">
+                {/* All buttons are always visible */}
+                <button 
+                  onClick={() => viewPaper(paper)}
+                  className="text-blue-500 hover:bg-blue-50 p-2 rounded-full transition-colors"
+                  title="View"
+                >
+                  <Eye className="w-5 h-5" />
+                </button>
+                
+                <button 
+                  onClick={() => downloadPaper(paper)}
+                  className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors"
+                  title="Download"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+                
+                <button 
+                  onClick={() => editPaper(paper)}
+                  className="text-yellow-500 hover:bg-yellow-50 p-2 rounded-full transition-colors"
+                  title="Edit"
+                >
+                  <Edit className="w-5 h-5" />
+                </button>
+                
                 <button 
                   onClick={() => sendForApproval(paper)}
                   className="text-purple-500 hover:bg-purple-50 p-2 rounded-full transition-colors"
@@ -623,18 +691,40 @@ export function EndSemSide() {
                 >
                   <Send className="w-5 h-5" />
                 </button>
-              )}
-              <button 
-                onClick={() => deletePaper(paper)}
-                className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
-                title="Delete"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
+                
+                <button 
+                  onClick={() => deletePaper(paper)}
+                  className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
             </div>
+            
+            {/* Show rejection comments if paper is rejected */}
+            {paper.status === 'Rejected' && paper.reviewComments && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-start">
+                  <AlertTriangle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-red-700">Rejection Reason:</h4>
+                    <p className="text-sm text-red-600">{paper.reviewComments}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
+      
+      {filteredPapers.length === 0 && (
+        <div className="bg-gray-50 text-gray-600 p-8 rounded-md text-center">
+          <FileText className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+          <h3 className="text-lg font-medium mb-1">No Papers Found</h3>
+          <p>Try adjusting your filters or create a new paper.</p>
+        </div>
+      )}
     </div>
   );
 }

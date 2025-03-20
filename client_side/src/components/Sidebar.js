@@ -29,7 +29,7 @@ const Sidebar = ({
     }
   }, [location.pathname, setIsSidebarOpen]);
 
-   
+  
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };  
@@ -151,13 +151,46 @@ const Sidebar = ({
                     onClick={() => navigate("/view-reset-requests")} 
                     isActive={location.pathname === "/view-reset-requests"}
                   />
-                  <NavItem 
-  icon={<FaCheckCircle />} 
-  label="Paper Approvals" 
-  isOpen={isSidebarOpen || isHovered} 
-  onClick={() => navigate("/paper-approval-types")} 
-  isActive={location.pathname === "/paper-approval-types" || location.pathname.startsWith("/paper-approvals")}
-/>
+                  
+                  {/* Fixed Paper Approvals section - now using NavItemWithSubmenu */}
+                  <NavItemWithSubmenu
+                    icon={<FaFileAlt />}
+                    label="Paper Approvals"
+                    isOpen={isSidebarOpen || isHovered}
+                    isExpanded={expandedItems["paperapproval"]}
+                    toggleExpand={() => toggleSubMenu("paperapproval")}
+                    isActive={location.pathname.startsWith("/approval")}
+                  >
+                    <SubNavItem
+                      icon={<HiOutlineClipboardDocument />}
+                      label="Entrance Exam"
+                      isOpen={isSidebarOpen || isHovered}
+                      onClick={() => navigate("/approvalentrance")}
+                      isActive={location.pathname === "/approvalentrance"}
+                    />
+                    <SubNavItem
+                      icon={<HiOutlineAcademicCap />}
+                      label="Mid-Semester"
+                      isOpen={isSidebarOpen || isHovered}
+                      onClick={() => navigate("/approvalmid")}
+                      isActive={location.pathname === "/approvalmid"}
+                    /> 
+                    <SubNavItem
+                      icon={<HiOutlineBookOpen />}
+                      label="End-Semester"
+                      isOpen={isSidebarOpen || isHovered}
+                      onClick={() => navigate("/approvalend")}
+                      isActive={location.pathname === "/approvalend"}
+                    />
+                    <SubNavItem
+                      icon={<LuBriefcase />}
+                      label="Open Electives"
+                      isOpen={isSidebarOpen || isHovered}
+                      onClick={() => navigate("/approvalelectives")}
+                      isActive={location.pathname === "/approvalelectives"}
+                    />
+                  </NavItemWithSubmenu>
+                  
                 </NavItemGroup>
               </>
             )}
