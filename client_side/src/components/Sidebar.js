@@ -165,8 +165,8 @@ const Sidebar = ({
                       icon={<HiOutlineClipboardDocument />}
                       label="Entrance Exam"
                       isOpen={isSidebarOpen || isHovered}
-                      onClick={() => navigate("/approvalentrance")}
-                      isActive={location.pathname === "/approvalentrance"}
+                      onClick={() => navigate("/admin/papers/approval")}
+                      isActive={location.pathname === "/admin/papers/approval"}
                     />
                     <SubNavItem
                       icon={<HiOutlineAcademicCap />}

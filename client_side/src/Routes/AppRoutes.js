@@ -99,7 +99,7 @@ const AppRoutes = () => {
         <Route path="/answer-keys" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKey /></PrivateRoute>} />
         <Route path="/entrance-exam" element={<PrivateRoute allowedRoles={["Teacher"]}><EntranceExamSide/></PrivateRoute>} />
         <Route path="/admin/papers/approval" element={<PrivateRoute allowedRoles={["Admin"]}><EntranceAdminApprovalPage/></PrivateRoute>} />
-        <Route path="/approvalend" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovals_EndSem /></PrivateRoute>} />
+       
 
         {/* ✅ Admin & SuperAdmin Routes */}
         <Route path="/admin-dashboard" element={<PrivateRoute allowedRoles={["Admin"]}><AdminDashboard /></PrivateRoute>} />
@@ -142,6 +142,7 @@ const AppRoutes = () => {
         <Route path="/exam-pattern" element={<PrivateRoute allowedRoles={["Teacher"]}><ExamPattern /></PrivateRoute>} />
         <Route path="/question-pool" element={<PrivateRoute allowedRoles={["Teacher"]}><QuestionPool /></PrivateRoute>} />
         <Route path="/end-semester" element={<PrivateRoute allowedRoles={["Teacher"]}><EndSemSide/></PrivateRoute>} />
+        <Route path="/approvalend" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovals_EndSem /></PrivateRoute>} />
 
         {/* ✅ Redirect Unknown Routes */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
