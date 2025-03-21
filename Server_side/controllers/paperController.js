@@ -228,7 +228,7 @@ exports.getPendingPapers = async (req, res) => {
     }
     
     const papers = await Paper.find(query)
-      .populate('createdBy', 'name email')
+      .populate('createdBy', 'username fullName ')
       .sort({ createdAt: -1 });
     
     res.status(200).json({
