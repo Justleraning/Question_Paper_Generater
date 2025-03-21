@@ -147,8 +147,8 @@ const EndPapersSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ['pending', 'submitted', 'approved', 'rejected'],
-      default: 'pending'
+      enum: ['draft', 'submitted', 'approved', 'rejected', 'Draft', 'Submitted', 'Approved', 'Rejected'],
+      default: 'draft'
     },
     approvalHistory: [{
       status: String,
@@ -158,14 +158,16 @@ const EndPapersSchema = new mongoose.Schema({
       },
       timestamp: Date,
       comments: String
-    }]
+    }],
+    submittedAt: Date,
+    approvedAt: Date
   },
   
   // Paper status (separate from metadata.status)
   status: {
     type: String,
-    enum: ['Pending', 'Approved', 'Rejected', 'Published'],
-    default: 'Pending'
+    enum: ['Draft', 'Submitted', 'Approved', 'Rejected', 'Published'],
+    default: 'Draft'
   },
 
   // Review fields similar to Paper model
@@ -238,9 +240,17 @@ const EndPapersSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Pre-save middleware to update timestamps
+// Pre-save middleware to update timestamps and normalize status values
 EndPapersSchema.pre('save', function(next) {
+  // Update the timestamp
   this.metadata.updatedAt = Date.now();
+  
+  // Normalize status field cases when saving
+  if (this.status) {
+    // Ensure the root status field has proper case (first letter uppercase, rest lowercase)
+    this.status = this.status.charAt(0).toUpperCase() + this.status.slice(1).toLowerCase();
+  }
+  
   next();
 });
 

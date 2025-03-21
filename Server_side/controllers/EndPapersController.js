@@ -8,6 +8,25 @@ const isPlaceholderUser = (userId) => {
   return userId.toString() === '000000000000000000000000';
 };
 
+// Helper function to normalize status fields
+const normalizeStatusFields = (paperData) => {
+  // Clone the data to avoid modifying the original
+  const normalizedData = { ...paperData };
+  
+  // Handle root status field (capitalize first letter)
+  if (normalizedData.status) {
+    normalizedData.status = normalizedData.status.charAt(0).toUpperCase() + 
+                           normalizedData.status.slice(1).toLowerCase();
+  }
+  
+  // Handle metadata.status field (lowercase)
+  if (normalizedData.metadata && normalizedData.metadata.status) {
+    normalizedData.metadata.status = normalizedData.metadata.status.toLowerCase();
+  }
+  
+  return normalizedData;
+};
+
 // @desc    Get all end papers
 // @route   GET /api/endpapers
 // @access  Private with fallback
@@ -68,14 +87,17 @@ const getEndPaperById = asyncHandler(async (req, res) => {
 // @access  Private with fallback
 const createEndPaper = asyncHandler(async (req, res) => {
   try {
+    // Normalize the status fields in the request body
+    const normalizedData = normalizeStatusFields(req.body);
+    
     // Ensure metadata exists
-    if (!req.body.metadata) {
-      req.body.metadata = {};
+    if (!normalizedData.metadata) {
+      normalizedData.metadata = {};
     }
     
-    // Set status to Pending if not provided
-    if (!req.body.status) {
-      req.body.status = 'Pending';
+    // Set status to Draft if not provided
+    if (!normalizedData.status) {
+      normalizedData.status = 'Draft';
     }
     
     // Fallback to placeholder user ID if not present
@@ -87,8 +109,8 @@ const createEndPaper = asyncHandler(async (req, res) => {
     let creatorName = "Unknown"; // Default value
     if (req.user && req.user._id) {
       // First try to get the name from the request body
-      if (req.body.metadata && req.body.metadata.creatorName) {
-        creatorName = req.body.metadata.creatorName;
+      if (normalizedData.metadata && normalizedData.metadata.creatorName) {
+        creatorName = normalizedData.metadata.creatorName;
       } else {
         // If not in request, try to fetch from User model
         const user = await User.findById(req.user._id).select('name');
@@ -99,13 +121,15 @@ const createEndPaper = asyncHandler(async (req, res) => {
     }
     
     const paperData = {
-      ...req.body,
+      ...normalizedData,
       createdBy: createdBy, // Root level createdBy
       metadata: {
-        ...req.body.metadata,
+        ...normalizedData.metadata,
         creatorName: creatorName,
-        status: 'draft'
-      }
+        status: 'draft',
+        approvalHistory: [] // Initialize approval history
+      },
+      status: 'Draft' // Ensure root status is set correctly
     };
     
     const paper = await EndPapers.create(paperData);
@@ -126,204 +150,329 @@ const createEndPaper = asyncHandler(async (req, res) => {
 // @route   PUT /api/endpapers/:id
 // @access  Private with fallback
 const updateEndPaper = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  
-  // Find the paper
-  const paper = await EndPapers.findById(id);
-  
-  if (!paper) {
-    res.status(404);
-    throw new Error("Paper not found");
+  try {
+    const { id } = req.params;
+    
+    // Find the paper
+    const paper = await EndPapers.findById(id);
+    
+    if (!paper) {
+      res.status(404);
+      throw new Error("Paper not found");
+    }
+    
+    // Check if user is authorized to update
+    // Always allow if using placeholder user
+    const isUsingPlaceholder = isPlaceholderUser(req.user._id);
+    const isAuthorized = isUsingPlaceholder || 
+                         req.user._id.toString() === paper.createdBy.toString() || 
+                         req.user.role === 'admin';
+    
+    if (!isAuthorized) {
+      res.status(403);
+      throw new Error("Not authorized to update this paper");
+    }
+    
+    // Only allow updates if paper is in Draft or Rejected status (unless admin or placeholder)
+    if (paper.status !== 'Draft' && paper.status !== 'Rejected' && 
+        !isUsingPlaceholder && req.user.role !== 'admin') {
+      res.status(400);
+      throw new Error("Cannot update paper that is not in Draft or Rejected status");
+    }
+    
+    // Clone the request body to avoid modifying the original
+    const updateData = { ...req.body };
+    
+    // Extract metadata field to avoid conflicts
+    const metadataUpdate = updateData.metadata;
+    delete updateData.metadata;
+    
+    // Update standard fields first
+    let updatedPaper = await EndPapers.findByIdAndUpdate(
+      id, 
+      updateData,
+      { new: true, runValidators: true }
+    );
+    
+    // If there's metadata to update, handle it separately
+    if (metadataUpdate) {
+      // Handle metadata.status case normalization
+      if (metadataUpdate.status) {
+        metadataUpdate.status = metadataUpdate.status.toLowerCase();
+      }
+      
+      // Update metadata fields individually to avoid conflicts
+      updatedPaper = await EndPapers.findByIdAndUpdate(
+        id,
+        { 
+          $set: {
+            'metadata.status': metadataUpdate.status || updatedPaper.metadata.status,
+            'metadata.creatorName': metadataUpdate.creatorName || updatedPaper.metadata.creatorName,
+            'metadata.updatedAt': Date.now()
+          }
+        },
+        { new: true, runValidators: true }
+      );
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: "Paper updated successfully",
+      paper: updatedPaper
+    });
+  } catch (error) {
+    console.error("Error updating paper:", error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "An error occurred while updating the paper"
+    });
   }
-  
-  // Check if user is authorized to update
-  // Always allow if using placeholder user
-  const isUsingPlaceholder = isPlaceholderUser(req.user._id);
-  const isAuthorized = isUsingPlaceholder || 
-                       req.user._id.toString() === paper.createdBy.toString() || 
-                       req.user.role === 'admin';
-  
-  if (!isAuthorized) {
-    res.status(403);
-    throw new Error("Not authorized to update this paper");
-  }
-  
-  // Only allow updates if paper is in draft status (unless admin or placeholder)
-  if (paper.metadata.status !== 'draft' && !isUsingPlaceholder && req.user.role !== 'admin') {
-    res.status(400);
-    throw new Error("Cannot update paper that is not in draft status");
-  }
-  
-  // Update the paper
-  const updatedPaper = await EndPapers.findByIdAndUpdate(
-    id, 
-    { 
-      ...req.body,
-      'metadata.updatedAt': Date.now()
-    },
-    { new: true, runValidators: true }
-  );
-  
-  res.status(200).json({
-    success: true,
-    message: "Paper updated successfully",
-    paper: updatedPaper
-  });
 });
 
 // @desc    Delete an end paper
 // @route   DELETE /api/endpapers/:id
 // @access  Private with fallback
 const deleteEndPaper = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  
-  // Find the paper
-  const paper = await EndPapers.findById(id);
-  
-  if (!paper) {
-    res.status(404);
-    throw new Error("Paper not found");
+  try {
+    const { id } = req.params;
+    
+    // Find the paper
+    const paper = await EndPapers.findById(id);
+    
+    if (!paper) {
+      return res.status(404).json({
+        success: false,
+        message: "Paper not found"
+      });
+    }
+    
+    // Check if user is authorized to delete
+    // Always allow if using placeholder user
+    const isUsingPlaceholder = isPlaceholderUser(req.user._id);
+    const isAuthorized = isUsingPlaceholder || 
+                         req.user._id.toString() === paper.createdBy.toString() || 
+                         req.user.role === 'admin';
+    
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this paper"
+      });
+    }
+    
+    // Only allow deletion if paper is in Draft or Rejected status (unless admin or placeholder)
+    // Or modify it to include more statuses, for example:
+if (paper.status !== 'Draft' && paper.status !== 'Rejected' && paper.status !== 'Approved' && 
+  !isUsingPlaceholder && req.user.role !== 'admin') {
+return res.status(400).json({
+  success: false,
+  message: "Cannot delete paper that is in Submitted or Published status"
+});
+}
+    
+    // Use deleteOne instead of remove (which is deprecated)
+    await EndPapers.deleteOne({ _id: id });
+    
+    return res.status(200).json({
+      success: true,
+      message: "Paper deleted successfully"
+    });
+  } catch (error) {
+    console.error("Error deleting paper:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete paper: " + error.message
+    });
   }
-  
-  // Check if user is authorized to delete
-  // Always allow if using placeholder user
-  const isUsingPlaceholder = isPlaceholderUser(req.user._id);
-  const isAuthorized = isUsingPlaceholder || 
-                       req.user._id.toString() === paper.createdBy.toString() || 
-                       req.user.role === 'admin';
-  
-  if (!isAuthorized) {
-    res.status(403);
-    throw new Error("Not authorized to delete this paper");
-  }
-  
-  // Only allow deletion if paper is in draft status (unless admin or placeholder)
-  if (paper.metadata.status !== 'draft' && !isUsingPlaceholder && req.user.role !== 'admin') {
-    res.status(400);
-    throw new Error("Cannot delete paper that is not in draft status");
-  }
-  
-  // Use deleteOne instead of remove (which is deprecated)
-  await EndPapers.deleteOne({ _id: id });
-  
-  res.status(200).json({
-    success: true,
-    message: "Paper deleted successfully"
-  });
 });
 
 // @desc    Send paper for approval
 // @route   POST /api/endpapers/:id/approval
 // @access  Private with fallback
 const sendForApproval = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  
-  // Find the paper
-  const paper = await EndPapers.findById(id);
-  
-  if (!paper) {
-    res.status(404);
-    throw new Error("Paper not found");
-  }
-  
-  // Check if user is authorized
-  // Always allow if using placeholder user
-  const isUsingPlaceholder = isPlaceholderUser(req.user._id);
-  const isAuthorized = isUsingPlaceholder || 
+  try {
+    console.log("=== BACKEND: SEND FOR APPROVAL - START ===");
+    const { id } = req.params;
+    console.log("Paper ID:", id);
+    
+    // Find the paper
+    const paper = await EndPapers.findById(id);
+    
+    if (!paper) {
+      res.status(404);
+      throw new Error("Paper not found");
+    }
+    
+    console.log("Paper found:", {
+      id: paper._id,
+      status: paper.status,
+      metadataStatus: paper.metadata?.status
+    });
+    
+    // Check if user is authorized
+    const isUsingPlaceholder = isPlaceholderUser(req.user._id);
+    const isAuthorized = isUsingPlaceholder || 
                        req.user._id.toString() === paper.createdBy.toString() ||
                        req.user.role === 'admin';
-  
-  if (!isAuthorized) {
-    res.status(403);
-    throw new Error("Not authorized to send this paper for approval");
+    
+    if (!isAuthorized) {
+      res.status(403);
+      throw new Error("Not authorized to send this paper for approval");
+    }
+    
+    // Make status check case-insensitive
+    // Convert paper status to lowercase for comparison
+    const currentStatus = paper.status.toLowerCase();
+    
+    if (currentStatus !== 'draft' && currentStatus !== 'rejected') {
+      console.error(`Cannot submit paper with status: ${paper.status}`);
+      res.status(400);
+      throw new Error(`Only papers in draft or rejected status can be submitted for approval. Current status: ${paper.status}`);
+    }
+    
+    // Update paper statuses with the CORRECT CASE for each field:
+    // - metadata.status should be lowercase
+    // - status should be uppercase
+    paper.metadata.status = 'submitted';  // lowercase for metadata.status
+    paper.status = 'Submitted';           // uppercase for main status
+    
+    // Add entry to approval history
+    if (!paper.metadata.approvalHistory) {
+      paper.metadata.approvalHistory = [];
+    }
+    
+    paper.metadata.approvalHistory.push({
+      status: 'submitted',
+      approvedBy: req.user._id,
+      timestamp: Date.now(),
+      comments: req.body.comments || 'Submitted for approval'
+    });
+    
+    // Set submittedAt timestamp if not set
+    if (!paper.metadata.submittedAt) {
+      paper.metadata.submittedAt = Date.now();
+    }
+    
+    // Clear any previous rejection reasons
+    paper.reviewComments = '';
+    paper.reviewedBy = null;
+    paper.reviewedOn = null;
+    
+    console.log("Saving paper with updated status:", {
+      status: paper.status,
+      metadataStatus: paper.metadata.status
+    });
+    
+    await paper.save();
+    
+    console.log("Paper successfully updated with new status:", paper.status);
+    
+    res.status(200).json({
+      success: true,
+      message: "Paper submitted for approval successfully",
+      paper: paper
+    });
+  } catch (error) {
+    console.error("=== BACKEND: SEND FOR APPROVAL - ERROR ===", error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to submit paper for approval"
+    });
   }
-  
-  // Only allow submission if paper is in draft status
-  if (paper.metadata.status !== 'draft') {
-    res.status(400);
-    throw new Error("This paper has already been submitted for approval");
-  }
-  
-  // Update paper status to 'submitted'
-  paper.metadata.status = 'submitted';
-  
-  // Also update the main status field
-  paper.status = 'Pending';
-  
-  paper.metadata.approvalHistory.push({
-    status: 'submitted',
-    approvedBy: req.user._id,
-    timestamp: Date.now(),
-    comments: req.body.comments || 'Submitted for approval'
-  });
-  
-  await paper.save();
-  
-  res.status(200).json({
-    success: true,
-    message: "Paper submitted for approval successfully",
-    paper: paper
-  });
 });
 
 // @desc    Process paper approval (approve/reject)
 // @route   PUT /api/endpapers/:id/approval
 // @access  Private (Admin/Approver only) with fallback
 const processPaperApproval = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { status, comments } = req.body;
-  
-  // Validate approval status
-  if (!['approved', 'rejected'].includes(status)) {
-    res.status(400);
-    throw new Error("Invalid approval status");
+  try {
+    const { id } = req.params;
+    const { status, comments } = req.body;
+    
+    // Validate approval status
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid approval status"
+      });
+    }
+    
+    // Check if user has approval rights (always allow if placeholder)
+    const isUsingPlaceholder = isPlaceholderUser(req.user._id);
+    if (!isUsingPlaceholder && !['admin', 'approver', 'Admin', 'SuperAdmin'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to approve papers"
+      });
+    }
+    
+    // Find the paper
+    const paper = await EndPapers.findById(id);
+    
+    if (!paper) {
+      return res.status(404).json({
+        success: false,
+        message: "Paper not found"
+      });
+    }
+    
+    // Only process papers in 'Submitted' status (case-insensitive)
+    const currentStatus = paper.status.toLowerCase();
+    if (!isUsingPlaceholder && currentStatus !== 'submitted') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot process approval for a paper that is ${paper.status}`
+      });
+    }
+    
+    // Update metadata.status (lowercase)
+    paper.metadata.status = status; // using lowercase from request
+    
+    // Update main status (uppercase first letter)
+    const capitalizedStatus = status.charAt(0).toUpperCase() + status.slice(1);
+    paper.status = capitalizedStatus;
+    
+    // Add entry to approval history
+    if (!paper.metadata.approvalHistory) {
+      paper.metadata.approvalHistory = [];
+    }
+    
+    paper.metadata.approvalHistory.push({
+      status,
+      approvedBy: req.user._id,
+      timestamp: Date.now(),
+      comments: comments || `Paper has been ${status}`
+    });
+    
+    // Update review fields
+    paper.reviewComments = comments || '';
+    paper.reviewedBy = req.user._id;
+    paper.reviewedOn = new Date();
+    
+    // Set approval timestamp if not already set and the paper is approved
+    if (status === 'approved' && !paper.metadata.approvedAt) {
+      paper.metadata.approvedAt = Date.now();
+    }
+    
+    console.log("Saving paper with updated status:", {
+      status: paper.status,
+      metadataStatus: paper.metadata.status
+    });
+    
+    await paper.save();
+    
+    return res.status(200).json({
+      success: true,
+      message: `Paper ${status} successfully`,
+      paper: paper
+    });
+  } catch (error) {
+    console.error("Error processing paper approval:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to process paper approval: " + error.message
+    });
   }
-  
-  // Check if user has approval rights (always allow if placeholder)
-  const isUsingPlaceholder = isPlaceholderUser(req.user._id);
-  if (!isUsingPlaceholder && !['admin', 'approver'].includes(req.user.role)) {
-    res.status(403);
-    throw new Error("Not authorized to approve papers");
-  }
-  
-  // Find the paper
-  const paper = await EndPapers.findById(id);
-  
-  if (!paper) {
-    res.status(404);
-    throw new Error("Paper not found");
-  }
-  
-  // Only process papers in 'submitted' status (unless using placeholder)
-  if (!isUsingPlaceholder && paper.metadata.status !== 'submitted') {
-    res.status(400);
-    throw new Error(`Cannot process approval for a paper that is ${paper.metadata.status}`);
-  }
-  
-  // Update paper status
-  paper.metadata.status = status;
-  paper.metadata.approvalHistory.push({
-    status: status,
-    approvedBy: req.user._id,
-    timestamp: Date.now(),
-    comments: comments || `Paper has been ${status}`
-  });
-  
-  // If approved, set to published
-  if (status === 'approved') {
-    paper.metadata.status = 'published';
-    paper.status = 'Approved';
-  } else if (status === 'rejected') {
-    paper.status = 'Rejected';
-  }
-  
-  await paper.save();
-  
-  res.status(200).json({
-    success: true,
-    message: `Paper ${status} successfully`,
-    paper: paper
-  });
 });
 
 // @desc    Update a specific question in a paper
@@ -338,8 +487,10 @@ const updatePaperQuestion = asyncHandler(async (req, res) => {
     const paper = await EndPapers.findById(id);
     
     if (!paper) {
-      res.status(404);
-      throw new Error("Paper not found");
+      return res.status(404).json({
+        success: false,
+        message: "Paper not found"
+      });
     }
     
     // Check if user is authorized
@@ -349,16 +500,29 @@ const updatePaperQuestion = asyncHandler(async (req, res) => {
                        req.user.role === 'admin';
     
     if (!isAuthorized) {
-      res.status(403);
-      throw new Error("Not authorized to update this paper's questions");
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update this paper's questions"
+      });
+    }
+    
+    // Only allow updates if paper is in Draft or Rejected status (unless admin or placeholder)
+    if (paper.status !== 'Draft' && paper.status !== 'Rejected' && 
+        !isUsingPlaceholder && req.user.role !== 'admin') {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot update questions for a paper that is not in Draft or Rejected status"
+      });
     }
     
     // Find the part
     const partIndex = paper.paperStructure.parts.findIndex(p => p.partId === partId);
     
     if (partIndex === -1) {
-      res.status(404);
-      throw new Error(`Part ${partId} not found`);
+      return res.status(404).json({
+        success: false,
+        message: `Part ${partId} not found`
+      });
     }
     
     // Find the question
@@ -367,8 +531,10 @@ const updatePaperQuestion = asyncHandler(async (req, res) => {
     );
     
     if (questionIndex === -1) {
-      res.status(404);
-      throw new Error(`Question ${questionId} not found in part ${partId}`);
+      return res.status(404).json({
+        success: false,
+        message: `Question ${questionId} not found in part ${partId}`
+      });
     }
     
     // Update question fields
@@ -388,19 +554,54 @@ const updatePaperQuestion = asyncHandler(async (req, res) => {
       paper.paperStructure.parts[partIndex].questions[questionIndex].marks = marks;
     }
     
+    // Update the timestamps
+    paper.metadata.updatedAt = Date.now();
+    
     // Save changes
     await paper.save();
     
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Question updated successfully",
       question: paper.paperStructure.parts[partIndex].questions[questionIndex]
     });
   } catch (error) {
     console.error("Error updating question:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || "An error occurred while updating the question"
+    });
+  }
+});
+
+// @desc    Get papers pending approval (for admins)
+// @route   GET /api/endpapers/approvals
+// @access  Private (Admin/Approver only)
+const getPendingApprovals = asyncHandler(async (req, res) => {
+  try {
+    // Check if user has approval rights (always allow if placeholder)
+    const isUsingPlaceholder = isPlaceholderUser(req.user._id);
+    if (!isUsingPlaceholder && !['admin', 'approver', 'Admin', 'SuperAdmin'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to view pending approvals"
+      });
+    }
+    
+    // Get all papers with status 'Submitted'
+    const pendingPapers = await EndPapers.find({ status: 'Submitted' })
+      .sort({ "metadata.submittedAt": -1 });
+      
+    return res.status(200).json({
+      success: true,
+      count: pendingPapers.length,
+      papers: pendingPapers
+    });
+  } catch (error) {
+    console.error("Error getting pending approvals:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get pending approvals: " + error.message
     });
   }
 });
@@ -413,5 +614,6 @@ module.exports = {
   deleteEndPaper,
   sendForApproval,
   processPaperApproval,
-  updatePaperQuestion
+  updatePaperQuestion,
+  getPendingApprovals
 };

@@ -75,32 +75,45 @@ const endPapersAuth = async (req, res, next) => {
  * Middleware to ensure teachers can only access their own papers
  */
 const teacherOwnPapersOnly = async (req, res, next) => {
-  // Skip for admins or if user not authenticated
-  if (!req.user || req.user.role === 'admin' || req.user.role === 'SuperAdmin') {
-    return next();
-  }
-  
-  // For GET, PUT, DELETE requests with a specific paper ID
-  if ((req.method === 'GET' || req.method === 'PUT' || req.method === 'DELETE') && req.params.id) {
-    try {
-      const EndPapers = require('../models/EndPapersModel');
-      const paper = await EndPapers.findById(req.params.id);
-      
-      if (!paper) {
-        return res.status(404).json({ message: 'Paper not found' });
-      }
-      
-      // Check if the user is the creator - now using root level createdBy
-      if (paper.createdBy.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Not authorized to access this paper' });
-      }
-    } catch (error) {
-      console.error('Error in teacherOwnPapersOnly middleware:', error);
-      return res.status(500).json({ message: 'Server error' });
+  try {
+    // Skip for admins or if user not authenticated
+    if (!req.user || req.user.role === 'admin' || req.user.role === 'SuperAdmin') {
+      return next();
     }
+    
+    // For GET, PUT, DELETE requests with a specific paper ID
+    if ((req.method === 'GET' || req.method === 'PUT' || req.method === 'DELETE') && req.params.id) {
+      try {
+        const EndPapers = require('../models/EndPapersModel');
+        const paper = await EndPapers.findById(req.params.id);
+        
+        if (!paper) {
+          return res.status(404).json({ 
+            success: false, 
+            message: 'Paper not found' 
+          });
+        }
+        
+        // Check if the user is the creator - now using root level createdBy
+        if (paper.createdBy.toString() !== req.user._id.toString()) {
+          return res.status(403).json({ 
+            success: false, 
+            message: 'Not authorized to access this paper' 
+          });
+        }
+      } catch (error) {
+        console.error('Error in teacherOwnPapersOnly middleware:', error);
+        // Pass to next handler instead of directly returning response
+        return next(error);
+      }
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Unexpected error in teacherOwnPapersOnly middleware:', error);
+    return next(error);
   }
+}; // <-- Note the closing curly brace and semicolon here
   
-  next();
-};
-
 module.exports = { endPapersAuth, teacherOwnPapersOnly };
+  

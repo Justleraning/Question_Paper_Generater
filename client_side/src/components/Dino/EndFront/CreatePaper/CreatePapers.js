@@ -765,10 +765,10 @@ const CreatePapers = () => {
         // Add creatorName to metadata
         metadata: {
           creatorName: creatorName,
-          status: 'draft'
+          status: 'Draft'
         },
-        // Set status to Pending
-        status: 'Pending',
+        // Set status to Draft
+        status: 'Draft',
         
         // Set up the paper structure with parts
         paperStructure: {
