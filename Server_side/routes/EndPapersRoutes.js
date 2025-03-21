@@ -8,7 +8,8 @@ const {
   deleteEndPaper,
   sendForApproval,
   processPaperApproval,
-  updatePaperQuestion
+  updatePaperQuestion,
+  getPendingApprovals
 } = require("../controllers/EndPapersController");
 const { protect, admin } = require("../middlewares/authMiddleware");
 const { endPapersAuth, teacherOwnPapersOnly } = require("../middlewares/EndPapersMiddleware");
@@ -19,10 +20,14 @@ router.route("/")
   .get(endPapersAuth, getAllEndPapers)
   .post(endPapersAuth, createEndPaper);
 
+// Add the missing route for pending approvals
+router.route("/approvals")
+  .get(endPapersAuth, getPendingApprovals);  // This route should NOT use teacherOwnPapersOnly
+
 router.route("/:id")
   .get(endPapersAuth, teacherOwnPapersOnly, getEndPaperById)
   .put(endPapersAuth, teacherOwnPapersOnly, updateEndPaper)
-  .delete(endPapersAuth, teacherOwnPapersOnly, deleteEndPaper);
+  .delete(endPapersAuth, deleteEndPaper); // Removed teacherOwnPapersOnly from delete route
 
 // New route for inline question editing
 router.route("/:id/parts/:partId/questions/:questionId")

@@ -1,14 +1,68 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Download, Edit, Trash2, Eye, Send, Calendar, AlertTriangle } from 'lucide-react';
+import { FileText, Download, Edit, Trash2, Eye, Send, Calendar, AlertTriangle, ArrowLeft, Printer } from 'lucide-react';
 import axios from 'axios';
 
+// Helper function to check if a paper can be submitted for approval
+const canSubmitForApproval = (paper) => {
+  console.log("Checking if paper can be submitted:", paper);
+  
+  // Check if paper exists
+  if (!paper || !paper._id) {
+    console.log("Paper is missing or has no ID");
+    return { 
+      canSubmit: false, 
+      reason: "Invalid paper data" 
+    };
+  }
+  
+  // Check paper status - using lowercase for case-insensitive comparison
+  const status = (paper.status || '').toLowerCase();
+  if (status !== 'draft' && status !== 'rejected' && status !== 'submitted') {
+    console.log(`Paper has invalid status: ${paper.status}`);
+    
+    // Special message if paper is already submitted
+    if (status === 'submitted') {
+      return {
+        canSubmit: false,
+        reason: "This paper has already been submitted for approval."
+      };
+    }
+    
+    return { 
+      canSubmit: false, 
+      reason: `Cannot submit papers with status '${paper.status}'. Only papers in draft or rejected status can be submitted.` 
+    };
+  }
+  
+  // If status is already "submitted", prevent resubmission
+  if (status === 'submitted') {
+    console.log("Paper is already submitted");
+    return {
+      canSubmit: false,
+      reason: "This paper has already been submitted for approval."
+    };
+  }
+  
+  // If we made it here, paper can be submitted
+  return { 
+    canSubmit: true, 
+    reason: null 
+  };
+};
+
+// Main EndSemSide Component
 export function EndSemSide() {
   const [papers, setPapers] = useState([]);
   const [filteredPapers, setFilteredPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  
+  // State for view mode - Using the same approach as PaperApprovals_EndSem
+  const [previewingPaper, setPreviewingPaper] = useState(null);
+  const [showPaper, setShowPaper] = useState(false);
+  const componentRef = useRef();
 
   // State for filters
   const [filters, setFilters] = useState({
@@ -82,23 +136,29 @@ export function EndSemSide() {
     });
   };
 
-  // View/Preview Paper - No buttons should be displayed (pure view mode)
+  // View/Preview Paper - Using the same approach as PaperApprovals_EndSem
   const viewPaper = (paper) => {
-    navigate('/create-papers', { 
-      state: { 
-        paperDetails: paper,
-        previewMode: true,
-        viewOnly: true,
-        disableEditing: true,
-        removeAllButtons: true,
-        removeReplaceButtons: true,
-        hideUIControls: true,        // Add this flag to hide all UI controls
-        cleanViewMode: true,         // Add this flag for a clean paper view
-        hideNavigation: true,        // Hide navigation elements
-        hideActionBar: true,         // Hide action bar
-        paperContentOnly: true       // Only show the paper content
-      } 
-    });
+    try {
+      console.log("View paper requested for:", paper._id);
+      setPreviewingPaper(paper);
+      setShowPaper(true);
+      // Scroll to top when viewing paper
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      console.error("Error in viewPaper function:", error);
+      alert("An error occurred while trying to view the paper. Please try again.");
+    }
+  };
+
+  // Exit preview mode
+  const exitPreview = () => {
+    setPreviewingPaper(null);
+    setShowPaper(false);
+  };
+
+  // Print paper
+  const printPaper = () => {
+    window.print();
   };
 
   // Edit Paper - No replace buttons
@@ -497,46 +557,52 @@ export function EndSemSide() {
     }
   };
 
-  // Send for Approval - Directly updates the database with Submitted status
-  // Replace your current sendForApproval function with this simplified version:
-const sendForApproval = async (paper) => {
-  try {
-    // Call the dedicated approval endpoint directly
-    const approvalResponse = await axios.post(`/api/endpapers/${paper._id}/approval`, 
-      {
-        comments: 'Submitted for approval'
-      }, 
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
+  // Send for approval function
+  const sendForApproval = async (paper) => {
+    try {
+      console.log("=== SEND FOR APPROVAL - START ===");
+      
+      // Check if the paper status is already "Submitted"
+      if (paper.status === 'Submitted') {
+        alert("This paper has already been submitted for approval.");
+        return;
       }
-    );
-
-    if (approvalResponse.data.success) {
-      // Update frontend state to match the new status
-      const updatedPapers = papers.map(p => 
-        p._id === paper._id 
-          ? { 
-              ...p, 
-              status: 'Submitted',
-              metadata: { 
-                ...p.metadata, 
-                status: 'submitted'
-              },
-              reviewComments: ''
-            } 
-          : p
+      
+      // Check if the paper can be submitted for approval
+      const { canSubmit, reason } = canSubmitForApproval(paper);
+      
+      if (!canSubmit) {
+        alert(reason);
+        return;
+      }
+      
+      console.log("Sending approval request to backend...");
+      
+      // Direct API URL from console logs
+      const API_URL = "/api";
+      
+      // Call the dedicated approval endpoint
+      const approvalResponse = await axios.post(`${API_URL}/endpapers/${paper._id}/approval`, 
+        {
+          comments: 'Submitted for approval'
+        }, 
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        }
       );
 
-      setPapers(updatedPapers);
-      setFilteredPapers(
-        filteredPapers.map(p => 
+      console.log("Response received:", approvalResponse.data);
+
+      if (approvalResponse.data.success) {
+        // Update frontend state to match the new status
+        const updatedPapers = papers.map(p => 
           p._id === paper._id 
             ? { 
                 ...p, 
-                status: 'Submitted',
+                status: 'Submitted',  // Use consistent capitalization with other parts of the app
                 metadata: { 
                   ...p.metadata, 
                   status: 'submitted'
@@ -544,34 +610,514 @@ const sendForApproval = async (paper) => {
                 reviewComments: ''
               } 
             : p
-        )
-      );
+        );
 
-      alert('Paper sent for approval successfully');
-    } else {
-      alert('Error: ' + (approvalResponse.data.message || 'Failed to send paper for approval'));
+        setPapers(updatedPapers);
+        setFilteredPapers(
+          filteredPapers.map(p => 
+            p._id === paper._id 
+              ? { 
+                  ...p, 
+                  status: 'Submitted',
+                  metadata: { 
+                    ...p.metadata, 
+                    status: 'submitted'
+                  },
+                  reviewComments: ''
+                } 
+              : p
+          )
+        );
+
+        alert('Paper sent for approval successfully. Please check the approvals page.');
+      } else {
+        console.error("API reported failure:", approvalResponse.data);
+        alert('Error: ' + (approvalResponse.data.message || 'Failed to send paper for approval'));
+      }
+    } catch (error) {
+      console.error('=== ERROR SENDING PAPER FOR APPROVAL ===');
+      console.error('Error object:', error);
+      
+      let errorMessage = 'Failed to send paper for approval';
+      if (error.response && error.response.data) {
+        if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Failed to send paper for approval: ${errorMessage}`);
     }
-  } catch (error) {
-    console.error('Error sending paper for approval:', error);
-    alert('Failed to send paper for approval: ' + (error.response?.data?.message || error.message));
-  }
-};
+  };
 
   // Status color mapping - Updated to include Submitted status
   const getStatusColor = (status) => {
     switch(status) {
-      case 'Pending': return 'bg-blue-100 text-blue-800';       // Pending (blue)
+      case 'Draft': return 'bg-blue-100 text-blue-800';       // Draft (blue)
+      case 'draft': return 'bg-blue-100 text-blue-800';       // draft (blue)
       case 'Submitted': return 'bg-yellow-100 text-yellow-800'; // Submitted papers (yellow)
-      case 'Approved': return 'bg-green-100 text-green-800';    // Approved papers (green)
-      case 'Rejected': return 'bg-red-100 text-red-800';        // Rejected papers (red)
-      // Keep supporting metadata.status values for backward compatibility
-      case 'pending': return 'bg-gray-100 text-gray-800';         // Draft papers (gray)
       case 'submitted': return 'bg-yellow-100 text-yellow-800'; // Same as 'Submitted'
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
+      case 'Approved': return 'bg-green-100 text-green-800';    // Approved papers (green)
+      case 'approved': return 'bg-green-100 text-green-800';    // Same as 'Approved'
+      case 'Rejected': return 'bg-red-100 text-red-800';        // Rejected papers (red)
+      case 'rejected': return 'bg-red-100 text-red-800';        // Same as 'Rejected'
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Add CSS styles for paper preview - Using the same CSS as PaperApprovals_EndSem
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      .approval-container {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+
+      .preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .preview-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .preview-button {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 8px 16px;
+        background-color: #f3f4f6;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background-color 0.2s;
+      }
+
+      .preview-button:hover {
+        background-color: #e5e7eb;
+      }
+
+      .din8-paper-container {
+        position: relative;
+      }
+      
+      .din8-a4-paper {
+        background-color: white;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin: 20px auto;
+        position: relative;
+        width: 210mm;
+        height: auto;
+        min-height: auto;
+      }
+      
+      .din8-a4-page {
+        width: 210mm;
+        height: auto;
+        min-height: auto;
+        padding: 20mm 15mm 15mm 15mm;
+        position: relative;
+        box-sizing: border-box;
+        overflow: visible;
+      }
+      
+      .din8-university-header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      
+      .din8-header-flex {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .din8-university-logo {
+        width: 130px;
+        height: auto;
+        margin-right: 15px;
+      }
+      
+      .din8-header-text {
+        text-align: center;
+      }
+      
+      .din8-university-name {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      
+      .din8-course-details {
+        font-size: 16px;
+        margin-bottom: 3px;
+      }
+      
+      .din8-paper-title {
+        font-size: 14px;
+        font-weight: bold;
+        margin: 8px 0;
+      }
+      
+      .din8-registration-box {
+        border: 1px solid #000;
+        padding: 5px;
+        position: absolute;
+        top: 5mm;
+        right: 5mm;
+        width: 50mm;
+        font-size: 12px;
+      }
+      
+      .din8-exam-info {
+        display: flex;
+        justify-content: space-between;
+        margin: 15px 0;
+        font-size: 16px;
+      }
+      
+      .din8-paper-info {
+        text-align: center;
+        margin: 10px 0;
+        font-weight: normal;
+      }
+      
+      .din8-part-title {
+        font-size: 14px;
+        font-weight: bold;
+        margin: 15px 0 5px 0;
+      }
+      
+      .din8-part-instructions {
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+      
+      .din8-question-list {
+        margin-bottom: 20px;
+      }
+      
+      .din8-question {
+        display: flex;
+        margin-bottom: 15px;
+        align-items: flex-start;
+      }
+      
+      .din8-question-number {
+        margin-right: 10px;
+        font-weight: bold;
+        min-width: 20px;
+      }
+      
+      .din8-question-text {
+        flex: 1;
+      }
+      
+      .din8-question-image-container {
+        margin-top: 10px;
+        margin-bottom: 10px;
+        text-align: center;
+        position: relative;
+        min-height: 50px;
+      }
+      
+      .din8-question-image {
+        max-width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      
+      .din8-no-questions {
+        padding: 10px;
+        margin: 10px 0;
+        font-style: italic;
+        color: #888;
+        text-align: center;
+        background-color: #f8f8f8;
+        border-radius: 4px;
+        border: 1px dashed #ccc;
+      }
+
+      .din8-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        color: white;
+        font-size: 18px;
+      }
+
+      .din8-loading-spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 4px solid white;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+        margin-bottom: 30px;
+      }
+
+      @media print {
+        .preview-header, .preview-actions, .action-buttons {
+          display: none;
+        }
+        
+        .din8-a4-paper {
+          box-shadow: none;
+          border: none;
+        }
+
+        body {
+          margin: 0;
+          padding: 0;
+          background: white;
+        }
+      }
+    `;
+    
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
+  // If we're previewing a paper, render the preview
+  if (previewingPaper && showPaper) {
+    const { university, examDetails, paperStructure } = previewingPaper;
+    
+    // Transform paperStructure to questions format needed by the paper viewer
+    const questions = {
+      partA: [],
+      partB: [],
+      partC: []
+    };
+
+    // Process each part's questions
+    paperStructure.parts.forEach(part => {
+      if (part.partId === 'A') {
+        questions.partA = part.questions.map(q => ({
+          _id: q.questionId,
+          question: q.questionText,
+          questionNumber: q.questionNumber,
+          hasImage: q.hasImage,
+          imageUrl: q.imageUrl,
+          unit: q.unit,
+          bloomLevel: q.bloomLevel,
+          marks: q.marks
+        }));
+      } else if (part.partId === 'B') {
+        questions.partB = part.questions.map(q => ({
+          _id: q.questionId,
+          question: q.questionText,
+          questionNumber: q.questionNumber,
+          hasImage: q.hasImage,
+          imageUrl: q.imageUrl,
+          unit: q.unit,
+          bloomLevel: q.bloomLevel,
+          marks: q.marks
+        }));
+      } else if (part.partId === 'C') {
+        questions.partC = part.questions.map(q => ({
+          _id: q.questionId,
+          question: q.questionText,
+          questionNumber: q.questionNumber,
+          hasImage: q.hasImage,
+          imageUrl: q.imageUrl,
+          unit: q.unit,
+          bloomLevel: q.bloomLevel,
+          marks: q.marks
+        }));
+      }
+    });
+
+    // Paper details
+    const paperDetails = {
+      university: university?.name || "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
+      maxMarks: examDetails?.maxMarks || "60",
+      duration: examDetails?.duration || "2"
+    };
+
+    return (
+      <div className="approval-container">
+        <div className="preview-header">
+          <h1 className="text-2xl font-bold">Paper Preview: {examDetails?.subjectCode} - {examDetails?.subjectName}</h1>
+          <div className="preview-actions">
+            <button className="preview-button" onClick={exitPreview}>
+              <ArrowLeft size={16} /> Back to Papers
+            </button>
+          </div>
+        </div>
+
+        {showPaper && (
+          <div className="din8-paper-container" id="din8-paper-container">
+            <div className="din8-a4-paper" ref={componentRef}>
+              {/* Page content with auto height instead of fixed height */}
+              <div className="din8-a4-page">
+                <div className="din8-university-header">
+                  <div className="din8-header-flex">
+                    <img 
+                      src={university?.logoUrl || "/SJU.png"} 
+                      alt="St. Joseph's University" 
+                      className="din8-university-logo"
+                      crossOrigin="anonymous"
+                    />
+                    <div className="din8-header-text">
+                      <div className="din8-university-name">{paperDetails.university}</div>
+                      <div className="din8-course-details">{examDetails.course} - {examDetails.semester} SEMESTER</div>
+                      <div className="din8-course-details">SEMESTER EXAMINATION: {examDetails.semesterExamination}</div>
+                      <div className="din8-course-details">(Examination conducted in {examDetails.examinationConducted})</div>
+                      <div className="din8-paper-title">{examDetails.subjectCode}: {examDetails.subjectName}</div>
+                      <div className="din8-course-details">( For current batch students only )</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="din8-registration-box">
+                  <div>Registration Number:</div>
+                  <div>Date:</div>
+                </div>
+                
+                <div className="din8-exam-info">
+                  <div>Time: {examDetails.examTimings}</div>
+                  <div>Max Marks: {paperDetails.maxMarks}</div>
+                </div>
+                
+                <div className="din8-course-details din8-paper-info">
+                  This paper contains {paperStructure.totalPages || 2} printed pages and {paperStructure.parts.length} parts
+                </div>
+                
+                {/* Part A */}
+                <div className="din8-part-title">PART-A</div>
+                <div className="din8-part-instructions">
+                  <div>{paperStructure.parts.find(p => p.partId === 'A')?.instructions[0] || "Answer all FIVE questions"}</div>
+                  <div>{paperStructure.parts.find(p => p.partId === 'A')?.instructions[1] || "(2 X 5 = 10)"}</div>
+                </div>
+                
+                <div className="din8-question-list">
+                  {questions.partA.length > 0 ? (
+                    questions.partA.map((question, index) => (
+                      <div className="din8-question" id={question._id} key={question._id || index}>
+                        <span className="din8-question-number">{question.questionNumber}.</span>
+                        <span className="din8-question-text">{question.question}</span>
+                        
+                        {/* Show image if available */}
+                        {question.hasImage && question.imageUrl && (
+                          <div className="din8-question-image-container">
+                            <img 
+                              src={question.imageUrl} 
+                              alt={`Image for question ${question.questionNumber}`}
+                              className="din8-question-image"
+                              loading="eager"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="din8-no-questions">Not enough questions available for Part A</div>
+                  )}
+                </div>
+                
+                {/* Part B */}
+                <div className="din8-part-title">PART-B</div>
+                <div className="din8-part-instructions">
+                  <div>{paperStructure.parts.find(p => p.partId === 'B')?.instructions[0] || "Answer any FIVE questions"}</div>
+                  <div>{paperStructure.parts.find(p => p.partId === 'B')?.instructions[1] || "(4 X 5 = 20)"}</div>
+                </div>
+                
+                <div className="din8-question-list">
+                  {questions.partB.length > 0 ? (
+                    questions.partB.map((question, index) => (
+                      <div className="din8-question" id={question._id} key={question._id || index}>
+                        <span className="din8-question-number">{question.questionNumber}.</span>
+                        <span className="din8-question-text">{question.question}</span>
+                        
+                        {/* Show image if available */}
+                        {question.hasImage && question.imageUrl && (
+                          <div className="din8-question-image-container">
+                            <img 
+                              src={question.imageUrl} 
+                              alt={`Image for question ${question.questionNumber}`}
+                              className="din8-question-image"
+                              loading="eager"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="din8-no-questions">Not enough questions available for Part B</div>
+                  )}
+                </div>
+                
+                {/* Part C */}
+                <div className="din8-part-title">PART-C</div>
+                <div className="din8-part-instructions">
+                  <div>{paperStructure.parts.find(p => p.partId === 'C')?.instructions[0] || "Answer any THREE questions"}</div>
+                  <div>{paperStructure.parts.find(p => p.partId === 'C')?.instructions[1] || "(10 X 3 = 30)"}</div>
+                </div>
+                
+                <div className="din8-question-list">
+                  {questions.partC.length > 0 ? (
+                    questions.partC.map((question, index) => (
+                      <div className="din8-question" id={question._id} key={question._id || index}>
+                        <span className="din8-question-number">{question.questionNumber}.</span>
+                        <span className="din8-question-text">{question.question}</span>
+                        
+                        {/* Show image if available */}
+                        {question.hasImage && question.imageUrl && (
+                          <div className="din8-question-image-container">
+                            <img 
+                              src={question.imageUrl} 
+                              alt={`Image for question ${question.questionNumber}`}
+                              className="din8-question-image"
+                              loading="eager"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="din8-no-questions">Not enough questions available for Part C</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
   if (error) return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
@@ -613,7 +1159,8 @@ const sendForApproval = async (paper) => {
           className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Statuses</option>
-          <option value="Pending">Pending</option>
+          <option value="Draft">Draft</option>
+          <option value="draft">draft</option>
           <option value="Submitted">Submitted</option>
           <option value="Approved">Approved</option>
           <option value="Rejected">Rejected</option>
@@ -649,11 +1196,11 @@ const sendForApproval = async (paper) => {
                       {paper.status}
                     </span>
                     <span className="text-xs text-gray-500">
-                      Created by: {paper.metadata.creatorName || "Unknown"}
+                      Created by: {paper.metadata?.creatorName || "Unknown"}
                     </span>
                     <div className="flex items-center text-xs text-gray-500">
                       <Calendar className="w-3 h-3 mr-1" />
-                      Created: {formatDate(paper.metadata.createdAt)}
+                      Created: {formatDate(paper.metadata?.createdAt)}
                     </div>
                   </div>
                 </div>

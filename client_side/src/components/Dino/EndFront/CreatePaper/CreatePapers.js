@@ -765,10 +765,10 @@ const CreatePapers = () => {
         // Add creatorName to metadata
         metadata: {
           creatorName: creatorName,
-          status: 'draft'
+          status: 'Draft'
         },
-        // Set status to Pending
-        status: 'Pending',
+        // Set status to Draft
+        status: 'Draft',
         
         // Set up the paper structure with parts
         paperStructure: {
@@ -1622,9 +1622,6 @@ const CreatePapers = () => {
             <div className="din8-paper-actions">
               <button className="din8-action-btn din8-save-btn" onClick={savePaper}>
                 Save Paper
-              </button>
-              <button className="din8-action-btn din8-download-btn" onClick={downloadPaper}>
-                Download Paper
               </button>
               <button className="din8-action-btn din8-generate-btn" onClick={randomizeQuestions}>
                 Randomize Questions
