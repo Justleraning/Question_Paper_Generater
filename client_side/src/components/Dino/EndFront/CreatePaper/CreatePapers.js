@@ -1623,9 +1623,6 @@ const CreatePapers = () => {
               <button className="din8-action-btn din8-save-btn" onClick={savePaper}>
                 Save Paper
               </button>
-              <button className="din8-action-btn din8-download-btn" onClick={downloadPaper}>
-                Download Paper
-              </button>
               <button className="din8-action-btn din8-generate-btn" onClick={randomizeQuestions}>
                 Randomize Questions
               </button>
