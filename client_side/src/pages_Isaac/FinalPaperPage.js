@@ -6,6 +6,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import logo from '../assets/image.png';
 import { saveCompletedPaper } from '../services/paperService.js';
+
 // Add this function at the beginning of your PaperApprovals component
 const showPopup = (message) => {
   // Create the popup container
@@ -39,6 +40,7 @@ const showPopup = (message) => {
   }, 3000);
 };
 
+// Helper function to strip HTML tags
 const stripHtmlTags = (input) => {
   if (!input) return "__________";
   
@@ -51,8 +53,45 @@ const stripHtmlTags = (input) => {
   return decodedInput.replace(/<[^>]*>/g, "").trim();
 };
 
+// Helper function to check if a URL is an image
 const isImageUrl = (url) => {
   return /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|svg))|data:image\//i.test(url);
+};
+
+// Helper function to get creator name
+const getCreatorName = () => {
+  let creatorName = "Unknown";
+  
+  try {
+    // Get user information from sessionStorage
+    const userJSON = sessionStorage.getItem('user');
+    
+    if (userJSON) {
+      const user = JSON.parse(userJSON);
+      
+      // Check for username which appears to be the main identifier
+      if (user && user.username) {
+        creatorName = user.username;
+      }
+      
+      // Try alternative user properties if username is not available
+      if (creatorName === "Unknown") {
+        if (user.name) creatorName = user.name;
+        else if (user.fullName) creatorName = user.fullName;
+        else if (user.displayName) creatorName = user.displayName;
+        else if (user.email) creatorName = user.email.split('@')[0];
+      }
+      
+      console.log("Using creator name:", creatorName);
+    } else {
+      console.warn("No user data found in sessionStorage");
+    }
+    
+    return creatorName;
+  } catch (error) {
+    console.error("Error getting creator name:", error);
+    return "Unknown";
+  }
 };
 
 const FinalPaperPage = () => {
@@ -391,111 +430,117 @@ const FinalPaperPage = () => {
     }, 100);
   };
 
-  // Handle saving the paper
-  // Handle saving the paper
-const handleSavePaper = async () => {
-  // Prevent double submission
-  if (isSaving) return;
-  
-  setIsSaving(true);
-  setSaveError(null);
-  
-  try {
-    console.log("Starting paper save process...");
+  // Handle saving the paper with creator name integration
+  const handleSavePaper = async () => {
+    // Prevent double submission
+    if (isSaving) return;
     
-    // Validate input
-    if (!subjectDetails?.id) {
-      throw new Error("Subject details are missing. Please select a subject.");
-    }
+    setIsSaving(true);
+    setSaveError(null);
     
-    if (!finalPaper || finalPaper.length === 0) {
-      throw new Error("No questions available to save. Please add questions first.");
-    }
-    
-    // Temporarily disable preview mode to get clean content for HTML snapshot
-    setIsPreview(false);
-    
-    // Wait for the DOM to update
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    // Capture HTML snapshot if ref is available
-    let htmlSnapshot = "";
-    if (paperRef.current) {
-      try {
-        htmlSnapshot = paperRef.current.outerHTML;
-        console.log("📸 HTML snapshot captured successfully");
-      } catch (err) {
-        console.warn("⚠️ Could not capture HTML snapshot:", err);
-        // Continue without snapshot if error occurs
+    try {
+      console.log("Starting paper save process...");
+      
+      // Get creator name from session storage
+      const creatorName = getCreatorName();
+      console.log("Paper will be created by:", creatorName);
+      
+      // Validate input
+      if (!subjectDetails?.id) {
+        throw new Error("Subject details are missing. Please select a subject.");
       }
+      
+      if (!finalPaper || finalPaper.length === 0) {
+        throw new Error("No questions available to save. Please add questions first.");
+      }
+      
+      // Temporarily disable preview mode to get clean content for HTML snapshot
+      setIsPreview(false);
+      
+      // Wait for the DOM to update
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Capture HTML snapshot if ref is available
+      let htmlSnapshot = "";
+      if (paperRef.current) {
+        try {
+          htmlSnapshot = paperRef.current.outerHTML;
+          console.log("📸 HTML snapshot captured successfully");
+        } catch (err) {
+          console.warn("⚠️ Could not capture HTML snapshot:", err);
+          // Continue without snapshot if error occurs
+        }
+      }
+      
+      // Return to preview mode
+      setIsPreview(true);
+      
+      // Prepare paper data
+      const paperData = {
+        title: `${subjectDetails?.name || 'Untitled'} Question Paper`,
+        subject: subjectDetails?.id,
+        subjectName: subjectDetails?.name,
+        subjectCode: subjectDetails?.code || "",
+        course: 'BCA',
+        paperType: marks === 20 ? 'Mid Sem' : 'End Sem',
+        questions: finalPaper.map(q => ({
+          text: q.text,
+          options: q.options,
+          correctOption: q.correctOption,
+          marks: marks / finalPaper.length // Distribute marks equally
+        })),
+        totalMarks: marks,
+        status: 'Draft',
+        // Store the creator name directly
+        creatorName: creatorName,
+        paperLayout: {
+          header: true,
+          logo: true,
+          registrationBox: true,
+          university: "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
+          course: "BCA",
+          examType: "SEMESTER EXAMINATION",
+          sessionDate: new Date().toISOString(),
+          timeAllowed: "1 Hours"
+        },
+        htmlSnapshot: htmlSnapshot
+      };
+      
+      console.log("📦 Paper Data to Save:", paperData);
+      
+      // Call saveCompletedPaper from paperService.js
+      const savedPaper = await saveCompletedPaper(paperData);
+      
+      if (!savedPaper) {
+        throw new Error("Failed to save paper. Server returned no data.");
+      }
+      
+      console.log("✅ Paper saved successfully:", savedPaper);
+      
+      // Show success notification
+      showPopup("Question paper saved successfully!");
+      
+      // Navigate to Open Electives page with state info
+      navigate('/open-electives', { 
+        state: { 
+          fromFinalPaper: true,
+          paperSaved: true,
+          paperId: savedPaper._id || savedPaper.id
+        } 
+      });
+      
+    } catch (error) {
+      console.error('❌ Error saving paper:', error);
+      setSaveError(error.message || 'Failed to save paper');
+      showPopup(`Error saving paper: ${error.message || 'Unknown error'}`);
+      
+      // Ensure we're back in preview mode
+      setIsPreview(true);
+    } finally {
+      setIsSaving(false);
     }
-    
-    // Return to preview mode
-    setIsPreview(true);
-    
-    // Prepare paper data
-    const paperData = {
-      title: `${subjectDetails?.name || 'Untitled'} Question Paper`,
-      subject: subjectDetails?.id,
-      subjectName: subjectDetails?.name,
-      subjectCode: subjectDetails?.code || "",
-      course: 'BCA',
-      paperType: marks === 20 ? 'Mid Sem' : 'End Sem',
-      questions: finalPaper.map(q => ({
-        text: q.text,
-        options: q.options,
-        correctOption: q.correctOption,
-        marks: marks / finalPaper.length // Distribute marks equally
-      })),
-      totalMarks: marks,
-      status: 'Draft',
-      paperLayout: {
-        header: true,
-        logo: true,
-        registrationBox: true,
-        university: "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
-        course: "BCA",
-        examType: "SEMESTER EXAMINATION",
-        sessionDate: new Date().toISOString(),
-        timeAllowed: "1 Hours"
-      },
-      htmlSnapshot: htmlSnapshot
-    };
-    
-    console.log("📦 Paper Data to Save:", paperData);
-    
-    // Call saveCompletedPaper from paperService.js
-    const savedPaper = await saveCompletedPaper(paperData);
-    
-    if (!savedPaper) {
-      throw new Error("Failed to save paper. Server returned no data.");
-    }
-    
-    console.log("✅ Paper saved successfully:", savedPaper);
-    
-    // Show success notification
-    showPopup("Question paper saved successfully!");
-    
-    // Navigate to Open Electives page with state info
-    navigate('/open-electives', { 
-      state: { 
-        fromFinalPaper: true,
-        paperSaved: true,
-        paperId: savedPaper._id || savedPaper.id
-      } 
-    });
-    
-  } catch (error) {
-    console.error('❌ Error saving paper:', error);
-    setSaveError(error.message || 'Failed to save paper');
-    showPopup(`Error saving paper: ${error.message || 'Unknown error'}`);
-    
-    // Ensure we're back in preview mode
-    setIsPreview(true);
-  } finally {
-    setIsSaving(false);
-  }
-};
+  };
+  
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Main content with scrollable area */}

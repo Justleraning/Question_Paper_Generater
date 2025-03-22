@@ -11,6 +11,7 @@ import {
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import logo from '../../assets/image.png';
+
 // Add this function at the beginning of your PaperApprovals component
 const showPopup = (message) => {
   // Create the popup container
@@ -50,6 +51,34 @@ const showPopup = (message) => {
     }
   }, 3000);
 };
+
+// Helper function to get creator name from paper
+const getCreatorName = (paper) => {
+  // First check for direct creatorName field (from new implementation)
+  if (paper.creatorName) return paper.creatorName;
+  
+  // Fall back to createdBy object properties if available
+  if (!paper.createdBy) return 'Unknown';
+  
+  // If creator has a name property
+  if (paper.createdBy.name) return paper.createdBy.name;
+  
+  // If creator has an email property
+  if (paper.createdBy.email) return paper.createdBy.email.split('@')[0];
+  
+  // If data comes as string
+  if (typeof paper.createdBy === 'string') return paper.createdBy;
+  
+  // If it's just an object with _id
+  if (paper.createdBy._id) {
+    // Try to make a reasonable display from the ID
+    const idStr = paper.createdBy._id.toString();
+    return `Unknown (ID: ${idStr.substring(0, 4)}...)`;
+  }
+  
+  return 'Unknown';
+};
+
 const PaperApprovals = () => {
     const { authState } = useAuth(); // Add this line
     const isAdmin = authState?.user?.role === "Admin" || authState?.user?.role === "SuperAdmin"; // Add this line
@@ -375,6 +404,7 @@ const PaperApprovals = () => {
 
     const currentDate = new Date().toLocaleDateString();
     const questions = currentPaper.questions || [];
+    const creatorName = getCreatorName(currentPaper);
     
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -415,6 +445,20 @@ const PaperApprovals = () => {
               <Download className="w-4 h-4 mr-2" />
               {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
             </button>
+          </div>
+        </div>
+        
+        {/* Creator name display */}
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-3 m-4">
+          <div className="flex">
+            <div>
+              <p className="text-sm text-blue-700">
+                <span className="font-medium">Created by:</span> {creatorName}
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                <span className="font-medium">Submitted:</span> {new Date(currentPaper.submittedAt || currentPaper.updatedAt).toLocaleDateString()}
+              </p>
+            </div>
           </div>
         </div>
         
@@ -580,6 +624,10 @@ const PaperApprovals = () => {
                       </h2>
                       <p className="text-sm text-gray-600">
                         {paper.subjectCode ? `${paper.subjectCode} | ` : ''}{paper.subjectName} | {paper.paperType}
+                      </p>
+                      {/* Add the creator name display */}
+                      <p className="text-xs text-gray-500">
+                        Created by: {getCreatorName(paper)}
                       </p>
                       <div className="flex items-center mt-1 space-x-2">
                         <span className="inline-block px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">

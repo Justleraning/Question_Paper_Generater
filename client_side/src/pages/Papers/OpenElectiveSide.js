@@ -13,8 +13,37 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import logo from '../../assets/image.png'; // Adjust path as needed
 
+// Helper function to get creator name based on available data
+const getCreatorName = (paper) => {
+  if (!paper.createdBy) return 'Unknown';
+  
+  // If creator has a name property
+  if (paper.createdBy.name) return paper.createdBy.name;
+  
+  // If creator has an email property
+  if (paper.createdBy.email) return paper.createdBy.email.split('@')[0];
+  
+  // If data comes as string
+  if (typeof paper.createdBy === 'string') return paper.createdBy;
+  
+  // If it's just an object with _id
+  if (paper.createdBy._id) {
+    // Try to make a reasonable display from the ID
+    const idStr = paper.createdBy._id.toString();
+    return `Unknown (ID: ${idStr.substring(0, 4)}...)`;
+  }
+  
+  return 'Unknown';
+};
 export function OpenElectiveSide() {
   // Add this function at the beginning of your PaperApprovals component
+  const inspectObject = (obj) => {
+    if (!obj) return "null";
+    const props = Object.getOwnPropertyNames(obj);
+    console.log("Object properties:", props);
+    console.log("Full object:", obj);
+    return Object.prototype.toString.call(obj);
+  };
 const showPopup = (message) => {
   // Create the popup container
   const popupContainer = document.createElement('div');
@@ -80,10 +109,25 @@ const showPopup = (message) => {
         setLoading(true);
         const response = await getAllOpenPapers();
         
-        if (Array.isArray(response)) {
+        if (Array.isArray(response) && response.length > 0) {
+          // More detailed debugging
+          console.log("First paper:", response[0]);
+          const creatorInfo = response[0].createdBy;
+          console.log("Creator info:", creatorInfo);
+          console.log("Creator type:", inspectObject(creatorInfo));
+          
+          // If createdBy is an object with _id, try to access properties directly
+          if (creatorInfo && creatorInfo._id) {
+            console.log("Creator ID:", creatorInfo._id);
+            console.log("Creator name:", creatorInfo.name);
+            console.log("Creator email:", creatorInfo.email);
+            // See if any properties exist on the prototype
+            console.log("Creator prototype properties:", 
+              Object.getOwnPropertyNames(Object.getPrototypeOf(creatorInfo)));
+          }
+          
           setPapers(response);
           setFilteredPapers(response);
-          console.log("✅ Fetched open papers:", response);
         } else {
           console.error("❌ Unexpected response format:", response);
           setPapers([]);
@@ -97,7 +141,7 @@ const showPopup = (message) => {
         setLoading(false);
       }
     };
-
+  
     fetchPapers();
   }, []);
 
@@ -799,14 +843,24 @@ const showPopup = (message) => {
                       {paper.title || `${paper.subjectName} Paper`}
                     </h2>
                     <p className="text-sm text-gray-600">
-                      {paper.subjectCode ? `${paper.subjectCode} | ` : ''}{paper.subjectName} | {paper.paperType}
-                    </p>
-                    <div className="flex items-center mt-1 space-x-2">
+                 {paper.subjectCode ? `${paper.subjectCode} | ` : ''}{paper.subjectName} | {paper.paperType}
+                 </p>
+                 <p className="text-xs text-gray-500">
+  Created by: {
+    paper.creatorName || 
+    (paper.createdBy ? 
+      (paper.createdBy.name || 
+       (paper.createdBy._id ? `User ${paper.createdBy._id.substring(0, 6)}...` : 'Unknown')) 
+      : 'Unknown')
+  }
+</p>
+                        <div className="flex items-center mt-1 space-x-2">
                       <span 
                         className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusBadgeColor(paper.status || 'Draft')}`}
                       >
                         {paper.status || 'Draft'}
                       </span>
+                      
                       <span className="text-xs text-gray-500">
                         {paper.totalMarks} marks
                       </span>

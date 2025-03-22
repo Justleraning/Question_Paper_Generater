@@ -47,9 +47,12 @@ const createOpenPaper = async (req, res) => {
 const getAllOpenPapers = async (req, res) => {
   try {
     const papers = await OpenPapers.find()
-      .populate("subject", "name code")
-      .populate("createdBy", "name email")
-      .sort({ createdAt: -1 });
+  .populate({
+    path: "createdBy",
+    select: "name email", // Make sure these fields are explicitly selected
+    model: "User" // Ensure correct model name
+  })
+  .sort({ createdAt: -1 });
     
     res.status(200).json({
       success: true,

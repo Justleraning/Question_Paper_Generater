@@ -55,13 +55,19 @@ const OpenPapersSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Total marks are required"],
     },
+    // Keep original createdBy for backward compatibility
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    // Add direct creatorName field
+    creatorName: {
+      type: String,
+      default: "Unknown"
+    },
     status: {
       type: String,
-      enum: ["Draft", "Submitted", "Approved", "Rejected"],
+      enum: ["Draft", "Submitted", "Approved", "Rejected", "Published", "Archived"],
       default: "Draft",
     },
     rejectionReason: {
@@ -103,5 +109,22 @@ const OpenPapersSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Pre-save middleware to update timestamps
+OpenPapersSchema.pre('save', function(next) {
+  // If status changes to Submitted, update submittedAt
+  if (this.isModified('status') && this.status === 'Submitted' && !this.submittedAt) {
+    this.submittedAt = Date.now();
+  }
+  
+  // If status changes to Approved, update approvedAt
+  if (this.isModified('status') && this.status === 'Approved' && !this.approvedAt) {
+    this.approvedAt = Date.now();
+  }
+  
+  next();
+});
+
+module.exports = mongoose.model("OpenPapers", OpenPapersSchema);
 
 module.exports = mongoose.model("OpenPapers", OpenPapersSchema);
