@@ -83,15 +83,7 @@ const Sidebar = ({
 
             {authState.user?.role === "Teacher" && (
               <>
-                <NavItemGroup label="Paper Management" isOpen={isSidebarOpen || isHovered}>
-                  <NavItem 
-                    icon={<FaTasks />} 
-                    label="Status of Paper" 
-                    isOpen={isSidebarOpen || isHovered} 
-                    onClick={() => navigate("/status-of-paper")} 
-                    isActive={location.pathname === "/status-of-paper"}
-                  />
-                  
+                <NavItemGroup label="Paper Management" isOpen={isSidebarOpen || isHovered}> 
                   <NavItemWithSubmenu
                     icon={<FaFileAlt />}
                     label="My Papers"
