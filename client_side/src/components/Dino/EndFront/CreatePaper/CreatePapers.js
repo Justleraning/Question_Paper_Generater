@@ -695,153 +695,204 @@ const CreatePapers = () => {
     }
   };
   
-  // Updated savePaper function with creator name and proper auth
-  const savePaper = async () => {
-    try {
-      // Show loading state
-      setLoading(true);
+// Updated savePaper function with validation
+const savePaper = async () => {
+  try {
+    // Validate that there are enough questions in each part
+    const requiredPartAQuestions = 5; // Required 5 questions for Part A
+    const requiredPartBQuestions = 7; // Required 7 questions for Part B
+    const requiredPartCQuestions = 4; // Required 4 questions for Part C
+    
+    // Check if questions meet the requirements
+    if (questions.partA.length < requiredPartAQuestions) {
+      setError(`Not enough questions in Part A. Need ${requiredPartAQuestions}, but have ${questions.partA.length}.`);
       
-      // Get creator name - Now comes from sessionStorage
-      const creatorName = getCreatorName();
-      
-      // Transform questions into the format required by the backend
-      // Remove UI elements like replace buttons and properly structure the questions
-      const processedQuestions = {
-        partA: questions.partA.map((q, index) => ({
-          questionId: q._id,
-          questionNumber: index + 1,
-          questionText: q.question || q.questionText,
-          hasImage: q.hasImage || false,
-          imageUrl: q.imageUrl || null,
-          imageState: imageStates[q.imageUrl?.split('/').pop()?.split('.')[0]] || null,
-          unit: q.unit || 1,
-          bloomLevel: q.bloomLevel || 'Remember L1',
-          marks: q.marks || 2,
-          part: 'A'
-        })),
-        partB: questions.partB.map((q, index) => ({
-          questionId: q._id,
-          questionNumber: index + 6, // Assuming Part A has 5 questions
-          questionText: q.question || q.questionText,
-          hasImage: q.hasImage || false,
-          imageUrl: q.imageUrl || null,
-          imageState: imageStates[q.imageUrl?.split('/').pop()?.split('.')[0]] || null,
-          unit: q.unit || 1,
-          bloomLevel: q.bloomLevel || 'Apply L2',
-          marks: q.marks || 4,
-          part: 'B'
-        })),
-        partC: questions.partC.map((q, index) => ({
-          questionId: q._id,
-          questionNumber: index + questions.partB.length + 6, // Accounting for Part A and B
-          questionText: q.question || q.questionText,
-          hasImage: q.hasImage || false,
-          imageUrl: q.imageUrl || null,
-          imageState: imageStates[q.imageUrl?.split('/').pop()?.split('.')[0]] || null,
-          unit: q.unit || 1,
-          bloomLevel: q.bloomLevel || 'Evaluate L3',
-          marks: q.marks || 10,
-          part: 'C'
-        }))
-      };
-      
-      // Build the paper structure according to our schema
-      const paperData = {
-        university: {
-          name: paperDetails.university,
-          logoUrl: "/SJU.png"
-        },
-        examDetails: {
-          course: examDetails.course,
-          semester: examDetails.semester,
-          semesterExamination: examDetails.semesterExamination,
-          examinationConducted: examDetails.examinationConducted,
-          subjectCode: examDetails.subjectCode,
-          subjectName: examDetails.subjectName,
-          examTimings: examDetails.examTimings,
-          maxMarks: paperDetails.maxMarks,
-          duration: paperDetails.duration
-        },
-        // Add creatorName to metadata
-        metadata: {
-          creatorName: creatorName,
-          status: 'Draft'
-        },
-        // Set status to Draft
-        status: 'Draft',
-        
-        // Set up the paper structure with parts
-        paperStructure: {
-          totalPages: 2,
-          parts: [
-            {
-              partId: 'A',
-              partTitle: 'PART-A',
-              instructions: ['Answer all FIVE questions', '(2 X 5 = 10)'],
-              marksFormat: '(2 X 5 = 10)',
-              questions: processedQuestions.partA
-            },
-            {
-              partId: 'B',
-              partTitle: 'PART-B',
-              instructions: ['Answer any FIVE questions', '(4 X 5 = 20)'],
-              marksFormat: '(4 X 5 = 20)',
-              questions: processedQuestions.partB
-            },
-            {
-              partId: 'C',
-              partTitle: 'PART-C',
-              instructions: ['Answer any THREE questions', '(10 X 3 = 30)'],
-              marksFormat: '(10 X 3 = 30)',
-              questions: processedQuestions.partC
-            }
-          ]
-        },
-        
-        // Save image states for all images
-        imageStates: imageStates,
-        
-        // Default layout settings
-        layout: {
-          paperSize: 'A4',
-          marginTop: 20,
-          marginRight: 15,
-          marginBottom: 20,
-          marginLeft: 15,
-          headerHeight: 60,
-          footerHeight: 20
+      // Scroll to the error message
+      setTimeout(() => {
+        const errorElement = document.querySelector('.din8-error-message');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      };
+      }, 100);
       
-      let response;
+      return; // Prevent saving
+    }
+    
+    if (questions.partB.length < requiredPartBQuestions) {
+      setError(`Not enough questions in Part B. Need ${requiredPartBQuestions}, but have ${questions.partB.length}.`);
       
-      // If we have a paperId, update the existing paper, otherwise create a new one
-      if (paperId) {
-        response = await axios.put(`/api/endpapers/${paperId}`, paperData, getAuthConfig());
-        alert('Question paper has been updated successfully!');
-      } else {
-        response = await axios.post('/api/endpapers', paperData, getAuthConfig());
-        
-        // Set the paper ID for future reference
-        if (response.data && response.data.paper && response.data.paper._id) {
-          setPaperId(response.data.paper._id);
+      // Scroll to the error message
+      setTimeout(() => {
+        const errorElement = document.querySelector('.din8-error-message');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        
-        alert('Question paper has been saved successfully!');
+      }, 100);
+      
+      return; // Prevent saving
+    }
+    
+    if (questions.partC.length < requiredPartCQuestions) {
+      setError(`Not enough questions in Part C. Need ${requiredPartCQuestions}, but have ${questions.partC.length}.`);
+      
+      // Scroll to the error message
+      setTimeout(() => {
+        const errorElement = document.querySelector('.din8-error-message');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      
+      return; // Prevent saving
+    }
+    
+    // If validation passes, clear any previous error
+    setError(null);
+    
+    // Show loading state
+    setLoading(true);
+    
+    // Get creator name - Now comes from sessionStorage
+    const creatorName = getCreatorName();
+    
+    // Transform questions into the format required by the backend
+    // Remove UI elements like replace buttons and properly structure the questions
+    const processedQuestions = {
+      partA: questions.partA.map((q, index) => ({
+        questionId: q._id,
+        questionNumber: index + 1,
+        questionText: q.question || q.questionText,
+        hasImage: q.hasImage || false,
+        imageUrl: q.imageUrl || null,
+        imageState: imageStates[q.imageUrl?.split('/').pop()?.split('.')[0]] || null,
+        unit: q.unit || 1,
+        bloomLevel: q.bloomLevel || 'Remember L1',
+        marks: q.marks || 2,
+        part: 'A'
+      })),
+      partB: questions.partB.map((q, index) => ({
+        questionId: q._id,
+        questionNumber: index + 6, // Assuming Part A has 5 questions
+        questionText: q.question || q.questionText,
+        hasImage: q.hasImage || false,
+        imageUrl: q.imageUrl || null,
+        imageState: imageStates[q.imageUrl?.split('/').pop()?.split('.')[0]] || null,
+        unit: q.unit || 1,
+        bloomLevel: q.bloomLevel || 'Apply L2',
+        marks: q.marks || 4,
+        part: 'B'
+      })),
+      partC: questions.partC.map((q, index) => ({
+        questionId: q._id,
+        questionNumber: index + questions.partB.length + 6, // Accounting for Part A and B
+        questionText: q.question || q.questionText,
+        hasImage: q.hasImage || false,
+        imageUrl: q.imageUrl || null,
+        imageState: imageStates[q.imageUrl?.split('/').pop()?.split('.')[0]] || null,
+        unit: q.unit || 1,
+        bloomLevel: q.bloomLevel || 'Evaluate L3',
+        marks: q.marks || 10,
+        part: 'C'
+      }))
+    };
+    
+    // Build the paper structure according to our schema
+    const paperData = {
+      university: {
+        name: paperDetails.university,
+        logoUrl: "/SJU.png"
+      },
+      examDetails: {
+        course: examDetails.course,
+        semester: examDetails.semester,
+        semesterExamination: examDetails.semesterExamination,
+        examinationConducted: examDetails.examinationConducted,
+        subjectCode: examDetails.subjectCode,
+        subjectName: examDetails.subjectName,
+        examTimings: examDetails.examTimings,
+        maxMarks: paperDetails.maxMarks,
+        duration: paperDetails.duration
+      },
+      // Add creatorName to metadata
+      metadata: {
+        creatorName: creatorName,
+        status: 'Draft'
+      },
+      // Set status to Draft
+      status: 'Draft',
+      
+      // Set up the paper structure with parts
+      paperStructure: {
+        totalPages: 2,
+        parts: [
+          {
+            partId: 'A',
+            partTitle: 'PART-A',
+            instructions: ['Answer all FIVE questions', '(2 X 5 = 10)'],
+            marksFormat: '(2 X 5 = 10)',
+            questions: processedQuestions.partA
+          },
+          {
+            partId: 'B',
+            partTitle: 'PART-B',
+            instructions: ['Answer any FIVE questions', '(4 X 5 = 20)'],
+            marksFormat: '(4 X 5 = 20)',
+            questions: processedQuestions.partB
+          },
+          {
+            partId: 'C',
+            partTitle: 'PART-C',
+            instructions: ['Answer any THREE questions', '(10 X 3 = 30)'],
+            marksFormat: '(10 X 3 = 30)',
+            questions: processedQuestions.partC
+          }
+        ]
+      },
+      
+      // Save image states for all images
+      imageStates: imageStates,
+      
+      // Default layout settings
+      layout: {
+        paperSize: 'A4',
+        marginTop: 20,
+        marginRight: 15,
+        marginBottom: 20,
+        marginLeft: 15,
+        headerHeight: 60,
+        footerHeight: 20
+      }
+    };
+    
+    let response;
+    
+    // If we have a paperId, update the existing paper, otherwise create a new one
+    if (paperId) {
+      response = await axios.put(`/api/endpapers/${paperId}`, paperData, getAuthConfig());
+      alert('Question paper has been updated successfully!');
+    } else {
+      response = await axios.post('/api/endpapers', paperData, getAuthConfig());
+      
+      // Set the paper ID for future reference
+      if (response.data && response.data.paper && response.data.paper._id) {
+        setPaperId(response.data.paper._id);
       }
       
-      // Enable edit mode after saving
-      setIsEditMode(true);
-      setDisableReplaceButtons(true);
-      
-    } catch (error) {
-      console.error('Error saving paper:', error);
-      alert(`Failed to save paper: ${error.response?.data?.message || error.message}`);
-    } finally {
-      setLoading(false);
+      alert('Question paper has been saved successfully!');
     }
-  };
-  
+    
+    // Enable edit mode after saving
+    setIsEditMode(true);
+    setDisableReplaceButtons(true);
+    
+  } catch (error) {
+    console.error('Error saving paper:', error);
+    alert(`Failed to save paper: ${error.response?.data?.message || error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
+
   const downloadPaper = () => {
     // Show loading indicator
     const loadingOverlay = document.createElement('div');

@@ -35,6 +35,7 @@ function EditQuestion() {
   const [expandedQuestions, setExpandedQuestions] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // State for editing panel (from CreateQuestion)
   const [editingQuestion, setEditingQuestion] = useState(null);
@@ -119,14 +120,6 @@ function EditQuestion() {
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
-
-  // Handle filter changes
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
 
   // Toggle question expansion
   const toggleExpand = (questionId) => {
@@ -326,6 +319,14 @@ function EditQuestion() {
       setSaving(false);
     }
   };
+ 
+  // Handle filter changes
+const handleFilterChange = (field, value) => {
+  setFilters(prev => ({
+    ...prev,
+    [field]: value
+  }));
+};
 
   // Delete question
   const handleDeleteQuestion = async (questionId) => {
@@ -356,6 +357,12 @@ function EditQuestion() {
       setLoading(false);
     }
   };
+
+  // Filter questions based on search term
+  const filteredQuestions = questions.filter(question => 
+    question.question.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (question.fullText && question.fullText.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="din5-question-pool-container">
@@ -423,16 +430,27 @@ function EditQuestion() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="din5-search-container">
+        <input
+          type="text"
+          className="din5-search-input"
+          placeholder="Search questions..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
       {/* Loading and Error Handling */}
       {loading && <p className="din5-loading">Loading questions...</p>}
       {error && <p className="din5-error">{error}</p>}
 
       {/* Question List */}
       <div className="din5-question-pool">
-        <h2>Questions: {questions.length}</h2>
+        <h2>Questions: {filteredQuestions.length}</h2>
         <div className="din5-questions-box">
-          {questions.length > 0 ? (
-            questions.map((question, index) => (
+          {filteredQuestions.length > 0 ? (
+            filteredQuestions.map((question, index) => (
               <div key={question._id} className="din5-question">
                 {/* Question Header */}
                 <div className="din5-question-header">
@@ -482,7 +500,7 @@ function EditQuestion() {
             ))
           ) : (
             <p className="din5-no-questions">
-              {loading ? "Loading..." : "No questions available."}
+              {loading ? "Loading..." : searchTerm ? "No matching questions found." : "No questions available."}
             </p>
           )}
         </div>

@@ -614,3 +614,30 @@ html, body {
   border-radius: 8px;
   border: 1px solid #ddd;
 }
+/* Search Bar CSS Snippet for EditQuestion.css */
+
+.din5-search-container {
+  margin: 20px 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.din5-search-input {
+  width: 100%;
+  padding: 10px 15px;
+  font-size: 16px;
+  border: 2px solid #ccc;
+  border-radius: 25px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.din5-search-input:focus {
+  border-color: #4f81bd;
+  box-shadow: 0 0 8px rgba(79, 129, 189, 0.5);
+}
+
+.din5-search-input::placeholder {
+  color: #999;
+}
