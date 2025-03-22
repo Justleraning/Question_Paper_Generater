@@ -3,6 +3,38 @@ import { useNavigate } from "react-router-dom";
 import { useQPContext } from "../Contexts/QPContext.js";
 import { motion } from "framer-motion";
 import { FaBook, FaArrowRight, FaUniversity, FaBarcode, FaLayerGroup, FaCheck } from "react-icons/fa";
+// Add this function at the beginning of your PaperApprovals component
+const showPopup = (message) => {
+  // Create the popup container
+  const popupContainer = document.createElement('div');
+  popupContainer.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  
+  // Create the popup content without the tick symbol
+  popupContainer.innerHTML = `
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+      <h2 class="text-xl font-bold mb-4">${message}</h2>
+      <button class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+        OK
+      </button>
+    </div>
+  `;
+  
+  // Add to document
+  document.body.appendChild(popupContainer);
+  
+  // Add event listener to OK button
+  const okButton = popupContainer.querySelector('button');
+  okButton.addEventListener('click', () => {
+    document.body.removeChild(popupContainer);
+  });
+  
+  // Auto-close after 3 seconds
+  setTimeout(() => {
+    if (document.body.contains(popupContainer)) {
+      document.body.removeChild(popupContainer);
+    }
+  }, 3000);
+};
 
 const IndexPage = () => {
   const [subjectName, setSubjectName] = useState("");
@@ -56,7 +88,7 @@ const IndexPage = () => {
       navigate("/questions");
     } catch (error) {
       console.error("❌ Error creating subject:", error.message);
-      alert(`Failed to create subject: ${error.message}`);
+      showPopup(`Failed to create subject: ${error.message}`);
     } finally {
       setLoading(false);
     }

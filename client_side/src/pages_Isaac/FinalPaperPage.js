@@ -6,6 +6,38 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import logo from '../assets/image.png';
 import { saveCompletedPaper } from '../services/paperService.js';
+// Add this function at the beginning of your PaperApprovals component
+const showPopup = (message) => {
+  // Create the popup container
+  const popupContainer = document.createElement('div');
+  popupContainer.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  
+  // Create the popup content without the tick symbol
+  popupContainer.innerHTML = `
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+      <h2 class="text-xl font-bold mb-4">${message}</h2>
+      <button class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+        OK
+      </button>
+    </div>
+  `;
+  
+  // Add to document
+  document.body.appendChild(popupContainer);
+  
+  // Add event listener to OK button
+  const okButton = popupContainer.querySelector('button');
+  okButton.addEventListener('click', () => {
+    document.body.removeChild(popupContainer);
+  });
+  
+  // Auto-close after 3 seconds
+  setTimeout(() => {
+    if (document.body.contains(popupContainer)) {
+      document.body.removeChild(popupContainer);
+    }
+  }, 3000);
+};
 
 const stripHtmlTags = (input) => {
   if (!input) return "__________";
@@ -103,7 +135,7 @@ const FinalPaperPage = () => {
   
     if (!Array.isArray(questionsToRandomize) || questionsToRandomize.length === 0) {
       console.error("No questions available to randomize");
-      alert("No questions available to randomize for the current subject. Please check the console for details.");
+      showPopup("No questions available to randomize for the current subject. Please check the console for details.");
       return;
     }
   
@@ -123,11 +155,11 @@ const FinalPaperPage = () => {
         console.log("✅ Answer Key:", answers);
       } else {
         console.warn("⚠️ Randomization returned empty array");
-        alert("Randomization failed. Please check the console for details.");
+        showPopup("Randomization failed. Please check the console for details.");
       }
     } catch (error) {
       console.error("❌ Error during randomization:", error);
-      alert("An error occurred during randomization. Please check the console for details.");
+      showPopup("An error occurred during randomization. Please check the console for details.");
     }
   }, [questions, finalPaper, marks, subjectDetails]);
 
@@ -163,7 +195,7 @@ const FinalPaperPage = () => {
           
           if (filteredData.length === 0) {
             console.warn("⚠️ No questions found for the current subject:", subjectDetails);
-            alert(`No questions found for subject: ${subjectDetails?.name || 'Unknown'}. Please add questions first.`);
+            showPopup(`No questions found for subject: ${subjectDetails?.name || 'Unknown'}. Please add questions first.`);
             return;
           }
           
@@ -177,11 +209,11 @@ const FinalPaperPage = () => {
           );
         } else {
           console.warn("⚠️ No questions found in database or invalid format:", data);
-          alert("No questions found in database. Please add questions first.");
+          showPopup("No questions found in database. Please add questions first.");
         }
       } catch (error) {
         console.error("❌ Error fetching questions:", error.message);
-        alert(`Error fetching questions: ${error.message}`);
+        showPopup(`Error fetching questions: ${error.message}`);
       }
     };
   
@@ -442,7 +474,7 @@ const handleSavePaper = async () => {
     console.log("✅ Paper saved successfully:", savedPaper);
     
     // Show success notification
-    alert("Question paper saved successfully!");
+    showPopup("Question paper saved successfully!");
     
     // Navigate to Open Electives page with state info
     navigate('/open-electives', { 
@@ -456,7 +488,7 @@ const handleSavePaper = async () => {
   } catch (error) {
     console.error('❌ Error saving paper:', error);
     setSaveError(error.message || 'Failed to save paper');
-    alert(`Error saving paper: ${error.message || 'Unknown error'}`);
+    showPopup(`Error saving paper: ${error.message || 'Unknown error'}`);
     
     // Ensure we're back in preview mode
     setIsPreview(true);

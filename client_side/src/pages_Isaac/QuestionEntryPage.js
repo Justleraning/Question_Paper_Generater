@@ -12,6 +12,38 @@ import {
   FaImage, FaFont, FaEye, FaEdit, FaTimes, FaTrash,
   FaArrowLeft, FaArrowRight, FaSave, FaCheckCircle, FaExclamationTriangle
 } from "react-icons/fa";
+// Add this function at the beginning of your PaperApprovals component
+const showPopup = (message) => {
+  // Create the popup container
+  const popupContainer = document.createElement('div');
+  popupContainer.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  
+  // Create the popup content without the tick symbol
+  popupContainer.innerHTML = `
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+      <h2 class="text-xl font-bold mb-4">${message}</h2>
+      <button class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+        OK
+      </button>
+    </div>
+  `;
+  
+  // Add to document
+  document.body.appendChild(popupContainer);
+  
+  // Add event listener to OK button
+  const okButton = popupContainer.querySelector('button');
+  okButton.addEventListener('click', () => {
+    document.body.removeChild(popupContainer);
+  });
+  
+  // Auto-close after 3 seconds
+  setTimeout(() => {
+    if (document.body.contains(popupContainer)) {
+      document.body.removeChild(popupContainer);
+    }
+  }, 3000);
+};
 
 const QuestionEntryPage = () => {
   const { subjectDetails, numUnits, marks, questions, setQuestions } = useQPContext();
@@ -149,8 +181,8 @@ const QuestionEntryPage = () => {
   const handleToggleOptionType = (key) => {
     // If user is trying to select image option
     if (options[key].type === 'text') {
-      // Show alert message
-      alert("Image option temporarily disabled due to low storage");
+      // Show message
+      showPopup("Image option temporarily disabled due to low storage");
       // Don't change the option type - keep it as text
       return;
     }
@@ -188,20 +220,20 @@ const QuestionEntryPage = () => {
 
     if (!subjectId) {
       console.error("❌ Validation Failed: subjectId is missing!");
-      alert("⚠️ Subject ID is missing. Please try again.");
+      showPopup("⚠️ Subject ID is missing. Please try again.");
       return;
     }
 
     const token = sessionStorage.getItem("token");
 
     if (!token) {
-      alert("❌ Authentication failed: No token found in session.");
+      showPopup("❌ Authentication failed: No token found in session.");
       return;
     }
 
     const cleanedQuestionText = editor.getText()?.trim() || "";
     if (!cleanedQuestionText) {
-      alert("⚠️ Please enter a valid question.");
+      showPopup("⚠️ Please enter a valid question.");
       return;
     }
     
@@ -213,12 +245,12 @@ const QuestionEntryPage = () => {
     ];
 
     if (!Array.isArray(formattedOptions) || formattedOptions.length !== 4 || formattedOptions.some(opt => opt === "")) {
-        alert("⚠️ Please provide exactly 4 valid options.");
+        showPopup("⚠️ Please provide exactly 4 valid options.");
         return;
     }
     
     if (!["A", "B", "C", "D"].includes(correctOption)) {
-      alert("⚠️ Please select a valid correct option (A, B, C, or D).");
+      showPopup("⚠️ Please select a valid correct option (A, B, C, or D).");
       return;
     }
 
@@ -291,14 +323,14 @@ const QuestionEntryPage = () => {
 
     } catch (error) {
       console.error("❌ Error saving question:", error.message);
-      alert(`❌ Failed to save question: ${error.message}`);
+      showPopup(`❌ Failed to save question: ${error.message}`);
     }
   };
 
   const handleNextQuestion = () => {
     // Only proceed if the current question has been saved
     if (!isCurrentQuestionSaved) {
-      alert("Please save the current question before proceeding to the next question.");
+      showPopup("Please save the current question before proceeding to the next question.");
       return;
     }
     
@@ -401,7 +433,7 @@ const QuestionEntryPage = () => {
   };
 
   const handleNextUnit = () => {
-    // Only proceed if the current question has been saved or is empty
+    // Only show confirmation if the current question has unsaved changes
     if (!isCurrentQuestionSaved && questionText.trim() !== "" && 
         (options.A.value || options.B.value || options.C.value || options.D.value)) {
       const confirmMove = window.confirm("You have unsaved changes. Are you sure you want to navigate to the next unit?");
@@ -411,26 +443,26 @@ const QuestionEntryPage = () => {
     }
     
     if (currentUnit < numUnits) {
-        setCurrentUnit(prevUnit => prevUnit + 1);
-        setCurrentQuestionIndex(0);
-
-        // Reset question fields when switching units
-        setQuestionText("");
-        if (editor) {
-          editor.commands.setContent('<p></p>');
-        }
-        setCorrectOption("");
-        setOptions({
-            A: { type: "text", value: "" },
-            B: { type: "text", value: "" },
-            C: { type: "text", value: "" },
-            D: { type: "text", value: "" },
-        });
-        
-        // New question in new unit is not yet saved
-        setIsCurrentQuestionSaved(false);
+      setCurrentUnit(prevUnit => prevUnit + 1);
+      setCurrentQuestionIndex(0);
+  
+      // Reset question fields when switching units
+      setQuestionText("");
+      if (editor) {
+        editor.commands.setContent('<p></p>');
+      }
+      setCorrectOption("");
+      setOptions({
+        A: { type: "text", value: "" },
+        B: { type: "text", value: "" },
+        C: { type: "text", value: "" },
+        D: { type: "text", value: "" },
+      });
+      
+      // New question in new unit is not yet saved
+      setIsCurrentQuestionSaved(false);
     } else {
-        navigate("/final-paper");
+      navigate("/final-paper");
     }
   };
 
@@ -550,7 +582,7 @@ const QuestionEntryPage = () => {
       console.log("✅ Question deleted successfully");
     } catch (error) {
       console.error("❌ Error deleting question:", error);
-      alert("Failed to delete question. Please try again.");
+      showPopup("Failed to delete question. Please try again.");
     }
   };
 

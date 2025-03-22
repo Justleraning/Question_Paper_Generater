@@ -11,7 +11,45 @@ import {
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import logo from '../../assets/image.png';
-
+// Add this function at the beginning of your PaperApprovals component
+const showPopup = (message) => {
+  // Create the popup container
+  const popupContainer = document.createElement('div');
+  popupContainer.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  
+  // Create the popup content
+  popupContainer.innerHTML = `
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+      <div class="flex justify-center mb-4">
+        <div class="bg-green-500 rounded-full p-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+      </div>
+      <h2 class="text-xl font-bold mb-4">${message}</h2>
+      <button class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+        OK
+      </button>
+    </div>
+  `;
+  
+  // Add to document
+  document.body.appendChild(popupContainer);
+  
+  // Add event listener to OK button
+  const okButton = popupContainer.querySelector('button');
+  okButton.addEventListener('click', () => {
+    document.body.removeChild(popupContainer);
+  });
+  
+  // Auto-close after 3 seconds
+  setTimeout(() => {
+    if (document.body.contains(popupContainer)) {
+      document.body.removeChild(popupContainer);
+    }
+  }, 3000);
+};
 const PaperApprovals = () => {
     const { authState } = useAuth(); // Add this line
     const isAdmin = authState?.user?.role === "Admin" || authState?.user?.role === "SuperAdmin"; // Add this line
@@ -126,10 +164,6 @@ const PaperApprovals = () => {
 
   // Approve Paper
   const approvePaper = async (paper) => {
-    if (!window.confirm(`Are you sure you want to approve "${paper.title || paper.subjectName}" paper?`)) {
-      return;
-    }
-    
     try {
       await updatePaperStatus(paper._id, 'Approved');
       
@@ -142,7 +176,7 @@ const PaperApprovals = () => {
         setCurrentPaper(null);
       }
       
-      alert("Paper approved successfully!");
+      showPopup("Paper approved successfully!");
     } catch (error) {
       console.error("❌ Error approving paper:", error);
       setError("Failed to approve paper. Please try again.");
@@ -161,7 +195,7 @@ const PaperApprovals = () => {
     if (!currentPaper) return;
     
     if (!rejectionReason.trim()) {
-      alert("Please provide a reason for rejection.");
+      showPopup("Please provide a reason for rejection.");
       return;
     }
     
@@ -180,7 +214,7 @@ const PaperApprovals = () => {
         setCurrentPaper(null);
       }
       
-      alert("Paper rejected successfully!");
+      showPopup("Paper rejected successfully!");
     } catch (error) {
       console.error("❌ Error rejecting paper:", error);
       setError("Failed to reject paper. Please try again.");
@@ -284,7 +318,7 @@ const PaperApprovals = () => {
         });
       } else {
         setIsGeneratingPDF(false);
-        alert("No paper content available to download.");
+        showPopup("No paper content available to download.");
       }
     } catch (error) {
       console.error("❌ Error downloading paper:", error);
@@ -297,11 +331,6 @@ const PaperApprovals = () => {
   const closePreview = () => {
     setShowPreview(false);
     setCurrentPaper(null);
-  };
-
-  // Go back to admin dashboard
-  const goBackToDashboard = () => {
-    navigate('/admin-dashboard');
   };
 
   // Handle filter changes
@@ -483,13 +512,6 @@ const PaperApprovals = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <button 
-              onClick={goBackToDashboard}
-              className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Dashboard
-            </button>
             <h1 className="text-3xl font-bold text-gray-800">{getPaperTypeName()} Approvals</h1>
           </div>
           <div className="text-sm bg-blue-100 text-blue-800 p-2 rounded-md">
@@ -498,34 +520,6 @@ const PaperApprovals = () => {
               {filteredPapers.length} papers requiring approval
             </p>
           </div>
-        </div>
-  
-        {/* Paper Type Tabs */}
-        <div className="mb-6 flex space-x-2 overflow-x-auto">
-          <button 
-            onClick={() => navigate("/paper-approvals?type=entrance")}
-            className={`px-4 py-2 rounded-lg font-medium ${paperType === 'entrance' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-          >
-            Entrance Exam
-          </button>
-          <button 
-            onClick={() => navigate("/paper-approvals?type=midsem")}
-            className={`px-4 py-2 rounded-lg font-medium ${paperType === 'midsem' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-          >
-            Mid Semester
-          </button>
-          <button 
-            onClick={() => navigate("/paper-approvals?type=endsem")}
-            className={`px-4 py-2 rounded-lg font-medium ${paperType === 'endsem' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-          >
-            End Semester
-          </button>
-          <button 
-            onClick={() => navigate("/paper-approvals?type=openelective")}
-            className={`px-4 py-2 rounded-lg font-medium ${paperType === 'openelective' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-          >
-            Open Elective
-          </button>
         </div>
   
         {/* Filters */}
@@ -551,7 +545,7 @@ const PaperApprovals = () => {
             <option value="">All Paper Types</option>
             <option value="Mid Sem">Mid Sem</option>
             <option value="End Sem">End Sem</option>
-            <option value="Internal Assessment">Internal Assessment</option>
+            
           </select>
   
           <input 

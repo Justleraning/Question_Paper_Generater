@@ -14,6 +14,45 @@ import html2canvas from 'html2canvas';
 import logo from '../../assets/image.png'; // Adjust path as needed
 
 export function OpenElectiveSide() {
+  // Add this function at the beginning of your PaperApprovals component
+const showPopup = (message) => {
+  // Create the popup container
+  const popupContainer = document.createElement('div');
+  popupContainer.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  
+  // Create the popup content
+  popupContainer.innerHTML = `
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+      <div class="flex justify-center mb-4">
+        <div class="bg-green-500 rounded-full p-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+      </div>
+      <h2 class="text-xl font-bold mb-4">${message}</h2>
+      <button class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+        OK
+      </button>
+    </div>
+  `;
+  
+  // Add to document
+  document.body.appendChild(popupContainer);
+  
+  // Add event listener to OK button
+  const okButton = popupContainer.querySelector('button');
+  okButton.addEventListener('click', () => {
+    document.body.removeChild(popupContainer);
+  });
+  
+  // Auto-close after 3 seconds
+  setTimeout(() => {
+    if (document.body.contains(popupContainer)) {
+      document.body.removeChild(popupContainer);
+    }
+  }, 3000);
+};
   const { authState } = useAuth(); // Get auth state
   const isAdmin = authState?.user?.role === "Admin" || authState?.user?.role === "SuperAdmin";
   
@@ -112,10 +151,7 @@ export function OpenElectiveSide() {
 
   // Delete Paper
   const handleDeletePaper = async (paper) => {
-    if (!window.confirm(`Are you sure you want to delete this paper: ${paper.title || paper.subjectName}?`)) {
-      return;
-    }
-    
+   
     try {
       await deleteOpenPaper(paper._id);
       
@@ -123,7 +159,7 @@ export function OpenElectiveSide() {
       setPapers(papers.filter(p => p._id !== paper._id));
       setFilteredPapers(filteredPapers.filter(p => p._id !== paper._id));
       
-      alert("Paper deleted successfully!");
+      showPopup("Paper deleted successfully!");
     } catch (error) {
       console.error("❌ Error deleting paper:", error);
       setError("Failed to delete paper. Please try again.");
@@ -138,22 +174,14 @@ export function OpenElectiveSide() {
       
       if (currentStatus === 'Draft') {
         newStatus = 'Submitted';
-        if (!window.confirm(`Are you sure you want to submit "${paper.title || paper.subjectName}" for approval? Once submitted, you cannot edit it until it's approved or rejected.`)) {
-          return;
-        }
       } else if (currentStatus === 'Submitted') {
         newStatus = 'Approved';
-        if (!window.confirm(`Are you sure you want to approve "${paper.title || paper.subjectName}"? This action represents approval from higher authority.`)) {
-          return;
-        }
       } else if (currentStatus === 'Approved') {
-        alert("This paper is already approved.");
+        showPopup("This paper is already approved.");
         return;
       } else if (currentStatus === 'Rejected') {
         newStatus = 'Submitted';
-        if (!window.confirm(`Are you sure you want to resubmit "${paper.title || paper.subjectName}" for approval?`)) {
-          return;
-        }
+        
       }
       
       // Call API to update paper status
@@ -169,7 +197,7 @@ export function OpenElectiveSide() {
         p._id === paper._id ? { ...p, status: newStatus } : p
       ));
       
-      alert(`Paper status changed to ${newStatus}!`);
+      showPopup(`Paper Successfully ${newStatus}!`);
     } catch (error) {
       console.error("❌ Error updating paper status:", error);
       setError("Failed to update paper status. Please try again.");
@@ -179,7 +207,7 @@ export function OpenElectiveSide() {
   // Reject Paper
   const rejectPaper = async (paper) => {
     if (paper.status !== 'Submitted') {
-      alert("Only submitted papers can be rejected.");
+      showPopup("Only submitted papers can be rejected.");
       return;
     }
     
@@ -200,7 +228,7 @@ export function OpenElectiveSide() {
         p._id === paper._id ? { ...p, status: 'Rejected', rejectionReason: reason } : p
       ));
       
-      alert("Paper has been rejected.");
+      showPopup("Paper has been rejected.");
     } catch (error) {
       console.error("❌ Error rejecting paper:", error);
       setError("Failed to reject paper. Please try again.");
@@ -404,7 +432,7 @@ export function OpenElectiveSide() {
       // Exit edit mode
       setIsEditing(false);
       
-      alert("Paper updated successfully!");
+      showPopup("Paper updated successfully!");
     } catch (error) {
       console.error("❌ Error saving paper:", error);
       setError("Failed to save changes. Please try again.");

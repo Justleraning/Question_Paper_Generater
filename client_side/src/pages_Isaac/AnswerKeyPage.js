@@ -5,7 +5,45 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } fro
 import { motion } from 'framer-motion';
 import { FaFileDownload, FaArrowLeft, FaSearch, FaCheckCircle, FaFilePdf, FaFileWord } from 'react-icons/fa';
 import { jsPDF } from 'jspdf';
-
+ // Add this function at the beginning of your PaperApprovals component
+ const showPopup = (message) => {
+  // Create the popup container
+  const popupContainer = document.createElement('div');
+  popupContainer.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  
+  // Create the popup content
+  popupContainer.innerHTML = `
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+      <div class="flex justify-center mb-4">
+        <div class="bg-green-500 rounded-full p-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+      </div>
+      <h2 class="text-xl font-bold mb-4">${message}</h2>
+      <button class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+        OK
+      </button>
+    </div>
+  `;
+  
+  // Add to document
+  document.body.appendChild(popupContainer);
+  
+  // Add event listener to OK button
+  const okButton = popupContainer.querySelector('button');
+  okButton.addEventListener('click', () => {
+    document.body.removeChild(popupContainer);
+  });
+  
+  // Auto-close after 3 seconds
+  setTimeout(() => {
+    if (document.body.contains(popupContainer)) {
+      document.body.removeChild(popupContainer);
+    }
+  }, 3000);
+};
 // Function to strip HTML tags
 const stripHtmlTags = (html) => {
   if (!html) return '';
@@ -118,7 +156,7 @@ const AnswerKeyPage = () => {
   // Download Answer Key as DOCX
   const handleDocxDownload = () => {
     if (correctAnswers.length === 0) {
-      alert('No answer key available for download.');
+      showPopup('No answer key available for download.');
       return;
     }
 
@@ -132,7 +170,7 @@ const AnswerKeyPage = () => {
   // Generate and download PDF
   const handlePdfExport = () => {
     if (correctAnswers.length === 0) {
-      alert('No answer key available for download.');
+      showPopup('No answer key available for download.');
       return;
     }
 
