@@ -1,6 +1,6 @@
 import { useAuth } from "../../Contexts/AuthContext.js";
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Check, X, Eye, Download, FileSearch, ArrowLeft } from 'lucide-react';
+import { FileText, Check, X, Eye, Download, FileSearch, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { 
@@ -80,27 +80,27 @@ const getCreatorName = (paper) => {
 };
 
 const PaperApprovals = () => {
-    const { authState } = useAuth(); // Add this line
-    const isAdmin = authState?.user?.role === "Admin" || authState?.user?.role === "SuperAdmin"; // Add this line
-    // Rest of your existing state declarations...
-  const [papers, setPapers] = useState([]);
-  const [filteredPapers, setFilteredPapers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    course: '',
-    paperType: '',
-    subjectName: '',
-  });
-  const [showPreview, setShowPreview] = useState(false);
-  const [currentPaper, setCurrentPaper] = useState(null);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [showRejectionModal, setShowRejectionModal] = useState(false);
-  const [paperType, setPaperType] = useState('openelective'); // Default to open elective
-  const paperRef = useRef(null);
-  const location = useLocation();
-  const navigate = useNavigate();
+    const { authState } = useAuth();
+    const isAdmin = authState?.user?.role === "Admin" || authState?.user?.role === "SuperAdmin";
+    const [papers, setPapers] = useState([]);
+    const [filteredPapers, setFilteredPapers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [filters, setFilters] = useState({
+      course: '',
+      paperType: '',
+      subjectName: '',
+    });
+    const [showPreview, setShowPreview] = useState(false);
+    const [currentPaper, setCurrentPaper] = useState(null);
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [showRejectionModal, setShowRejectionModal] = useState(false);
+    const [paperType, setPaperType] = useState('openelective'); // Default to open elective
+    const paperRef = useRef(null);
+    const location = useLocation();
+    const navigate = useNavigate();
 
   useEffect(() => {
     // Extract paper type from URL query parameter
@@ -112,9 +112,16 @@ const PaperApprovals = () => {
     fetchPapers();
   }, [location.search]);
 
-  const fetchPapers = async () => {
+  const fetchPapers = async (showRefreshAnimation = false) => {
     try {
-      setLoading(true);
+      if (showRefreshAnimation) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
+      // Clear any previous errors
+      setError(null);
       
       // For now, only implementing the open electives papers
       // In a real system, you'd have different API calls for different paper types
@@ -134,18 +141,37 @@ const PaperApprovals = () => {
         setPapers(submittedPapers);
         setFilteredPapers(submittedPapers);
         console.log("✅ Fetched papers for approval:", submittedPapers);
+        
+        if (showRefreshAnimation) {
+          // Show a success message when refreshing manually
+         
+        }
       } else {
         console.error("❌ Unexpected response format:", response);
         setPapers([]);
         setFilteredPapers([]);
       }
       
-      setLoading(false);
+      if (showRefreshAnimation) {
+        // Add a slight delay before turning off refresh animation for better UX
+        setTimeout(() => {
+          setIsRefreshing(false);
+        }, 500);
+      } else {
+        setLoading(false);
+      }
     } catch (err) {
       console.error("❌ Error fetching papers:", err);
       setError("Failed to load papers for approval. Please try again later.");
       setLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  // Function to handle manual refresh click
+  const handleRefresh = () => {
+    // Call fetchPapers with flag to show refresh animation
+    fetchPapers(true);
   };
 
   const getPaperTypeName = () => {
@@ -558,11 +584,21 @@ const PaperApprovals = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-800">{getPaperTypeName()} Approvals</h1>
           </div>
-          <div className="text-sm bg-blue-100 text-blue-800 p-2 rounded-md">
-            <p className="flex items-center">
-              <FileSearch className="w-4 h-4 mr-1" />
-              {filteredPapers.length} papers requiring approval
-            </p>
+          <div className="flex items-center space-x-3">
+            <div className="text-sm bg-blue-100 text-blue-800 p-2 rounded-md">
+              <p className="flex items-center">
+                <FileSearch className="w-4 h-4 mr-1" />
+                {filteredPapers.length} papers requiring approval
+              </p>
+            </div>
+            <button 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className={`text-blue-600 p-2 rounded-full border border-blue-200 hover:bg-blue-50 ${isRefreshing ? 'cursor-not-allowed' : ''}`}
+              title="Refresh list"
+            >
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
   
@@ -589,7 +625,7 @@ const PaperApprovals = () => {
             <option value="">All Paper Types</option>
             <option value="Mid Sem">Mid Sem</option>
             <option value="End Sem">End Sem</option>
-            
+            <option value="Internal Assessment">Internal Assessment</option>
           </select>
   
           <input 
@@ -606,7 +642,16 @@ const PaperApprovals = () => {
         {filteredPapers.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <p className="text-xl text-gray-600">No papers are currently awaiting approval.</p>
-            <p className="text-gray-500 mt-2">When faculty members submit papers for approval, they will appear here.</p>
+            <p className="text-gray-500 mt-2">
+              When faculty members submit papers for approval, they will appear here.
+              <button 
+                onClick={handleRefresh} 
+                className="ml-2 text-blue-500 hover:text-blue-700 underline focus:outline-none"
+                disabled={isRefreshing}
+              >
+                Refresh now
+              </button>
+            </p>
           </div>
         ) : (
           <div className="grid gap-4">

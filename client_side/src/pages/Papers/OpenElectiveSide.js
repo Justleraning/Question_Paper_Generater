@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from "../../Contexts/AuthContext.js";
 import { useNavigate } from 'react-router-dom';
-import { FileText, Trash2, Eye, ArrowLeft, Download, Edit, Save, X, ArrowUpCircle, Check } from 'lucide-react';
+import { FileText, Trash2, Eye, ArrowLeft, Download, Edit, Save, X, ArrowUpCircle, Check, RefreshCw } from 'lucide-react';
 import { 
   getAllOpenPapers, 
   getOpenPaperById, 
@@ -89,6 +89,7 @@ const showPopup = (message) => {
   const [filteredPapers, setFilteredPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [filters, setFilters] = useState({
     course: '',
     paperType: '',
@@ -103,47 +104,73 @@ const showPopup = (message) => {
   const paperRef = useRef(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchPapers = async () => {
-      try {
-        setLoading(true);
-        const response = await getAllOpenPapers();
+  // Function to fetch papers data
+  const fetchPapers = async () => {
+    try {
+      setLoading(true);
+      setIsRefreshing(true);
+      const response = await getAllOpenPapers();
+      
+      if (Array.isArray(response) && response.length > 0) {
+        // More detailed debugging
+        console.log("First paper:", response[0]);
+        const creatorInfo = response[0].createdBy;
+        console.log("Creator info:", creatorInfo);
+        console.log("Creator type:", inspectObject(creatorInfo));
         
-        if (Array.isArray(response) && response.length > 0) {
-          // More detailed debugging
-          console.log("First paper:", response[0]);
-          const creatorInfo = response[0].createdBy;
-          console.log("Creator info:", creatorInfo);
-          console.log("Creator type:", inspectObject(creatorInfo));
-          
-          // If createdBy is an object with _id, try to access properties directly
-          if (creatorInfo && creatorInfo._id) {
-            console.log("Creator ID:", creatorInfo._id);
-            console.log("Creator name:", creatorInfo.name);
-            console.log("Creator email:", creatorInfo.email);
-            // See if any properties exist on the prototype
-            console.log("Creator prototype properties:", 
-              Object.getOwnPropertyNames(Object.getPrototypeOf(creatorInfo)));
-          }
-          
-          setPapers(response);
-          setFilteredPapers(response);
-        } else {
-          console.error("❌ Unexpected response format:", response);
-          setPapers([]);
-          setFilteredPapers([]);
+        // If createdBy is an object with _id, try to access properties directly
+        if (creatorInfo && creatorInfo._id) {
+          console.log("Creator ID:", creatorInfo._id);
+          console.log("Creator name:", creatorInfo.name);
+          console.log("Creator email:", creatorInfo.email);
+          // See if any properties exist on the prototype
+          console.log("Creator prototype properties:", 
+            Object.getOwnPropertyNames(Object.getPrototypeOf(creatorInfo)));
         }
         
-        setLoading(false);
-      } catch (err) {
-        console.error("❌ Error fetching papers:", err);
-        setError("Failed to load question papers. Please try again later.");
-        setLoading(false);
+        setPapers(response);
+        
+        // Apply any existing filters to the new data
+        let filtered = [...response];
+        Object.entries(filters).forEach(([filterName, filterValue]) => {
+          if (filterValue) {
+            filtered = filtered.filter(paper => {
+              if (filterName === 'subjectName') {
+                return paper.subjectName?.toLowerCase().includes(filterValue.toLowerCase());
+              }
+              return paper[filterName] === filterValue;
+            });
+          }
+        });
+        
+        setFilteredPapers(filtered);
+      } else {
+        console.error("❌ Unexpected response format:", response);
+        setPapers([]);
+        setFilteredPapers([]);
       }
-    };
-  
+      
+      setLoading(false);
+      setIsRefreshing(false);
+      setError(null); // Clear any previous errors
+    } catch (err) {
+      console.error("❌ Error fetching papers:", err);
+      setError("Failed to load question papers. Please try again later.");
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  // Initial load of papers
+  useEffect(() => {
     fetchPapers();
   }, []);
+  
+  // Refresh function to reload papers
+  const handleRefresh = () => {
+    fetchPapers();
+   
+  };
 
   // Helper function to strip HTML tags and properly decode HTML entities
   const stripHtmlTags = (input) => {
@@ -195,7 +222,6 @@ const showPopup = (message) => {
 
   // Delete Paper
   const handleDeletePaper = async (paper) => {
-   
     try {
       await deleteOpenPaper(paper._id);
       
@@ -766,12 +792,23 @@ const showPopup = (message) => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Open Elective Question Papers</h1>
-          <button 
-            onClick={() => navigate('/question-generator')} 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Create New Paper
-          </button>
+          <div className="flex space-x-3">
+            {/* Refresh button */}
+            <button 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className={`flex items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors ${isRefreshing ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              <RefreshCw className={`w-5 h-5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+            <button 
+              onClick={() => navigate('/question-generator')} 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Create New Paper
+            </button>
+          </div>
         </div>
   
         {/* Filters */}
