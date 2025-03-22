@@ -58,6 +58,7 @@ import QuestionPreview from "../pages/Modules/QuestionPreview.js";
 import AnswerKey from "../pages/Modules/AnswerKey.js";
 import EntranceExamSide from "../pages/Papers/EntranceExamSide.js";
 import EntranceAdminApprovalPage from "../pages/Papers/PaperApprovals_Entrance.js";
+import PaperApprovals_MidSem from "../pages/Papers/PaperApprovals_MidSem.js";
 
 // ✅ Authentication Wrapper
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -131,6 +132,7 @@ const AppRoutes = () => {
         <Route path="/viewpaper/:id" element={<PrivateRoute allowedRoles={["Teacher"]}><ViewPaper /></PrivateRoute>} />
         <Route path="/modalrosh" element={<PrivateRoute allowedRoles={["Teacher"]}><ModalRosh/></PrivateRoute>} />
         <Route path="/midsemester" element={<PrivateRoute allowedRoles={["Teacher"]}><MidSemSide/></PrivateRoute>} />
+        <Route path="/approvalmid" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovals_MidSem/></PrivateRoute>} />
 
         {/* ✅ Dino Existing Routes */}
         <Route path="/selected-marks" element={<PrivateRoute allowedRoles={["Teacher"]}><SelectMarks /></PrivateRoute>} />

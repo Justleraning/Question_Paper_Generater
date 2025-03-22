@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../Contexts/AuthContext.js";
-import { FileText, Eye, Trash2, Check, X, Upload, Filter } from 'lucide-react';
+import { FileText, Eye, Edit ,Trash2, Check, X, Upload, RefreshCw, AlertCircle } from 'lucide-react';
 
 const MidSemSide = () => {
   const { authState } = useAuth();
@@ -13,22 +13,40 @@ const MidSemSide = () => {
   const [deleting, setDeleting] = useState(null);
   const navigate = useNavigate();
 
+  // For rejection dialog
+  const [rejectingPaperId, setRejectingPaperId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
   // Filter states
   const [statusFilter, setStatusFilter] = useState("All");
   const [semesterFilter, setSemesterFilter] = useState("All");
   const [availableSemesters, setAvailableSemesters] = useState([]);
 
   useEffect(() => {
+    console.log("Fetching papers...");
+    
+    // Fetch papers with a more robust approach
     fetch("http://localhost:5000/get-questions")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Server responded with status ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
         console.log("✅ API Response:", data);
-        setPapers(data);
-        setFilteredPapers(data);
         
-        // Extract unique semesters from data
-        const semesters = [...new Set(data.map(paper => paper.semester).filter(Boolean))];
-        setAvailableSemesters(semesters);
+        // Check if data is an array and not empty
+        if (Array.isArray(data) && data.length > 0) {
+          setPapers(data);
+          setFilteredPapers(data);
+          
+          // Extract unique semesters from data
+          const semesters = [...new Set(data.map(paper => paper.semester).filter(Boolean))];
+          setAvailableSemesters(semesters);
+        } else {
+          console.log("No papers received or data is not an array:", data);
+        }
         
         setLoading(false);
       })
@@ -40,6 +58,8 @@ const MidSemSide = () => {
 
   // Apply filters when filter states change
   useEffect(() => {
+    if (papers.length === 0) return;
+    
     let result = [...papers];
     
     // Apply status filter
@@ -52,10 +72,53 @@ const MidSemSide = () => {
       result = result.filter(paper => paper.semester === semesterFilter);
     }
     
+    console.log(`Filtered papers: ${result.length} results`);
     setFilteredPapers(result);
   }, [statusFilter, semesterFilter, papers]);
 
+  const refreshPapers = () => {
+    setLoading(true);
+    console.log("Manually refreshing papers...");
+    
+    fetch("http://localhost:5000/get-questions")
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Server responded with status ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        console.log("✅ API Response:", data);
+        
+        // Check if data is an array and not empty
+        if (Array.isArray(data) && data.length > 0) {
+          setPapers(data);
+          setFilteredPapers(data);
+          
+          // Extract unique semesters from data
+          const semesters = [...new Set(data.map(paper => paper.semester).filter(Boolean))];
+          setAvailableSemesters(semesters);
+        } else {
+          console.log("No papers received or data is not an array:", data);
+        }
+        
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("❌ Error fetching questions:", error);
+        setLoading(false);
+        alert("Failed to refresh papers. Please try again.");
+      });
+  };
+
   const handleDelete = async (id) => {
+    // Prevent deletion of non-draft papers for teachers
+    const paperToDelete = papers.find(p => p._id === id);
+    if (!isAdmin && paperToDelete && paperToDelete.status !== 'Draft' && paperToDelete.status !== 'Rejected') {
+      alert("You cannot delete papers that have been submitted or approved.");
+      return;
+    }
+    
     const confirmDelete = window.confirm("Are you sure you want to delete this paper?");
     if (!confirmDelete) return;
   
@@ -112,77 +175,142 @@ const MidSemSide = () => {
   const sendForApproval = async (paper) => {
     try {
       const currentStatus = paper.status || 'Draft';
-      let newStatus;
-
-      if (currentStatus === 'Draft') {
-        newStatus = 'Submitted';
-        if (!window.confirm(`Are you sure you want to submit "${paper.subject || paper.subjectCode}" for approval? Once submitted, you cannot edit it until it's approved or rejected.`)) {
-          return;
-        }
-      } else if (currentStatus === 'Submitted') {
-        newStatus = 'Approved';
-        if (!window.confirm(`Are you sure you want to approve "${paper.subject || paper.subjectCode}"? This action represents approval from higher authority.`)) {
-          return;
-        }
-      } else if (currentStatus === 'Approved') {
-        alert("This paper is already approved.");
+      
+      if (currentStatus !== 'Draft' && currentStatus !== 'Rejected') {
+        alert(`This paper is already ${currentStatus.toLowerCase()}.`);
         return;
-      } else if (currentStatus === 'Rejected') {
-        newStatus = 'Submitted';
-        if (!window.confirm(`Are you sure you want to resubmit "${paper.subject || paper.subjectCode}" for approval?`)) {
-          return;
-        }
+      }
+      
+      if (!window.confirm(`Are you sure you want to submit this "${paper.subject || 'paper'}" for approval?`)) {
+        return;
       }
 
       // Call API to update paper status
-      await fetch(`http://localhost:5000/update-paper-status/${paper._id}`, {
+      const response = await fetch(`http://localhost:5000/update-paper-status/${paper._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ 
+          status: 'Submitted',
+          submittedBy: authState?.user?._id,
+          submittedAt: new Date()
+        })
       });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit paper for approval");
+      }
+
+      const result = await response.json();
 
       // Update state to reflect the new status
       setPapers(prevPapers => prevPapers.map(p =>
-        p._id === paper._id ? { ...p, status: newStatus } : p
+        p._id === paper._id ? { ...p, status: 'Submitted' } : p
       ));
 
-      alert(`Paper status changed to ${newStatus}!`);
+      alert("Paper has been submitted for approval! ✅");
     } catch (error) {
-      console.error("❌ Error updating paper status:", error);
-      alert("Failed to update paper status. Please try again.");
+      console.error("❌ Error submitting paper:", error);
+      alert("Failed to submit paper. Please try again.");
     }
   };
 
-  // Reject Paper
-  const rejectPaper = async (paper) => {
-    if (paper.status !== 'Submitted') {
-      alert("Only submitted papers can be rejected.");
+  // For Admins: Approve Paper
+  const handleApprovePaper = async (paperId) => {
+    if (!isAdmin) return;
+    
+    if (!window.confirm("Are you sure you want to approve this paper?")) {
       return;
     }
 
-    const reason = window.prompt("Please provide a reason for rejection:");
-    if (reason === null) return; // User cancelled
-
     try {
-      // Call API to update paper status
-      await fetch(`http://localhost:5000/update-paper-status/${paper._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Rejected', rejectionReason: reason })
+      const response = await fetch(`http://localhost:5000/update-paper-status/${paperId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          status: "Approved",
+          approvedBy: authState?.user?._id,
+          approvedAt: new Date()
+        }),
       });
 
-      // Update state to reflect the new status
-      setPapers(prevPapers => prevPapers.map(p =>
-        p._id === paper._id ? { ...p, status: 'Rejected', rejectionReason: reason } : p  
-      ));
+      if (!response.ok) {
+        throw new Error("Failed to approve paper");
+      }
 
-      alert("Paper has been rejected.");
+      // Update UI
+      setPapers(prevPapers => prevPapers.map(paper => 
+        paper._id === paperId 
+          ? { ...paper, status: "Approved", approvedAt: new Date() } 
+          : paper
+      ));
+      
+      alert("Paper approved successfully!");
+    } catch (error) {
+      console.error("❌ Error approving paper:", error);
+      alert("Failed to approve paper. Please try again.");
+    }
+  };
+
+  // For Admins: Open rejection dialog
+  const openRejectionDialog = (paperId) => {
+    if (!isAdmin) return;
+    setRejectingPaperId(paperId);
+  };
+
+  // For Admins: Cancel rejection
+  const cancelRejection = () => {
+    setRejectingPaperId(null);
+    setRejectionReason("");
+  };
+
+  // For Admins: Submit rejection
+  const submitRejection = async () => {
+    if (!isAdmin) return;
+    
+    if (!rejectionReason.trim()) {
+      alert("Please provide a reason for rejection");
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/update-paper-status/${rejectingPaperId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          status: "Rejected",
+          rejectedBy: authState?.user?._id,
+          rejectedAt: new Date(),
+          rejectionReason: rejectionReason.trim()
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to reject paper");
+      }
+
+      // Update UI
+      setPapers(prevPapers => prevPapers.map(paper => 
+        paper._id === rejectingPaperId 
+          ? { 
+              ...paper, 
+              status: "Rejected", 
+              rejectedAt: new Date(),
+              rejectionReason: rejectionReason.trim()
+            } 
+          : paper
+      ));
+      
+      alert("Paper rejected ⛔ Feedback sent to teacher 📩");
+      
+      // Reset state
+      cancelRejection();
     } catch (error) {
       console.error("❌ Error rejecting paper:", error);
       alert("Failed to reject paper. Please try again.");
     }
   };
 
+  // Get status badge styling
   const getStatusBadgeColor = (status) => {
     switch(status) {
       case 'Draft':
@@ -208,55 +336,63 @@ const MidSemSide = () => {
     <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Mid Semester Question Papers</h1>
 
-      {/* Filter Section */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+    {/* Filter Section */}
+    <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
+        {/* Status Filter */}
+        <div className="w-full">
+          <select
+            id="statusFilter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full block rounded-lg border border-gray-200 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-3"
+          >
+            <option value="All">All Statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Submitted">Submitted</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
 
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-2">
-            {/* Status Filter */}
-            <div className="w-full sm:w-auto">
-              <select
-                id="statusFilter"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full sm:w-auto block rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-              >
-                <option value="All">All Statuses</option>
-                <option value="Draft">Draft</option>
-                <option value="Submitted">Submitted</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-            </div>
+        {/* Semester Filter */}
+        <div className="w-full">
+          <select
+            id="semesterFilter"
+            value={semesterFilter}
+            onChange={(e) => setSemesterFilter(e.target.value)}
+            className="w-full block rounded-lg border border-gray-200 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-3"
+          >
+            <option value="All">All Semesters</option>
+            {availableSemesters.map((semester) => (
+              <option key={semester} value={semester}>
+                {semester}
+              </option>
+            ))}
+          </select>
+        </div>
 
-            {/* Semester Filter */}
-            <div className="w-full sm:w-auto">
-              <select
-                id="semesterFilter"
-                value={semesterFilter}
-                onChange={(e) => setSemesterFilter(e.target.value)}
-                className="w-full sm:w-auto block rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-              >
-                <option value="All">All Semesters</option>
-                {availableSemesters.map((semester) => (
-                  <option key={semester} value={semester}>
-                    {semester}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Reset Filters Button */}
-            <div className="w-full sm:w-auto self-end">
-              <button
-                onClick={resetFilters}
-                className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm"
-              >
-                Reset Filters
-              </button>
-            </div>
-          </div>
+        {/* Reset Filters Button */}
+        <div className="w-half">
+          <button
+            onClick={resetFilters}
+            className="w-half px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm border border-gray-200 shadow-sm"
+          >
+            Reset Filters
+          </button>
+        </div>
       </div>
-
+    
+    {/* Refresh Button */}
+    <div className="w-half">
+      <button
+        onClick={refreshPapers}
+        className="w-half px-4 py-3 bg-blue-0 text-blue-700 rounded-lg transition-colors text-sm flex items-center justify-center"
+      >
+      <RefreshCw className="w-4 h-4 mr-2" />
+      </button>
+    </div>
+    </div>
       {loading ? (
         <div className="text-center py-8">
           <p className="text-lg text-gray-600">Loading...</p>
@@ -291,19 +427,48 @@ const MidSemSide = () => {
                       {paper.subject || "Untitled"} {paper.subjectCode ? `- ${paper.subjectCode}` : ""}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {paper.course || "BCA"} | {paper.semester || " "}
+                      {paper.course || "BCA"} | {paper.semester || " "} | Units: {extractUnits(paper)}
                     </p>
-                    <div className="flex items-center mt-1 space-x-2">
-                      <span 
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusBadgeColor(paper.status || 'Draft')}`}
-                      >
-                        {paper.status || 'Draft'}
-                      </span>
-                      {paper.status === 'Rejected' && paper.rejectionReason && (
-                        <span className="text-xs text-red-600">
-                          Rejected: {paper.rejectionReason}
+                    <div className="flex flex-col mt-1">
+                      <div className="flex items-center space-x-2">
+                        <span 
+                          className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusBadgeColor(paper.status || 'Draft')}`}
+                        >
+                          {paper.status || 'Draft'}
                         </span>
+                        
+                        {/* Show submission/approval/rejection date if available */}
+                        {paper.submittedAt && paper.status === 'Submitted' && (
+                          <span className="text-xs text-gray-500">
+                            Submitted on: {new Date(paper.submittedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                        
+                        {paper.approvedAt && paper.status === 'Approved' && (
+                          <span className="text-xs text-gray-500">
+                            Approved on : {new Date(paper.approvedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                        
+                        {paper.rejectedAt && paper.status === 'Rejected' && (
+                          <span className="text-xs text-gray-500">
+                            Rejected on : {new Date(paper.rejectedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Show rejection reason if available */}
+                      {paper.status === 'Rejected' && paper.rejectionReason && (
+                        <div className="flex items-start mt-1 text-xs text-red-600">
+                          <AlertCircle className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" />
+                          <span>{paper.rejectionReason}</span>
+                        </div>
                       )}
+
+                      {/* Show number of questions */}
+                      <div className="text-xs text-gray-500 mt-1">
+                        Questions: {paper.questions ? paper.questions.length : 0}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -314,10 +479,11 @@ const MidSemSide = () => {
                   {!isAdmin && (paper.status === 'Draft' || paper.status === 'Rejected') && (
                     <button
                       onClick={() => sendForApproval(paper)}
-                      className="text-purple-500 hover:bg-purple-50 p-2 rounded-full transition-colors"
-                      title="Send for approval"
+                      className="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg flex items-center hover:bg-purple-200 text-sm"
+                      title="Submit for Approval"
                     >
                       <Upload className="w-4 h-4 mr-1" />
+                      Submit for Approval
                     </button>
                   )}
                   
@@ -325,14 +491,14 @@ const MidSemSide = () => {
                   {isAdmin && paper.status === 'Submitted' && (
                     <>
                       <button 
-                        onClick={() => sendForApproval(paper)}
+                        onClick={() => handleApprovePaper(paper._id)}
                         className="bg-green-500 text-white px-3 py-1 rounded-lg flex items-center hover:bg-green-600 text-sm"
                       >
                         <Check className="w-4 h-4 mr-1" />
                         Approve
                       </button>
                       <button
-                        onClick={() => rejectPaper(paper)} 
+                        onClick={() => openRejectionDialog(paper._id)}
                         className="bg-red-500 text-white px-3 py-1 rounded-lg flex items-center hover:bg-red-600 text-sm"
                       >
                         <X className="w-4 h-4 mr-1" />
@@ -348,9 +514,18 @@ const MidSemSide = () => {
                   >
                     <Eye className="w-5 h-5" />
                   </button>
-                  
-                  {/* Delete button - only for Draft and Rejected papers */}
-                  {(
+
+                  {(paper.status === 'Draft' || paper.status === 'Rejected' || isAdmin) && (
+                    <button
+                      oonClick={() => handleViewPaper(paper._id)}
+                      className="text-yellow-500 hover:bg-yellow-50 p-2 rounded-full transition-colors"
+                      title="Edit Paper"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                  )}
+                  {/* Delete button - only for Draft and Rejected papers or admin */}
+                  {(paper.status === 'Draft' || paper.status === 'Rejected' || isAdmin) && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -366,6 +541,38 @@ const MidSemSide = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Rejection reason modal */}
+      {isAdmin && rejectingPaperId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold mb-4">Provide Rejection Reason</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This feedback will be shared with the teacher. Please provide constructive criticism.
+            </p>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="w-full border border-gray-300 rounded-md p-2 mb-4 h-32"
+              placeholder="Enter reason for rejection..."
+            ></textarea>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={cancelRejection}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitRejection}
+                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+              >
+                Reject Paper
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

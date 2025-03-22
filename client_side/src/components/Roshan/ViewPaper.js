@@ -575,9 +575,16 @@ const ViewPaper = () => {
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "20px", textAlign: "center", background: "rgb(200, 203, 206)", minHeight: "100vh" }}>
-      <a href="/midsemester" style={{ textDecoration: "none", color: "#072b52", fontWeight: "bold", fontSize: "18px", display: "inline-block", padding: "15px" }}>
+      <button onClick={() => navigate(-1)} style={{ 
+        textDecoration: "none", 
+        color: "#072b52", 
+        fontWeight: "bold", 
+        fontSize: "18px", 
+        display: "inline-block", 
+        padding: "15px" 
+      }}>
         &#129136; &nbsp; Back
-      </a>
+      </button>
 
       <div style={{ 
         marginTop: "20px", 
@@ -652,22 +659,6 @@ const ViewPaper = () => {
         }}>
           <Download size={20} /> Download
         </button>
-
-        <button onClick={handleApproval} style={{
-                padding: "10px 15px",
-                background: "rgba(251, 247, 42, 0.88)",
-                fontSize: "17px",
-                color: "black",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                marginBottom: '20px'
-              }}>
-                <Upload size={20} /> Send for Approval
-          </button>
 
         {isEditing && (
           <div style={{ display: 'inline-flex', gap: '10px' }}>

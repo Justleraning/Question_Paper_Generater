@@ -67,7 +67,7 @@ const createPaper = async (req, res) => {
   try {
     console.log("📥 Received paper data:", JSON.stringify(req.body, null, 2));
     
-    const { subject, semester, questions } = req.body;
+    const { subject, semester, questions, createdBy } = req.body;
     
     // Validate input
     if (!subject || !semester || !questions || questions.length === 0) {
@@ -104,7 +104,10 @@ const createPaper = async (req, res) => {
       subject: subject, // Add subject at root level (required)
       semester: semester, // Add semester at root level (required)
       unit: processedQuestions[0].unit || "Default Unit", // Add unit at root level (required)
-      questions: processedQuestions // Add questions as before
+      questions: processedQuestions, // Add questions as before
+      status: "Draft", // Set default status
+      createdBy: createdBy || null, // Store creator if available
+      createdAt: new Date() // Add creation timestamp
     });
     
     console.log("📋 Paper object created:", JSON.stringify(newPaper, null, 2));
@@ -455,6 +458,158 @@ app.get("/api/question-papers", getAllQuestionPapers);
 app.get("/api/question-papers/:id", getQuestionPaperById);
 app.post("/api/question-papers/randomize", randomizeQuestionPaper);
 app.delete("/api/question-papers/:id", deleteQuestionPaper);
+
+app.put("/update-paper-status/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, approvedBy, approvedAt, rejectedBy, rejectedAt, rejectionReason, submittedBy, submittedAt } = req.body;
+    
+    console.log(`📝 Request to update paper ${id} status to ${status}`);
+    
+    // Validate input
+    if (!status || !id) {
+      return res.status(400).json({ error: "Paper ID and status are required" });
+    }
+    
+    // Check if paper exists
+    const paper = await Question.findById(id);
+    if (!paper) {
+      console.log(`❌ Paper not found with ID: ${id}`);
+      return res.status(404).json({ error: "Paper not found" });
+    }
+    
+    console.log(`Current paper status: ${paper.status || 'None'}`);
+    
+    // Update the paper status and related fields
+    paper.status = status;
+    
+    if (status === "Approved") {
+      paper.approvedBy = approvedBy;
+      paper.approvedAt = approvedAt || new Date();
+      // Clear any rejection data if previously rejected
+      paper.rejectionReason = undefined;
+      paper.rejectedAt = undefined;
+      paper.rejectedBy = undefined;
+      
+      console.log(`✅ Paper ${id} marked as approved`);
+    } else if (status === "Rejected") {
+      paper.rejectedBy = rejectedBy;
+      paper.rejectedAt = rejectedAt || new Date();
+      paper.rejectionReason = rejectionReason;
+      // Clear any approval data if previously approved
+      paper.approvedAt = undefined;
+      paper.approvedBy = undefined;
+      
+      console.log(`❌ Paper ${id} rejected. Reason: ${rejectionReason}`);
+    } else if (status === "Submitted") {
+      paper.submittedAt = submittedAt || new Date();
+      paper.submittedBy = submittedBy;
+      
+      console.log(`📤 Paper ${id} submitted for approval`);
+    }
+    
+    // Save the updated paper
+    const updatedPaper = await paper.save();
+    
+    // Check if save was successful
+    if (updatedPaper.status === status) {
+      console.log(`✅ Paper ${id} status successfully updated to: ${status}`);
+    } else {
+      console.log(`⚠️ Paper status may not have been updated correctly. Current: ${updatedPaper.status}`);
+    }
+    
+    // Return success response
+    res.json({
+      message: `Paper status updated to ${status}`,
+      paper: updatedPaper
+    });
+  } catch (error) {
+    console.error("❌ Error updating paper status:", error);
+    res.status(500).json({ error: "Failed to update paper status" });
+  }
+});
+
+// 3. Enhance the get-submitted-papers endpoint with more diagnostic info
+app.get("/get-submitted-papers", async (req, res) => {
+  try {
+    console.log("📌 Fetching papers with 'Submitted' status...");
+    
+    // Check how many papers have status field first
+    const papersWithStatus = await Question.countDocuments({ status: { $exists: true } });
+    console.log(`Papers with status field: ${papersWithStatus}`);
+    
+    // Count by status
+    const statusCounts = await Question.aggregate([
+      { $match: { status: { $exists: true } } },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+    
+    console.log("Papers by status:");
+    statusCounts.forEach(s => console.log(`- ${s._id || 'null'}: ${s.count}`));
+    
+    // Only fetch papers with "Submitted" status
+    const submittedPapers = await Question.find({ status: "Submitted" })
+      .sort({ submittedAt: -1 }); // Most recently submitted first
+    
+    console.log(`✅ Found ${submittedPapers.length} submitted papers`);
+    
+    if (submittedPapers.length > 0) {
+      // Log the first paper's details for debugging
+      console.log("First submitted paper:", {
+        id: submittedPapers[0]._id,
+        subject: submittedPapers[0].subject,
+        status: submittedPapers[0].status,
+        submittedAt: submittedPapers[0].submittedAt
+      });
+    }
+    
+    res.json(submittedPapers);
+  } catch (error) {
+    console.error("❌ Error fetching submitted papers:", error);
+    res.status(500).json({ error: "Failed to fetch submitted papers" });
+  }
+});
+
+// 4. Add a diagnostic endpoint to help troubleshoot
+app.get("/api/paper-status-summary", async (req, res) => {
+  try {
+    // Get total paper count
+    const totalPapers = await Question.countDocuments();
+    
+    // Get papers with status field
+    const papersWithStatus = await Question.countDocuments({ status: { $exists: true } });
+    
+    // Count by status
+    const statusCounts = await Question.aggregate([
+      { $match: { status: { $exists: true } } },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+    
+    // Format the status counts
+    const statusSummary = {};
+    statusCounts.forEach(item => {
+      statusSummary[item._id || 'null'] = item.count;
+    });
+    
+    // Get a sample of papers without status
+    const papersWithoutStatus = await Question.find({ status: { $exists: false } })
+      .limit(5)
+      .select('_id subject semester createdAt');
+    
+    res.json({
+      totalPapers,
+      papersWithStatus,
+      papersWithoutStatus: totalPapers - papersWithStatus,
+      statusSummary,
+      paperSamples: {
+        withoutStatus: papersWithoutStatus
+      }
+    });
+  } catch (error) {
+    console.error("Error generating paper status summary:", error);
+    res.status(500).json({ error: "Failed to generate summary" });
+  }
+});
 
 // Error handling middleware
 app.use(errorHandler);

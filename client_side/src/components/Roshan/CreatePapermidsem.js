@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Eye } from 'lucide-react'
 
 const CreatePaper = () => {
   const [papers, setPapers] = useState([]);
@@ -52,118 +53,106 @@ const CreatePaper = () => {
     navigate(`/viewpaper/${paperId}`);
   };
 
-  // Helper function to extract units from questions
-// Helper function to extract units from questions or use the units array
-const extractUnits = (paper) => {
-  // First check if there's a units array
-  if (paper.units && paper.units.length > 0) {
-    return paper.units.join(", ");
-  }
-  
-  // Fallback to extracting from questions
-  if (paper.questions && paper.questions.length > 0) {
-    const units = paper.questions
-      .map(q => q.unit)
-      .filter((unit, index, self) => 
-        unit && self.indexOf(unit) === index
-      );
-      
-    return units.length > 0 ? units.join(", ") : paper.unit || "Unit 1";
-  }
-  
-  // Last resort, return the top-level unit
-  return paper.unit || "Unit 1";
-};
+  // Helper function to extract units from questions or use the units array
+  const extractUnits = (paper) => {
+    // First check if there's a units array
+    if (paper.units && paper.units.length > 0) {
+      return paper.units.join(", ");
+    }
+    
+    // Fallback to extracting from questions
+    if (paper.questions && paper.questions.length > 0) {
+      const units = paper.questions
+        .map(q => q.unit)
+        .filter((unit, index, self) => 
+          unit && self.indexOf(unit) === index
+        );
+        
+      return units.length > 0 ? units.join(", ") : paper.unit || "Unit 1";
+    }
+    
+    // Last resort, return the top-level unit
+    return paper.unit || "Unit 1";
+  };
 
   return (
-    <div style={{ fontFamily: "Arial, sans-serif", padding: "20px", textAlign: "center", background: "#e3e8f0", minHeight: "100vh" }}>
-      <a href="/mainp" style={{ textDecoration: "none", color: "#4e45a6", background: "lightblue", fontWeight: "bold", fontSize: "18px", display: "inline-block", borderRadius: "20px", padding: "10px", marginRight: "100%", cursor: "pointer", transition: "color 0.3s ease" }}>
+    <div className="font-sans p-5 text-center bg-gray-100 min-h-screen">
+      {/* Back Button */}
+      <a 
+        href="/mainp" 
+        className="no-underline text-indigo-700 bg-blue-200 font-bold text-lg inline-block rounded-full p-2.5 mr-auto cursor-pointer transition-colors duration-300 hover:bg-blue-300"
+      >
         &#129136; Back
       </a>
-      <h1>Mid Semester Examination</h1>
-      <h2 style={{ background:"lightblue", textAlign:"center", display:"inline-block", borderRadius: "15px", padding:"10px 10px 10px 10px", marginBottom: "20px"}}>Saved Question Papers</h2>
-      {loading ? <p>Loading...</p> : papers.length === 0 ? <p style={{color:'#ac1d1d', fontWeight:'bold'}}>-- No saved question papers ⚠️ --</p> :
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "15px" }}>
-          
+      
+      {/* Main Heading */}
+      <h1 className="text-3xl font-bold my-4">Mid Semester Examination</h1>
+      
+      {/* Subheading */}
+      <h2 className="bg-blue-200 text-center inline-block rounded-xl px-4 py-2.5 mb-5 font-semibold">
+        Saved Question Papers
+      </h2>
+      
+      {/* Conditional Rendering for Papers */}
+      {loading ? (
+        <p className="text-gray-600">Loading...</p>
+      ) : papers.length === 0 ? (
+        <p className="text-red-700 font-bold">-- No saved question papers ⚠️ --</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {papers.map((paper, index) => (
-          <div 
-            key={paper._id} 
-            style={{
-              position: "relative",
-              padding: "15px",
-              background: "#fff",
-              borderRadius: "8px",
-              cursor: "pointer",
-              boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
-              transition: "opacity 0.3s ease-out, transform 0.3s ease-out",
-              opacity: deleting === paper._id ? 0 : 1,
-              transform: deleting === paper._id ? "scale(0.9)" : "scale(1)",
-            }}
-            onMouseOver={() => (e) => (e.target.style.color = "#0056b3")}
-            onMouseOut={() => (e) => (e.target.style.color = "#fff")}
-          > 
-            {/* Delete Button */}
-            <span onClick={(e) => { e.stopPropagation(); handleDelete(paper._id); }} 
-              style={{ position: 'absolute',
-                top: '-10px',
-                right: '-10px',
-                backgroundColor: '#ff5555',
-                color: 'white',
-                fontSize:'22px',
-                fontWeight: 'bolder',
-                borderRadius: '50%',
-                width: '30px',
-                height: '30px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }}>
-              &#10799;
-            </span>
+            <div 
+              key={paper._id} 
+              className={`
+                relative p-4 bg-white rounded-lg cursor-pointer shadow-md
+                transition-all duration-300 transform
+                ${deleting === paper._id ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}
+              `}
+              onMouseOver={(e) => e.target.style.color = "#0056b3"}
+              onMouseOut={(e) => e.target.style.color = ""}
+            > 
+              {/* Delete Button */}
+              <span 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  handleDelete(paper._id); 
+                }} 
+                className="
+                  absolute -top-2.5 -right-2.5 bg-red-500 text-white text-2xl font-bold
+                  rounded-full w-8 h-8 flex justify-center items-center cursor-pointer shadow-md
+                  hover:bg-red-500 text-gray-40  transition-colors
+                "
+              >
+                &#10799;
+              </span>
 
-            {/* Title Section */}
-            <h3>
-              {paper.subject ? paper.subject : "❌ No Subject"}
-              <br />
-              {paper.semester ? paper.semester : "❌ No Semester"}
-            </h3>
+              {/* Title Section */}
+              <h3 className="text-lg font-semibold mb-2">
+                {paper.subject ? paper.subject : "❌ No Subject"}
+                <br />
+                {paper.semester ? paper.semester : "❌ No Semester"}
+              </h3>
 
-            {/* Units */}
-            <h4>Units : {extractUnits(paper)}</h4>
-            
-            {/* Questions Count */}
-            <p>Questions: {paper.questions ? paper.questions.length : 0}</p>
+              {/* Units */}
+              <h4 className="text-md font-medium mb-1">Units: {extractUnits(paper)}</h4>
+              
+              {/* Questions Count */}
+              <p className="text-gray-700 mb-3">Questions: {paper.questions ? paper.questions.length : 0}</p>
 
-            {/* View Paper Button */}
-            <button 
-              onClick={() => handleViewPaper(paper._id)} 
-              style={{
-                marginTop: "10px",
-                padding: "8px 12px",
-                background: "#007bff",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                transition: "all 0.20s ease",
-                position: 'relative',
-                fontSize: "15px",
-                cursor: "pointer"
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = "#3a85ff";
-                e.target.style.transform = "translateY(0)";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = "#007bff";
-                e.target.style.transform = "translateY(2px)";
-              }}>
-              View Paper
-            </button>
-          </div>
-        ))}
+              {/* View Paper Button */}
+              <button 
+                onClick={() => handleViewPaper(paper._id)} 
+                className="
+                  mt-2 px-3 py-2 bg-blue-200 text-white-300 border-none rounded-lg text-base
+                  cursor-pointer transform transition-all duration-200
+                "
+              >
+                <Eye />
+              </button>
+            </div>
+          ))}
         </div>
-      }
+      )}
     </div>
   );
 };
