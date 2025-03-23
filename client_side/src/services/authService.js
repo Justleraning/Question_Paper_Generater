@@ -60,34 +60,40 @@ export const loginUser = async (credentials) => {
   }
 };
 
+// FIX: Get Reset Requests - Return empty array instead of undefined
 export const getResetRequests = async () => {
   try {
-    const response = await axios.get(`${AUTH_API_URL}/reset-requests`, { headers: authHeaders() });
-
-    const requests = response.data;
-    const user = JSON.parse(sessionStorage.getItem("user"));
-
-    if (!user || !user.role) {
-      console.error("🚨 No valid user found!");
-      return [];
+    console.log("🔍 Fetching reset requests...");
+    const response = await axios.get(`${AUTH_API_URL}/reset-requests`, { 
+      headers: authHeaders() 
+    });
+    
+    console.log("✅ Raw API Response:", response);
+    
+    // Handle different possible response formats:
+    // 1. If response.data is an array, use it directly
+    // 2. If it's an object with a data/requests/results property, use that
+    // 3. Otherwise return an empty array
+    
+    let requests = [];
+    if (Array.isArray(response.data)) {
+      requests = response.data;
+    } else if (response.data && typeof response.data === 'object') {
+      requests = response.data.requests || response.data.data || response.data.results || [];
     }
-
-    // ✅ Filter reset requests based on role
-    let filteredRequests = [];
-
-    if (user.role === "SuperAdmin") {
-      filteredRequests = requests.filter(req => req.role === "Admin"); // SuperAdmin sees only Admins' requests
-    } else if (user.role === "Admin") {
-      filteredRequests = requests.filter(req => req.role === "Teacher"); // Admin sees only Teachers' requests
-    } else {
-      console.warn("🚨 Unauthorized access to reset requests!");
-      return [];
-    }
-
-    console.log("✅ Filtered Reset Requests:", filteredRequests);
-    return filteredRequests;
+    
+    console.log("🔍 Reset requests retrieved:", requests);
+    
+    // IMPORTANT: Don't filter the requests here - just return whatever the backend provided
+    return requests;
   } catch (error) {
-    handleAuthError(error);
+    console.error("❌ Error fetching reset requests:", error);
+    if (error.response) {
+      console.error("Response status:", error.response.status);
+      console.error("Response data:", error.response.data);
+    }
+    // Return empty array instead of undefined
+    return [];
   }
 };
 
@@ -110,10 +116,24 @@ export const approveResetRequest = async (username) => {
   }
 };
 
-// ✅ Change Password Before Login (User provides username + old password)
-export const changePasswordBeforeLogin = async (changeForm) => {
+// MODIFIED: Change Password Before Login (User provides username + old password)
+// Fix: Removed custom header causing CORS issues
+export const changePasswordBeforeLogin = async (changeForm, options = {}) => {
   try {
-    const response = await axios.post(`${AUTH_API_URL}/change-password-before-login`, changeForm);
+    // Make the API call without custom headers to avoid CORS issues
+    const response = await axios.post(
+      `${AUTH_API_URL}/change-password-before-login`, 
+      changeForm
+    );
+    
+    // If noAlert option is set, suppress any alert and just return the data
+    // The calling component will handle showing a custom dialog
+    if (options.noAlert && response.data) {
+      console.log("Password change successful:", response.data.message);
+      return response.data;
+    }
+    
+    // Otherwise, let the alert happen naturally
     return response.data;
   } catch (error) {
     handleAuthError(error);

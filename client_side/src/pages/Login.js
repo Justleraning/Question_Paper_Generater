@@ -14,16 +14,61 @@ const Login = () => {
   const [resetForm, setResetForm] = useState({ username: "", fullName: "" });
   const [changeForm, setChangeForm] = useState({ username: "", currentPassword: "", newPassword: "" });
   const [showSuperAdminDialog, setShowSuperAdminDialog] = useState(false);
+  
+  // New state for password validation
+  const [passwordError, setPasswordError] = useState("");
+  
+  // New state for custom notification dialog that replaces alerts
+  const [notificationDialog, setNotificationDialog] = useState({
+    open: false,
+    message: "",
+    title: "localhost:3000 says",
+    onClose: () => {}
+  });
+
+  // Password validation function
+  const validatePassword = (password) => {
+    if (!password) return "Password is required";
+    
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(password);
+
+    if (!hasUpperCase) {
+      return "Password must contain at least one uppercase letter";
+    }
+    if (!hasLowerCase) {
+      return "Password must contain at least one lowercase letter";
+    }
+    if (!hasNumber) {
+      return "Password must contain at least one number";
+    }
+    if (!hasSpecialChar) {
+      return "Password must contain at least one special character";
+    }
+    return "";
+  };
 
   // Handle Input Changes
   const handleChange = (e) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
   };
+  
   const handleResetChange = (e) => {
     setResetForm({ ...resetForm, [e.target.name]: e.target.value });
   };
+  
   const handleChangePasswordChange = (e) => {
-    setChangeForm({ ...changeForm, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setChangeForm({ ...changeForm, [name]: value });
+    
+    // Validate password as user types
+    if (name === "newPassword") {
+      const error = validatePassword(value);
+      setPasswordError(error);
+      console.log("Password validation:", error); // Debug log
+    }
   };
 
   // Handle Login
@@ -48,8 +93,15 @@ const Login = () => {
       }
 
       const response = await requestPasswordReset(resetForm);
-      alert("Password reset request submitted! Wait for admin approval.");
-      setResetMode(false);
+      // Replace alert with custom dialog
+      setNotificationDialog({
+        open: true,
+        message: "Password reset request submitted! Wait for admin approval.",
+        onClose: () => {
+          setNotificationDialog(prev => ({ ...prev, open: false }));
+          setResetMode(false);
+        }
+      });
     } catch (err) {
       setError(err.response?.data?.message || "Reset request failed.");
     }
@@ -58,10 +110,28 @@ const Login = () => {
   // Handle Password Change Before Login
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    
+    // Validate password before submitting
+    const validationError = validatePassword(changeForm.newPassword);
+    if (validationError) {
+      setPasswordError(validationError);
+      return;
+    }
+    
+    setPasswordError("");
+    
     try {
-      const response = await changePasswordBeforeLogin(changeForm);
-      alert(response.message);
-      setChangePasswordMode(false);
+      // Use noAlert option to bypass the browser alert
+      const response = await changePasswordBeforeLogin(changeForm, { noAlert: true });
+      // Show custom dialog instead of alert
+      setNotificationDialog({
+        open: true,
+        message: response.message || "Password changed successfully! You can now login.",
+        onClose: () => {
+          setNotificationDialog(prev => ({ ...prev, open: false }));
+          setChangePasswordMode(false);
+        }
+      });
     } catch (err) {
       setError(err.response?.data?.message || "Failed to change password.");
     }
@@ -69,6 +139,40 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-tr from-gray-100 via-white to-blue-50">
+      {/* Custom Notification Dialog - Replaces browser alerts */}
+      <Dialog open={notificationDialog.open} onClose={notificationDialog.onClose} className="fixed inset-0 z-50">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md transition-all duration-300 animate-fadeIn">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 text-blue-600">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            
+            <Dialog.Title className="text-xl font-bold text-center mb-2">
+              {notificationDialog.title}
+            </Dialog.Title>
+            
+            <div className="text-center mb-6">
+              <p className="text-gray-700">{notificationDialog.message}</p>
+            </div>
+            
+            <div className="flex justify-center">
+              <button
+                className="bg-blue-500 text-white px-5 py-2 rounded-lg hover:bg-blue-600 transition-all duration-200 font-medium flex items-center transform hover:scale-[1.02] active:scale-[0.98]"
+                onClick={notificationDialog.onClose}
+              >
+                OK
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
       {/* Floating shapes for dynamic background */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-16 w-32 h-32 bg-blue-200 opacity-20 rounded-full transform rotate-45"></div>
@@ -283,14 +387,41 @@ const Login = () => {
                       type="password" 
                       name="newPassword" 
                       placeholder="Enter new password" 
-                      className="pl-10 w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200" 
+                      className={`pl-10 w-full border ${passwordError ? 'border-red-300' : 'border-gray-300'} p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
                       onChange={handleChangePasswordChange} 
                       required 
                     />
                   </div>
+                  
+                  {/* Password validation message */}
+                  {passwordError && (
+                    <p className="text-red-500 text-xs mt-1">{passwordError}</p>
+                  )}
+                  
+                  {/* Password requirements checklist */}
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-500">Password must contain:</p>
+                    <ul className="text-xs text-gray-500 list-disc pl-5 mt-1">
+                      <li className={`${/[A-Z]/.test(changeForm.newPassword) ? 'text-green-500' : ''}`}>
+                        At least one uppercase letter
+                      </li>
+                      <li className={`${/[a-z]/.test(changeForm.newPassword) ? 'text-green-500' : ''}`}>
+                        At least one lowercase letter
+                      </li>
+                      <li className={`${/[0-9]/.test(changeForm.newPassword) ? 'text-green-500' : ''}`}>
+                        At least one number
+                      </li>
+                      <li className={`${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(changeForm.newPassword) ? 'text-green-500' : ''}`}>
+                        At least one special character
+                      </li>
+                    </ul>
+                  </div>
                 </div>
                 
-                <button className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-3 rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all duration-200 font-medium flex items-center justify-center transform hover:scale-[1.02] active:scale-[0.98] mt-6">
+                <button 
+                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-3 rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all duration-200 font-medium flex items-center justify-center transform hover:scale-[1.02] active:scale-[0.98] mt-6"
+                  disabled={!!passwordError}
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
@@ -323,10 +454,10 @@ const Login = () => {
                   </button>
                 </div>
               )}
-
+              
               {(resetMode || changePasswordMode) && (
                 <button 
-                  onClick={() => { setResetMode(false); setChangePasswordMode(false); }} 
+                  onClick={() => { setResetMode(false); setChangePasswordMode(false); setPasswordError(""); }} 
                   className="w-full text-gray-600 text-sm hover:text-gray-800 flex items-center justify-center transition-colors duration-200 group"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 group-hover:animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">

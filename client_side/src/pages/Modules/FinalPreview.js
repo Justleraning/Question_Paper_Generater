@@ -300,7 +300,7 @@ const FinalPreview = () => {
     } finally {
       setLoading(false);
     }
-    fetchAllQuestions();
+    
   };
 
   const handleSave = async () => {

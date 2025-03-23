@@ -15,7 +15,7 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar with hover state */}
+      {/* Only render one Sidebar component - do not add a second sidebar */}
       <Sidebar 
         isSidebarOpen={isSidebarOpen} 
         setIsSidebarOpen={setIsSidebarOpen}

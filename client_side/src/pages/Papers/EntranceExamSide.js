@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Download, Edit, Trash2, Eye, Send, Plus, ChevronDown, ChevronRight, Filter, X, Save, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { FileText, Download, Edit, Trash2, Eye, Send, Plus, ChevronDown, ChevronRight, Filter, X, Save, XCircle, AlertCircle, RefreshCw, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
   getMyPapers, 
@@ -20,13 +20,20 @@ const EntranceExamSide = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedPaper, setExpandedPaper] = useState(null);
-  const [notification, setNotification] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [downloadFormat, setDownloadFormat] = useState('pdf');
   const [showDownloadOptions, setShowDownloadOptions] = useState({});
+  
+  // State for delete confirmation
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [sendConfirmation, setSendConfirmation] = useState(null);
   
   // Auto-refresh setup (hidden from UI)
   const autoRefreshIntervalRef = useRef(null);
   const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds refresh interval
+
+  // State for tracking expanded rejection reasons
+const [expandedRejection, setExpandedRejection] = useState(null);
   
   // Modal states for viewing paper
   const [showViewModal, setShowViewModal] = useState(false);
@@ -55,6 +62,17 @@ const EntranceExamSide = () => {
   const [editedQuestions, setEditedQuestions] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [editingQuestion, setEditingQuestion] = useState(null);
+
+  // Function to add message
+  const addMessage = (text, type = 'info') => {
+    const id = Date.now();
+    setMessages(prev => [...prev, { id, text, type }]);
+    
+    // Auto-remove message after 5 seconds
+    setTimeout(() => {
+      setMessages(prev => prev.filter(msg => msg.id !== id));
+    }, 5000);
+  };
 
   // Setup auto-refresh on component mount and cleanup on unmount
   useEffect(() => {
@@ -108,7 +126,10 @@ const EntranceExamSide = () => {
           if (statusChanges.length > 0) {
             // Notify about status changes
             const changedPaper = statusChanges[0]; // Just show notification for the first one if multiple changed
-            setNotification(`Paper "${changedPaper.courseName}" ${changedPaper.status === 'Approved' ? 'approved' : changedPaper.status === 'Rejected' ? 'rejected' : 'status updated'}`);
+            const messageType = changedPaper.status === 'Approved' ? 'success' : 
+                               changedPaper.status === 'Rejected' ? 'error' : 'info';
+            
+            addMessage(`Paper "${changedPaper.courseName}" ${changedPaper.status === 'Approved' ? 'approved' : changedPaper.status === 'Rejected' ? 'rejected' : 'status updated'}`, messageType);
             
             // Play a notification sound if browser supports it
             try {
@@ -128,7 +149,7 @@ const EntranceExamSide = () => {
     } catch (err) {
       console.error('Error fetching papers:', err);
       if (!isAutoRefresh) {
-        setError('Failed to load papers. Please try again.');
+        addMessage('Failed to load papers. Please try again.', 'error');
       }
       setPapers([]);
     } finally {
@@ -247,7 +268,7 @@ const EntranceExamSide = () => {
       
       // Validate questions
       if (editedQuestions.length === 0) {
-        setError('No questions to save.');
+        addMessage('No questions to save.', 'error');
         setLoading(false);
         return;
       }
@@ -255,7 +276,7 @@ const EntranceExamSide = () => {
       // Check for empty question text
       const hasEmptyQuestions = editedQuestions.some(q => !q.question || q.question.trim() === '');
       if (hasEmptyQuestions) {
-        setError('All questions must have text.');
+        addMessage('All questions must have text.', 'error');
         setLoading(false);
         return;
       }
@@ -271,37 +292,21 @@ const EntranceExamSide = () => {
             : paper
         ));
         
-        setNotification('Questions updated successfully!');
+        addMessage('Questions updated successfully!', 'success');
         closeQuestionEditModal();
       } else {
-        setError(response?.message || 'Failed to update questions.');
+        addMessage(response?.message || 'Failed to update questions.', 'error');
       }
     } catch (err) {
       console.error('Error updating questions:', err);
-      setError('Failed to update questions. Please try again.');
+      addMessage('Failed to update questions. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   // Handle edit button click for paper details
-  const handleEditPaper = (paper, event) => {
-    if (event) event.stopPropagation();
-    
-    // Set editing paper and form data
-    setEditingPaper(paper._id);
-    setEditFormData({
-      courseName: paper.courseName || '',
-      customSubjectName: paper.customSubjectName || '',
-      totalMarks: paper.totalMarks || 0,
-      examTime: paper.examTime || 1
-    });
-    
-    // Expand the paper if it's not already expanded
-    if (expandedPaper !== paper._id) {
-      setExpandedPaper(paper._id);
-    }
-  };
+ 
 
   // Handle form field changes
   const handleEditFormChange = (e) => {
@@ -330,19 +335,19 @@ const EntranceExamSide = () => {
       
       // Validate form data
       if (!editFormData.courseName.trim()) {
-        setError('Course name is required.');
+        addMessage('Course name is required.', 'error');
         setLoading(false);
         return;
       }
       
       if (isNaN(editFormData.totalMarks) || editFormData.totalMarks <= 0) {
-        setError('Total marks must be a positive number.');
+        addMessage('Total marks must be a positive number.', 'error');
         setLoading(false);
         return;
       }
       
       if (isNaN(editFormData.examTime) || editFormData.examTime <= 0) {
-        setError('Exam time must be a positive number.');
+        addMessage('Exam time must be a positive number.', 'error');
         setLoading(false);
         return;
       }
@@ -358,14 +363,14 @@ const EntranceExamSide = () => {
             : paper
         ));
         
-        setNotification('Paper updated successfully!');
+        addMessage('Paper updated successfully!', 'success');
         cancelEditing(); // Exit edit mode
       } else {
-        setError(response?.message || 'Failed to update paper.');
+        addMessage(response?.message || 'Failed to update paper.', 'error');
       }
     } catch (err) {
       console.error('Error updating paper:', err);
-      setError('Failed to update paper. Please try again.');
+      addMessage('Failed to update paper. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -378,7 +383,7 @@ const EntranceExamSide = () => {
       setShowDownloadOptions(prev => ({...prev, [paper._id]: false}));
       
       // Set notification
-      setNotification(`Downloading ${paper.courseName} paper in ${format.toUpperCase()} format...`);
+      addMessage(`Downloading ${paper.courseName} paper in ${format.toUpperCase()} format...`, 'info');
       
       // Generate file name
       const fileName = `${paper.courseName}${paper.customSubjectName ? '_' + paper.customSubjectName : ''}_${paper.totalMarks}marks`;
@@ -389,13 +394,9 @@ const EntranceExamSide = () => {
       } else if (format === 'docx') {
         await generateDOCX(paper, fileName);
       }
-      
-      // Clear notification after a delay
-      setTimeout(() => setNotification(null), 3000);
     } catch (error) {
       console.error('Error downloading paper:', error);
-      setError(`Failed to download paper in ${format.toUpperCase()} format.`);
-      setTimeout(() => setError(null), 3000);
+      addMessage(`Failed to download paper in ${format.toUpperCase()} format.`, 'error');
     }
   };
 
@@ -489,12 +490,10 @@ const EntranceExamSide = () => {
       }
       
       doc.save(`${fileName}.pdf`);
-      setNotification("PDF downloaded successfully!");
-      setTimeout(() => setNotification(null), 3000);
+      addMessage("PDF downloaded successfully!", 'success');
     } catch (error) {
       console.error("Error generating PDF:", error);
-      setError("Failed to generate PDF. Please try again.");
-      setTimeout(() => setError(null), 3000);
+      addMessage("Failed to generate PDF. Please try again.", 'error');
     }
   };
 
@@ -680,13 +679,11 @@ const EntranceExamSide = () => {
       // Generate the document
       Packer.toBlob(doc).then(blob => {
         saveAs(blob, `${fileName}.docx`);
-        setNotification("DOCX downloaded successfully!");
-        setTimeout(() => setNotification(null), 3000);
+        addMessage("DOCX downloaded successfully!", 'success');
       });
     } catch (error) {
       console.error("Error generating DOCX:", error);
-      setError("Failed to generate DOCX. Please try again.");
-      setTimeout(() => setError(null), 3000);
+      addMessage("Failed to generate DOCX. Please try again.", 'error');
     }
   };
 
@@ -699,13 +696,17 @@ const EntranceExamSide = () => {
     }));
   };
 
-  // Delete paper
-  const handleDeletePaper = async (paperId, event) => {
+  // Delete paper - updated to use custom confirmation dialog
+  const handleDeletePaper = (paperId, event) => {
     // Stop event propagation to prevent expanding/collapsing when clicking delete
     if (event) event.stopPropagation();
     
-    if (!window.confirm('Are you sure you want to delete this paper?')) return;
-    
+    // Show delete confirmation dialog
+    setDeleteConfirmation(paperId);
+  };
+
+  // Confirm delete
+  const confirmDelete = async (paperId) => {
     try {
       setLoading(true);
       const response = await deletePaper(paperId);
@@ -716,57 +717,77 @@ const EntranceExamSide = () => {
 
         // Then refresh papers list from server
         await fetchPapers();
-        setNotification('Paper deleted successfully!');
+        addMessage('Paper deleted successfully!', 'success');
       } else {
-        setError(response?.message || 'Failed to delete paper. Please try again.');
+        addMessage(response?.message || 'Failed to delete paper. Please try again.', 'error');
       }
-      
-      setTimeout(() => setNotification(null), 3000);
     } catch (err) {
       console.error('Error deleting paper:', err);
-      setError('Failed to delete paper. Please try again.');
-      setTimeout(() => setError(null), 3000);
+      addMessage('Failed to delete paper. Please try again.', 'error');
     } finally {
       setLoading(false);
+      setDeleteConfirmation(null); // Clear confirmation state
     }
   };
 
-  // Send for approval
-  const handleSendForApproval = async (paper, event) => {
+  // Cancel delete
+  const cancelDelete = () => {
+    setDeleteConfirmation(null);
+  };
+
+  // Send for approval - updated to use custom confirmation
+  const handleSendForApproval = (paper, event) => {
     if (event) event.stopPropagation();
-    // Show confirmation dialog
-    const confirmSend = window.confirm('Are you sure you want to send this paper for approval?');
-    if (!confirmSend) return;
     
+    // Show confirmation dialog
+    setSendConfirmation(paper._id);
+  };
+
+  // Confirm send for approval
+  const confirmSendForApproval = async (paperId) => {
     try {
       setLoading(true);
-      const result = await sendPaperForApproval(paper._id);
+      
+      // Find the paper
+      const paper = papers.find(p => p._id === paperId);
+      if (!paper) {
+        addMessage('Paper not found.', 'error');
+        setSendConfirmation(null);
+        setLoading(false);
+        return;
+      }
+      
+      const result = await sendPaperForApproval(paperId);
       
       if (result && result.success) {
         // First update the local state to reflect changes immediately
         setPapers(prevPapers => 
           prevPapers.map(p => 
-            p._id === paper._id 
+            p._id === paperId
               ? { ...p, status: 'Pending Approval' } 
               : p
           )
         );
 
-        setNotification('Paper sent for approval successfully!');
+        addMessage('Paper sent for approval successfully!', 'success');
         
         // Then refresh papers list from server
         await fetchPapers();
       } else {
-        setError(result?.message || 'Failed to send paper for approval.');
+        addMessage(result?.message || 'Failed to send paper for approval.', 'error');
       }
     } catch (err) {
       console.error('Error sending paper for approval:', err);
-      setError('An error occurred while sending paper for approval.');
+      addMessage('An error occurred while sending paper for approval.', 'error');
     } finally {
       setLoading(false);
+      setSendConfirmation(null); // Clear confirmation state
     }
-    
-    setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Cancel send for approval
+  const cancelSendForApproval = () => {
+    setSendConfirmation(null);
   };
 
   // Get status badge based on paper status
@@ -821,691 +842,699 @@ const EntranceExamSide = () => {
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || '';
   };
+// Get message style based on type
+const getMessageStyle = (type) => {
+  switch (type) {
+    case 'success':
+      return "fixed bottom-4 right-4 px-4 py-3 bg-green-500 text-white rounded-lg shadow-lg";
+    case 'error':
+      return "fixed bottom-4 right-4 px-4 py-3 bg-red-500 text-white rounded-lg shadow-lg";
+    case 'warning':
+      return "fixed bottom-4 right-4 px-4 py-3 bg-yellow-500 text-white rounded-lg shadow-lg";
+    case 'info':
+    default:
+      return "fixed bottom-4 right-4 px-4 py-3 bg-blue-500 text-white rounded-lg shadow-lg";
+  }
+};
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Entrance Exam Papers</h1>
+return (
+  <div className="container mx-auto px-4 py-8">
+    <div className="flex justify-between items-center mb-6">
+      <h1 className="text-3xl font-bold text-gray-800">Entrance Exam Papers</h1>
+      
+      <div className="flex items-center space-x-2">
+        {/* Manual refresh button */}
+        <button
+          onClick={handleManualRefresh}
+          className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
+          title="Refresh"
+        >
+          <RefreshCw className="h-5 w-5" />
+        </button>
         
-        <div className="flex items-center space-x-2">
-          {/* Manual refresh button */}
-          <button
-            onClick={handleManualRefresh}
-            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
-            title="Refresh"
-          >
-            <RefreshCw className="h-5 w-5" />
-          </button>
-          
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition flex items-center gap-1"
-          >
-            <Filter size={18} />
-            <span>Filter by Status</span>
-            {filters.status && (
-              <span className="ml-1 bg-blue-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
-                1
-              </span>
-            )}
-          </button>
-          
-          <button
-            onClick={() => navigate('/papers/create')}
-            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-1"
-          >
-            <Plus size={18} />
-            <span>New Paper</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Status Filter Only */}
-      {showFilters && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-semibold">Filter by Status</h2>
-            {filters.status && (
-              <button
-              onClick={clearFilters}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Clear Filter
-            </button>
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition flex items-center gap-1"
+        >
+          <Filter size={18} />
+          <span>Filter by Status</span>
+          {filters.status && (
+            <span className="ml-1 bg-blue-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
+              1
+            </span>
           )}
-        </div>
+        </button>
         
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Status
-          </label>
-          <select
-            name="status"
-            value={filters.status}
-            onChange={handleFilterChange}
-            className="w-full p-2 border border-gray-300 rounded-md"
+        <button
+          onClick={() => navigate('/papers/create')}
+          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-1"
+        >
+          <Plus size={18} />
+          <span>New Paper</span>
+        </button>
+      </div>
+    </div>
+
+    {/* Status Filter Only */}
+    {showFilters && (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-lg font-semibold">Filter by Status</h2>
+          {filters.status && (
+            <button
+            onClick={clearFilters}
+            className="text-sm text-blue-600 hover:text-blue-800"
           >
-            <option value="">All Statuses</option>
-            <option value="Not Sent">Not Sent</option>
-            <option value="Pending Approval">Pending Approval</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-          </select>
-        </div>
+            Clear Filter
+          </button>
+        )}
       </div>
-    )}
-
-    {/* Notification */}
-    {notification && (
-      <div className="w-full mb-4 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded flex justify-between items-center">
-        <span>{notification}</span>
-        <button 
-          onClick={() => setNotification(null)}
-          className="text-blue-800 font-bold"
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Status
+        </label>
+        <select
+          name="status"
+          value={filters.status}
+          onChange={handleFilterChange}
+          className="w-full p-2 border border-gray-300 rounded-md"
         >
-          ×
-        </button>
+          <option value="">All Statuses</option>
+          <option value="Not Sent">Not Sent</option>
+          <option value="Pending Approval">Pending Approval</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+        </select>
       </div>
-    )}
+    </div>
+  )}
 
-    {/* Error message */}
-    {error && (
-      <div className="w-full mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded flex justify-between items-center">
-        <span>{error}</span>
-        <button 
-          onClick={() => setError(null)}
-          className="text-red-700 font-bold"
-        >
-          ×
-        </button>
-      </div>
-    )}
-
-    {/* Loading indicator */}
-    {loading ? (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    ) : (
-      <>
-        {/* Papers List */}
-        {papers.length > 0 ? (
-          <div className="grid gap-4">
-            {papers.map((paper) => {
-              const questionCounts = countSubjectQuestions(paper.questions);
-              const hasSubjects = Object.keys(questionCounts).length > 0;
-              const totalQuestions = paper.questions?.length || 0;
-              const isEditing = editingPaper === paper._id;
-              
-              return (
+  {/* Loading indicator */}
+  {loading ? (
+    <div className="flex justify-center items-center py-12">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  ) : (
+    <>
+      {/* Papers List */}
+      {papers.length > 0 ? (
+        <div className="grid gap-4">
+          {papers.map((paper) => {
+            const questionCounts = countSubjectQuestions(paper.questions);
+            const hasSubjects = Object.keys(questionCounts).length > 0;
+            const totalQuestions = paper.questions?.length || 0;
+            const isEditing = editingPaper === paper._id;
+            
+            return (
+            <div 
+              key={paper._id} 
+              className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+            >
+              {/* Paper Header - Always visible */}
               <div 
-                key={paper._id} 
-                className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+                className="p-4 flex items-center justify-between cursor-pointer border-b"
+                onClick={() => !isEditing && toggleExpandPaper(paper._id)}
               >
-                {/* Paper Header - Always visible */}
-                <div 
-                  className="p-4 flex items-center justify-between cursor-pointer border-b"
-                  onClick={() => !isEditing && toggleExpandPaper(paper._id)}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <FileText className="text-blue-500 w-7 h-7" />
-                    </div>
-                    <div>
-                    <h2 className="text-xl font-semibold text-gray-800">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <FileText className="text-blue-500 w-7 h-7" />
+                  </div>
+                  <div>
+                  <h2 className="text-xl font-semibold text-gray-800">
 {paper.courseName}
 {paper.customSubjectName && ` - ${paper.customSubjectName}`}
 </h2>
 <p className="text-sm text-gray-600 mt-1">
 <span className="inline-flex items-center bg-purple-100 text-purple-800 px-2 py-1 rounded mr-2">
-  {paper.totalMarks} Marks
+{paper.totalMarks} Marks
 </span>
 <span className="inline-flex items-center bg-green-100 text-green-800 px-2 py-1 rounded">
-  {totalQuestions} Questions
+{totalQuestions} Questions
 </span>
 <span className="ml-2">
-  {getStatusBadge(paper.status || 'Not Sent')}
+{getStatusBadge(paper.status || 'Not Sent')}
 </span>
 </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="mr-4 text-right">
-                      <p className="text-sm text-gray-500">
-                        Created: {formatDate(paper.date || paper.createdAt)}
-                      </p>
-                    </div>
-                    <div className="text-gray-400">
-                      {expandedPaper === paper._id ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                    </div>
                   </div>
                 </div>
-                
-                {/* Expanded View */}
-                {expandedPaper === paper._id && (
-                  <div className="p-4 bg-gray-50 border-b">
-                    {/* Paper Details - Normal View vs Editing View */}
-                    {isEditing ? (
-                      // Editing Form
-                      <div className="mb-4 bg-white p-4 rounded border">
-                        <h3 className="text-lg font-semibold mb-4">Edit Paper Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Course Name*
-                            </label>
-                            <input
-                              type="text"
-                              name="courseName"
-                              value={editFormData.courseName}
-                              onChange={handleEditFormChange}
-                              className="w-full p-2 border border-gray-300 rounded-md"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Subject Name (Optional)
-                            </label>
-                            <input
-                              type="text"
-                              name="customSubjectName"
-                              value={editFormData.customSubjectName}
-                              onChange={handleEditFormChange}
-                              className="w-full p-2 border border-gray-300 rounded-md"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Total Marks*
-                            </label>
-                            <input
-                              type="number"
-                              name="totalMarks"
-                              value={editFormData.totalMarks}
-                              onChange={handleEditFormChange}
-                              min="1"
-                              className="w-full p-2 border border-gray-300 rounded-md"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Exam Time (Hours)*
-                            </label>
-                            <input
-                              type="number"
-                              name="examTime"
-                              value={editFormData.examTime}
-                              onChange={handleEditFormChange}
-                              min="0.5"
-                              step="0.5"
-                              className="w-full p-2 border border-gray-300 rounded-md"
-                              required
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-end mt-4 space-x-2">
-                          <button
-                            onClick={cancelEditing}
-                            className="px-3 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition flex items-center gap-1"
-                          >
-                            <XCircle size={16} />
-                            <span>Cancel</span>
-                          </button>
-                          <button
-                            onClick={() => saveEditedPaper(paper._id)}
-                            className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center gap-1"
-                          >
-                            <Save size={16} />
-                            <span>Save Changes</span>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      // Normal View
-                      <div className="mb-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="bg-white p-3 rounded border">
-                            <h3 className="text-sm font-medium text-gray-500">Course</h3>
-                            <p className="font-semibold">{paper.courseName}</p>
-                          </div>
-                          {paper.customSubjectName && (
-                            <div className="bg-white p-3 rounded border">
-                              <h3 className="text-sm font-medium text-gray-500">Subject</h3>
-                              <p className="font-semibold">{paper.customSubjectName}</p>
-                            </div>
-                          )}
-                          <div className="bg-white p-3 rounded border">
-                            <h3 className="text-sm font-medium text-gray-500">Total Marks</h3>
-                            <p className="font-semibold">{paper.totalMarks}</p>
-                          </div>
-                          <div className="bg-white p-3 rounded border">
-                            <h3 className="text-sm font-medium text-gray-500">Exam Time</h3>
-                            <p className="font-semibold">{paper.examTime || 1} Hours</p>
-                          </div>
-                          <div className="bg-white p-3 rounded border">
-                            <h3 className="text-sm font-medium text-gray-500">Created On</h3>
-                            <p className="font-semibold">{formatDate(paper.date || paper.createdAt)}</p>
-                          </div>
-                          <div className="bg-white p-3 rounded border">
-                            <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                            <p className="font-semibold">{getStatusBadge(paper.status || 'Not Sent')}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Don't show these sections during editing */}
-                    {!isEditing && (
-                      <>
-                        {/* Rejection comments if applicable */}
-                        {paper.status === 'Rejected' && paper.reviewComments && (
-                          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <h3 className="text-md font-semibold mb-1 text-red-700">Rejection Reason:</h3>
-                            <p className="text-red-800">{paper.reviewComments}</p>
-                          </div>
-                        )}
-                        
-                        {/* Subject breakdown */}
-                        {hasSubjects && (
-                          <div className="mb-4">
-                            <h3 className="text-md font-semibold mb-2">Question Distribution</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                              {Object.entries(questionCounts).map(([subject, count]) => (
-                                <div key={subject} className="bg-white px-3 py-2 rounded border flex justify-between">
-                                  <span className="text-gray-700">{subject}</span>
-                                  <span className="font-semibold">{count} questions</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Only Edit Questions Button - removed View all questions button */}
-                        <div className="mb-4 flex flex-wrap justify-center gap-3">
-                          <button 
-                            onClick={(e) => handleEditQuestions(paper, e)}
-                            className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition flex items-center gap-1"
-                          >
-                            <Edit size={16} />
-                            <span>Edit Questions</span>
-                          </button>
-                        </div>
-                      </>
-                    )}
+                <div className="flex items-center">
+                  <div className="mr-4 text-right">
+                    <p className="text-sm text-gray-500">
+                      Created: {formatDate(paper.date || paper.createdAt)}
+                    </p>
                   </div>
-                )}
-                
-                {/* Action Buttons */}
-                <div className="flex items-center justify-end gap-1 p-3 bg-gray-50 border-t">
-                  {/* Only show edit controls if currently editing */}
+                  <div className="text-gray-400">
+                    {expandedPaper === paper._id ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Expanded View */}
+              {expandedPaper === paper._id && (
+                <div className="p-4 bg-gray-50 border-b">
+                  {/* Paper Details - Normal View vs Editing View */}
                   {isEditing ? (
-                    <>
-                      <button 
-                        onClick={cancelEditing}
-                        className="text-gray-500 hover:bg-gray-50 p-2 rounded-full transition-colors flex items-center"
-                        title="Cancel"
-                      >
-                        <XCircle className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={() => saveEditedPaper(paper._id)}
-                        className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors flex items-center"
-                        title="Save Changes"
-                      >
-                        <Save className="w-5 h-5" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="relative mr-1">
-                        <button 
-                          onClick={(e) => toggleDownloadOptions(paper._id, e)}
-                          className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors flex items-center"
-                          title="Download"
-                        >
-                          <Download className="w-5 h-5" />
-                        </button>
-                        
-                        {showDownloadOptions[paper._id] && (
-                          <div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10">
-                            <div className="p-2">
-                              <div className="mb-2">
-                                <label className="flex items-center text-sm">
-                                  <input 
-                                    type="radio" 
-                                    name={`downloadFormat-${paper._id}`} 
-                                    checked={downloadFormat === 'pdf'} 
-                                    onChange={() => setDownloadFormat('pdf')} 
-                                    className="mr-2" 
-                                  />
-                                  PDF Format
-                                </label>
-                              </div>
-                              <div className="mb-2">
-                                <label className="flex items-center text-sm">
-                                  <input 
-                                    type="radio" 
-                                    name={`downloadFormat-${paper._id}`} 
-                                    checked={downloadFormat === 'docx'} 
-                                    onChange={() => setDownloadFormat('docx')} 
-                                    className="mr-2" 
-                                  />
-                                  DOCX Format
-                                </label>
-                              </div>
-                              <div className="flex justify-end mt-2">
-                                <button 
-                                  onClick={() => handleDownloadPaper(paper, downloadFormat)} 
-                                  className="px-3 py-1 bg-blue-500 text-white text-sm rounded"
-                                >
-                                  Download
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                    // Editing Form
+                    <div className="mb-4 bg-white p-4 rounded border">
+                      <h3 className="text-lg font-semibold mb-4">Edit Paper Details</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Course Name*
+                          </label>
+                          <input
+                            type="text"
+                            name="courseName"
+                            value={editFormData.courseName}
+                            onChange={handleEditFormChange}
+                            className="w-full p-2 border border-gray-300 rounded-md"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Subject Name (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            name="customSubjectName"
+                            value={editFormData.customSubjectName}
+                            onChange={handleEditFormChange}
+                            className="w-full p-2 border border-gray-300 rounded-md"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Total Marks*
+                          </label>
+                          <input
+                            type="number"
+                            name="totalMarks"
+                            value={editFormData.totalMarks}
+                            onChange={handleEditFormChange}
+                            min="1"
+                            className="w-full p-2 border border-gray-300 rounded-md"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Exam Time (Hours)*
+                          </label>
+                          <input
+                            type="number"
+                            name="examTime"
+                            value={editFormData.examTime}
+                            onChange={handleEditFormChange}
+                            min="0.5"
+                            step="0.5"
+                            className="w-full p-2 border border-gray-300 rounded-md"
+                            required
+                          />
+                        </div>
                       </div>
                       
-                      <button 
-                        onClick={(e) => handleViewPaper(paper, e)}
-                        className="text-blue-500 hover:bg-blue-50 p-2 rounded-full transition-colors"
-                        title="View"
-                      >
-                       <Eye className="w-5 h-5" />
-                      </button>
-                      
-                      <button 
-                        onClick={(e) => handleEditPaper(paper, e)}
-                        className="text-yellow-500 hover:bg-yellow-50 p-2 rounded-full transition-colors"
-                        title="Edit Details"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      
-                      <button 
-                        onClick={(e) => handleDeletePaper(paper._id, e)}
-                        className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                      
-                      {(paper.status === 'Not Sent' || paper.status === 'Rejected') && (
-                        <button 
-                          onClick={(e) => handleSendForApproval(paper, e)}
-                          className="text-purple-500 hover:bg-purple-50 p-2 rounded-full transition-colors"
-                          title="Send for Approval"
+                      <div className="flex justify-end mt-4 space-x-2">
+                        <button
+                          onClick={cancelEditing}
+                          className="px-3 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition flex items-center gap-1"
                         >
-                          <Send className="w-5 h-5" />
+                          <XCircle size={16} />
+                          <span>Cancel</span>
                         </button>
+                        <button
+                          onClick={() => saveEditedPaper(paper._id)}
+                          className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center gap-1"
+                        >
+                          <Save size={16} />
+                          <span>Save Changes</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // Normal View
+                    <div className="mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white p-3 rounded border">
+                          <h3 className="text-sm font-medium text-gray-500">Course</h3>
+                          <p className="font-semibold">{paper.courseName}</p>
+                        </div>
+                        {paper.customSubjectName && (
+                          <div className="bg-white p-3 rounded border">
+                            <h3 className="text-sm font-medium text-gray-500">Subject</h3>
+                            <p className="font-semibold">{paper.customSubjectName}</p>
+                          </div>
+                        )}
+                        <div className="bg-white p-3 rounded border">
+                          <h3 className="text-sm font-medium text-gray-500">Total Marks</h3>
+                          <p className="font-semibold">{paper.totalMarks}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <h3 className="text-sm font-medium text-gray-500">Exam Time</h3>
+                          <p className="font-semibold">{paper.examTime || 1} Hours</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <h3 className="text-sm font-medium text-gray-500">Created On</h3>
+                          <p className="font-semibold">{formatDate(paper.date || paper.createdAt)}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <h3 className="text-sm font-medium text-gray-500">Status</h3>
+                          <p className="font-semibold">{getStatusBadge(paper.status || 'Not Sent')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Don't show these sections during editing */}
+                  {!isEditing && (
+                    <>
+            {/* Rejection comments if applicable */}
+{paper.status === 'Rejected' && paper.reviewComments && (
+  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+    <div className="flex justify-between items-start">
+      <h3 className="text-md font-semibold text-red-700 flex items-center">
+        <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+        Rejection Reason:
+      </h3>
+      
+      {paper.reviewComments.length > 100 && (
+        <button 
+          onClick={() => setExpandedRejection(expandedRejection === paper._id ? null : paper._id)}
+          className="text-red-600 text-sm hover:underline"
+        >
+          {expandedRejection === paper._id ? 'Show Less' : 'Show More'}
+        </button>
+      )}
+    </div>
+    
+    <div className="mt-2">
+      {expandedRejection === paper._id ? (
+        <p className="text-red-800 break-words whitespace-pre-wrap">{paper.reviewComments}</p>
+      ) : (
+        <p className="text-red-800 overflow-hidden break-words" 
+           style={{ 
+             display: '-webkit-box', 
+             WebkitLineClamp: '2', 
+             WebkitBoxOrient: 'vertical',
+           }}>
+          {paper.reviewComments}
+        </p>
+      )}
+    </div>
+  </div>
+)}
+                      
+                      {/* Subject breakdown */}
+                      {hasSubjects && (
+                        <div className="mb-4">
+                          <h3 className="text-md font-semibold mb-2">Question Distribution</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                            {Object.entries(questionCounts).map(([subject, count]) => (
+                              <div key={subject} className="bg-white px-3 py-2 rounded border flex justify-between">
+                                <span className="text-gray-700">{subject}</span>
+                                <span className="font-semibold">{count} questions</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
+                      
+                      {/* Only Edit Questions Button - removed View all questions button */}
+                      <div className="mb-4 flex flex-wrap justify-center gap-3">
+                        <button 
+                          onClick={(e) => handleEditQuestions(paper, e)}
+                          className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition flex items-center gap-1"
+                        >
+                          <Edit size={16} />
+                          <span>Edit Questions</span>
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>
-              </div>
-            )})}
-          </div>
-        ) : (
-          <div className="text-center py-16 bg-gray-50 rounded-lg border border-gray-200">
-            <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-            <p className="text-xl text-gray-600 mb-4">No entrance exam papers found.</p>
-            {filters.status ? (
-              <button 
-                onClick={clearFilters}
-                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition mx-auto"
-              >
-                Clear Filter
-              </button>
-            ) : (
-              <button 
-                onClick={() => navigate('/papers/create')}
-                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-2 mx-auto"
-              >
-                <Plus size={18} />
-                <span>Create New Paper</span>
-              </button>
-            )}
-          </div>
-        )}
-      </>
-    )}
-     {/* Paper View Modal */}
-     {showViewModal && selectedPaper && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-          <div className="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center">
-            <h2 className="text-xl font-bold">
-              {selectedPaper.courseName}
-              {selectedPaper.customSubjectName && ` - ${selectedPaper.customSubjectName}`}
-            </h2>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={(e) => handleEditQuestions(selectedPaper, e)}
-                className="px-3 py-2 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition flex items-center gap-1"
-              >
-                <Edit size={16} />
-                <span>Edit Questions</span>
-              </button>
-              <button 
-                onClick={closeViewModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
-            </div>
-          </div>
-          
-          <div className="p-6">
-            {/* Paper Header */}
-            <div className="text-center mb-8 pb-8 border-b">
-              <div className="flex justify-center mb-4">
-                <img src={universityLogo} alt="University Logo" className="h-16" />
-              </div>
-              <h1 className="text-2xl font-bold mb-2">ST. JOSEPH'S UNIVERSITY, BENGALURU - 27</h1>
-              <h2 className="text-xl mb-4">
-                {selectedPaper.customSubjectName 
-                  ? `${selectedPaper.courseName} - ${selectedPaper.customSubjectName}`
-                  : selectedPaper.courseName}
-              </h2>
-              <p className="text-lg font-medium mb-4">SEMESTER EXAMINATION</p>
+              )}
               
-              <div className="flex justify-between max-w-md mx-auto mt-6">
-                <p><span className="font-medium">Date:</span> {formatDate(selectedPaper.date || selectedPaper.createdAt)}</p>
-                <p><span className="font-medium">Time:</span> {selectedPaper.examTime || 1} Hours</p>
-                <p><span className="font-medium">Marks:</span> {selectedPaper.totalMarks}</p>
-              </div>
-              
-              <p className="mt-4 font-medium">Answer all questions</p>
-            </div>
-            
-            {/* Questions Section */}
-            {selectedPaper.questions && selectedPaper.questions.length > 0 ? (
-              <div>
-                {/* Group questions by subject */}
-                {(() => {
-                  // Group questions by subject
-                  const subjectGroups = {};
-                  selectedPaper.questions.forEach(q => {
-                    const subjectName = q.subject || 'Unknown';
-                    if (!subjectGroups[subjectName]) {
-                      subjectGroups[subjectName] = [];
-                    }
-                    subjectGroups[subjectName].push(q);
-                  });
-                  
-                  // Render each subject group
-                  let questionNumber = 1;
-                  return Object.entries(subjectGroups).map(([subjectName, questions]) => (
-                    <div key={subjectName} className="mb-8">
-                      <h3 className="text-lg font-bold mb-4 text-center bg-gray-100 py-2 rounded">
-                        {subjectName}
-                      </h3>
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-1 p-3 bg-gray-50 border-t">
+                {/* Only show edit controls if currently editing */}
+                {isEditing ? (
+                  <>
+                    <button 
+                      onClick={cancelEditing}
+                      className="text-gray-500 hover:bg-gray-50 p-2 rounded-full transition-colors flex items-center"
+                      title="Cancel"
+                    >
+                      <XCircle className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => saveEditedPaper(paper._id)}
+                      className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors flex items-center"
+                      title="Save Changes"
+                    >
+                      <Save className="w-5 h-5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative mr-1">
+                      <button 
+                        onClick={(e) => toggleDownloadOptions(paper._id, e)}
+                        className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors flex items-center"
+                        title="Download"
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
                       
-                      <div className="space-y-6">
-                        {questions.map((question, idx) => {
-                          const qNum = questionNumber++;
-                          return (
-                            <div key={question._id || idx} className="border-b pb-4">
-                              <p className="mb-2 font-medium">
-                                {qNum}. {stripHTMLTags(question.question)}
-                              </p>
-                              
-                              {question.options && Array.isArray(question.options) && (
-                                <div className="ml-8 grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                                  {question.options.map((option, optionIdx) => (
-                                    <div key={optionIdx} className="flex items-start">
-                                      <span className="font-medium mr-2">{['A', 'B', 'C', 'D'][optionIdx]}.</span>
-                                      <span>{stripHTMLTags(option.value || '')}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                      {showDownloadOptions[paper._id] && (
+                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10">
+                          <div className="p-2">
+                            <div className="mb-2">
+                              <label className="flex items-center text-sm">
+                                <input 
+                                  type="radio" 
+                                  name={`downloadFormat-${paper._id}`} 
+                                  checked={downloadFormat === 'pdf'} 
+                                  onChange={() => setDownloadFormat('pdf')} 
+                                  className="mr-2" 
+                                />
+                                PDF Format
+                              </label>
                             </div>
-                          );
-                        })}
-                      </div>
+                            <div className="mb-2">
+                              <label className="flex items-center text-sm">
+                                <input 
+                                  type="radio" 
+                                  name={`downloadFormat-${paper._id}`} 
+                                  checked={downloadFormat === 'docx'} 
+                                  onChange={() => setDownloadFormat('docx')} 
+                                  className="mr-2" 
+                                />
+                                DOCX Format
+                              </label>
+                            </div>
+                            <div className="flex justify-end mt-2">
+                              <button 
+                                onClick={() => handleDownloadPaper(paper, downloadFormat)} 
+                                className="px-3 py-1 bg-blue-500 text-white text-sm rounded"
+                              >
+                                Download
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ));
-                })()}
+                    
+                    <button 
+                      onClick={(e) => handleViewPaper(paper, e)}
+                      className="text-blue-500 hover:bg-blue-50 p-2 rounded-full transition-colors"
+                      title="View"
+                    >
+                     <Eye className="w-5 h-5" />
+                    </button>
+                    
+                  <button 
+                      onClick={(e) => handleDeletePaper(paper._id, e)}
+                      className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                    
+                    {(paper.status === 'Not Sent' || paper.status === 'Rejected') && (
+                      <button 
+                        onClick={(e) => handleSendForApproval(paper, e)}
+                        className="text-purple-500 hover:bg-purple-50 p-2 rounded-full transition-colors"
+                        title="Send for Approval"
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No questions found for this paper.</p>
-              </div>
-            )}
+            </div>
+          )})}
+        </div>
+      ) : (
+        <div className="text-center py-16 bg-gray-50 rounded-lg border border-gray-200">
+          <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+          <p className="text-xl text-gray-600 mb-4">No entrance exam papers found.</p>
+          {filters.status ? (
+            <button 
+              onClick={clearFilters}
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition mx-auto"
+            >
+              Clear Filter
+            </button>
+          ) : (
+            <button 
+              onClick={() => navigate('/papers/create')}
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-2 mx-auto"
+            >
+              <Plus size={18} />
+              <span>Create New Paper</span>
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  )}
+   {/* Paper View Modal */}
+   {showViewModal && selectedPaper && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center">
+          <h2 className="text-xl font-bold">
+            {selectedPaper.courseName}
+            {selectedPaper.customSubjectName && ` - ${selectedPaper.customSubjectName}`}
+          </h2>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={(e) => handleEditQuestions(selectedPaper, e)}
+              className="px-3 py-2 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition flex items-center gap-1"
+            >
+              <Edit size={16} />
+              <span>Edit Questions</span>
+            </button>
+            <button 
+              onClick={closeViewModal}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={24} />
+            </button>
           </div>
         </div>
-      </div>
-    )}
-    
-    {/* Question Edit Modal */}
-    {showQuestionEditModal && editingPaperQuestions && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-          <div className="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
-            <h2 className="text-xl font-bold">
-              Edit Questions - {editingPaperQuestions.courseName}
-              {editingPaperQuestions.customSubjectName && ` - ${editingPaperQuestions.customSubjectName}`}
-            </h2>
-            <div className="flex gap-2">
-              <button 
-                onClick={saveEditedQuestions}
-                className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center gap-1"
-              >
-                <Save size={18} />
-                <span>Save All</span>
-              </button>
-              <button 
-                onClick={closeQuestionEditModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
+        
+        <div className="p-6">
+          {/* Paper Header */}
+          <div className="text-center mb-8 pb-8 border-b">
+            <div className="flex justify-center mb-4">
+              <img src={universityLogo} alt="University Logo" className="h-16" />
             </div>
+            <h1 className="text-2xl font-bold mb-2">ST. JOSEPH'S UNIVERSITY, BENGALURU - 27</h1>
+            <h2 className="text-xl mb-4">
+              {selectedPaper.customSubjectName 
+                ? `${selectedPaper.courseName} - ${selectedPaper.customSubjectName}`
+                : selectedPaper.courseName}
+            </h2>
+            <p className="text-lg font-medium mb-4">SEMESTER EXAMINATION</p>
+            
+            <div className="flex justify-between max-w-md mx-auto mt-6">
+              <p><span className="font-medium">Date:</span> {formatDate(selectedPaper.date || selectedPaper.createdAt)}</p>
+              <p><span className="font-medium">Time:</span> {selectedPaper.examTime || 1} Hours</p>
+              <p><span className="font-medium">Marks:</span> {selectedPaper.totalMarks}</p>
+            </div>
+            
+            <p className="mt-4 font-medium">Answer all questions</p>
           </div>
           
-          <div className="p-6">
-            {/* No questions message */}
-            {(!editedQuestions || editedQuestions.length === 0) ? (
-              <div className="text-center py-12">
-                <AlertCircle className="mx-auto h-16 w-16 text-yellow-500 mb-4" />
-                <p className="text-xl text-gray-600 mb-4">No questions found in this paper.</p>
-              </div>
-            ) : (
-              <>
-                {/* Subject tabs */}
-                <div className="mb-6 border-b">
-                  <div className="flex flex-wrap gap-2">
-                    {[...new Set(editedQuestions.map(q => q.subject))].map(subject => (
-                      <button
-                        key={subject}
-                        onClick={() => setSelectedSubject(subject)}
-                        className={`px-4 py-2 rounded-t-lg ${
-                          selectedSubject === subject 
-                            ? 'bg-blue-100 text-blue-800 border-b-2 border-blue-500' 
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        {subject}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+          {/* Questions Section */}
+          {selectedPaper.questions && selectedPaper.questions.length > 0 ? (
+            <div>
+              {/* Group questions by subject */}
+              {(() => {
+                // Group questions by subject
+                const subjectGroups = {};
+                selectedPaper.questions.forEach(q => {
+                  const subjectName = q.subject || 'Unknown';
+                  if (!subjectGroups[subjectName]) {
+                    subjectGroups[subjectName] = [];
+                  }
+                  subjectGroups[subjectName].push(q);
+                });
                 
-                {/* Questions for selected subject */}
-                <div className="space-y-8">
-                  {editedQuestions
-                    .filter(q => q.subject === selectedSubject)
-                    .map((question, index) => (
-                      <div 
-                        key={question._id} 
-                        className="border rounded-lg overflow-hidden bg-white"
-                      >
-                        <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
-                          <h3 className="font-medium">Question {index + 1}</h3>
-                          <button
-                            onClick={() => editingQuestion === question._id ? cancelEditingQuestion() : startEditingQuestion(question._id)}
-                            className={`px-3 py-1 rounded flex items-center gap-1 ${
-                              editingQuestion === question._id 
-                                ? 'bg-gray-200 text-gray-700' 
-                                : 'bg-yellow-100 text-yellow-700'
-                            }`}
-                          >
-                            {editingQuestion === question._id ? (
-                              <>
-                                <XCircle size={16} />
-                                <span>Cancel</span>
-                              </>
-                            ) : (
-                              <>
-                                <Edit size={16} />
-                                <span>Edit</span>
-                              </>
+                // Render each subject group
+                let questionNumber = 1;
+                return Object.entries(subjectGroups).map(([subjectName, questions]) => (
+                  <div key={subjectName} className="mb-8">
+                    <h3 className="text-lg font-bold mb-4 text-center bg-gray-100 py-2 rounded">
+                      {subjectName}
+                    </h3>
+                    
+                    <div className="space-y-6">
+                      {questions.map((question, idx) => {
+                        const qNum = questionNumber++;
+                        return (
+                          <div key={question._id || idx} className="border-b pb-4">
+                            <p className="mb-2 font-medium">
+                              {qNum}. {stripHTMLTags(question.question)}
+                            </p>
+                            
+                            {question.options && Array.isArray(question.options) && (
+                              <div className="ml-8 grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                {question.options.map((option, optionIdx) => (
+                                  <div key={optionIdx} className="flex items-start">
+                                    <span className="font-medium mr-2">{['A', 'B', 'C', 'D'][optionIdx]}.</span>
+                                    <span>{stripHTMLTags(option.value || '')}</span>
+                                  </div>
+                                ))}
+                              </div>
                             )}
-                          </button>
-                        </div>
-                        
-                        <div className="p-4">
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No questions found for this paper.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )}
+  
+  {/* Question Edit Modal */}
+  {showQuestionEditModal && editingPaperQuestions && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
+          <h2 className="text-xl font-bold">
+            Edit Questions - {editingPaperQuestions.courseName}
+            {editingPaperQuestions.customSubjectName && ` - ${editingPaperQuestions.customSubjectName}`}
+          </h2>
+          <div className="flex gap-2">
+            <button 
+              onClick={saveEditedQuestions}
+              className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center gap-1"
+            >
+              <Save size={18} />
+              <span>Save All</span>
+            </button>
+            <button 
+              onClick={closeQuestionEditModal}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-6">
+          {/* No questions message */}
+          {(!editedQuestions || editedQuestions.length === 0) ? (
+            <div className="text-center py-12">
+              <AlertCircle className="mx-auto h-16 w-16 text-yellow-500 mb-4" />
+              <p className="text-xl text-gray-600 mb-4">No questions found in this paper.</p>
+            </div>
+          ) : (
+            <>
+              {/* Subject tabs */}
+              <div className="mb-6 border-b">
+                <div className="flex flex-wrap gap-2">
+                  {[...new Set(editedQuestions.map(q => q.subject))].map(subject => (
+                    <button
+                      key={subject}
+                      onClick={() => setSelectedSubject(subject)}
+                      className={`px-4 py-2 rounded-t-lg ${
+                        selectedSubject === subject 
+                          ? 'bg-blue-100 text-blue-800 border-b-2 border-blue-500' 
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      {subject}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Questions for selected subject */}
+              <div className="space-y-8">
+                {editedQuestions
+                  .filter(q => q.subject === selectedSubject)
+                  .map((question, index) => (
+                    <div 
+                      key={question._id} 
+                      className="border rounded-lg overflow-hidden bg-white"
+                    >
+                      <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
+                        <h3 className="font-medium">Question {index + 1}</h3>
+                        <button
+                          onClick={() => editingQuestion === question._id ? cancelEditingQuestion() : startEditingQuestion(question._id)}
+                          className={`px-3 py-1 rounded flex items-center gap-1 ${
+                            editingQuestion === question._id 
+                              ? 'bg-gray-200 text-gray-700' 
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}
+                        >
                           {editingQuestion === question._id ? (
-                            // Edit mode
-                            <div className="space-y-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Question Text*
-                                </label>
-                                <textarea
-                                  value={question.question}
-                                  onChange={(e) => handleQuestionChange(question._id, 'question', e.target.value)}
-                                  className="w-full p-2 border border-gray-300 rounded-md min-h-[100px]"
-                                  required
-                                />
+                            <>
+                              <XCircle size={16} />
+                              <span>Cancel</span>
+                            </>
+                          ) : (
+                            <>
+                              <Edit size={16} />
+                              <span>Edit</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      
+                      <div className="p-4">
+                        {editingQuestion === question._id ? (
+                          // Edit mode
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Question Text*
+                              </label>
+                              <textarea
+                                value={question.question}
+                                onChange={(e) => handleQuestionChange(question._id, 'question', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-md min-h-[100px]"
+                                required
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Options
+                              </label>
+                              <div className="space-y-2">
+                                {question.options && question.options.map((option, optIdx) => (
+                                  <div key={optIdx} className="flex items-start gap-2">
+                                    <span className="font-medium mt-2">{['A', 'B', 'C', 'D'][optIdx]}.</span>
+                                    <textarea
+                                      value={option.value || ''}
+                                      onChange={(e) => handleOptionChange(question._id, optIdx, e.target.value)}
+                                      className="flex-grow p-2 border border-gray-300 rounded-md"
+                                    />
+                                  </div>
+                                ))}
                               </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Options
-                                </label>
-                                <div className="space-y-2">
-                                  {question.options && question.options.map((option, optIdx) => (
-                                    <div key={optIdx} className="flex items-start gap-2">
-                                      <span className="font-medium mt-2">{['A', 'B', 'C', 'D'][optIdx]}.</span>
-                                      <textarea
-                                        value={option.value || ''}
-                                        onChange={(e) => handleOptionChange(question._id, optIdx, e.target.value)}
-                                        className="flex-grow p-2 border border-gray-300 rounded-md"
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              
-                              <div className="flex justify-end">
-                                <button
-                                  onClick={() => cancelEditingQuestion()}
-                                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded mr-2"
+                            </div>
+                            
+                            <div className="flex justify-end">
+                              <button
+                                onClick={() => cancelEditingQuestion()}
+                                className="px-3 py-1 bg-gray-200 text-gray-700 rounded mr-2"
                                 >
                                   Cancel
                                 </button>
@@ -1560,6 +1589,80 @@ const EntranceExamSide = () => {
        </div>
      </div>
    )}
+   
+   {/* Delete Confirmation Modal */}
+   {deleteConfirmation && (
+     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+       <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
+         <h3 className="text-lg font-medium mb-4">Confirm Delete</h3>
+         <p className="mb-6">Are you sure you want to delete this paper? This action cannot be undone.</p>
+         <div className="flex justify-end space-x-3">
+           <button 
+             onClick={cancelDelete}
+             className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+           >
+             Cancel
+           </button>
+           <button 
+             onClick={() => confirmDelete(deleteConfirmation)}
+             className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-1"
+           >
+             <Check size={16} />
+             <span>Delete</span>
+           </button>
+         </div>
+       </div>
+     </div>
+   )}
+   
+   {/* Send for Approval Confirmation Modal */}
+   {sendConfirmation && (
+     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+       <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
+         <h3 className="text-lg font-medium mb-4">Send for Approval</h3>
+         <p className="mb-6">Are you sure you want to send this paper for approval?</p>
+         <div className="flex justify-end space-x-3">
+           <button 
+             onClick={cancelSendForApproval}
+             className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+           >
+             Cancel
+           </button>
+           <button 
+             onClick={() => confirmSendForApproval(sendConfirmation)}
+             className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center gap-1"
+           >
+             <Send size={16} />
+             <span>Send</span>
+           </button>
+         </div>
+       </div>
+     </div>
+   )}
+   
+   {/* Message toast notifications */}
+   <div className="fixed bottom-4 right-4 z-50 space-y-3">
+     {messages.map((message) => (
+       <div
+         key={message.id}
+         className={getMessageStyle(message.type)}
+         style={{ 
+           animation: 'fadeIn 0.3s, fadeOut 0.5s 4.5s',
+           maxWidth: '350px'
+         }}
+       >
+         <div className="flex justify-between items-center">
+           <div className="flex-1 mr-2">{message.text}</div>
+           <button
+             onClick={() => setMessages(prev => prev.filter(m => m.id !== message.id))}
+             className="text-white opacity-70 hover:opacity-100"
+           >
+             <X size={16} />
+           </button>
+         </div>
+       </div>
+     ))}
+   </div>
  </div>
 );
 };

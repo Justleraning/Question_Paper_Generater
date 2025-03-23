@@ -17,21 +17,26 @@ const Sidebar = ({
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState({});
 
-  // Auto-shrink sidebar when navigating to a specific module
+  // Auto-shrink sidebar when navigating to a specific module - with safety check
   useEffect(() => {
-    // When a path changes (user navigates to a module)
-    if (location.pathname !== "/dashboard") {
-      // Shrink the sidebar
-      setIsSidebarOpen(false);
-    } else {
-      // Expand on dashboard
-      setIsSidebarOpen(true);
+    // Only run this effect if setIsSidebarOpen is a function
+    if (typeof setIsSidebarOpen === 'function') {
+      // When a path changes (user navigates to a module)
+      if (location.pathname !== "/dashboard") {
+        // Shrink the sidebar
+        setIsSidebarOpen(false);
+      } else {
+        // Expand on dashboard
+        setIsSidebarOpen(true);
+      }
     }
   }, [location.pathname, setIsSidebarOpen]);
 
   
   const toggleSidebar = () => {
-    setIsSidebarOpen(prev => !prev);
+    if (typeof setIsSidebarOpen === 'function') {
+      setIsSidebarOpen(prev => !prev);
+    }
   };  
 
   const toggleSubMenu = (key) => {
@@ -57,8 +62,8 @@ const Sidebar = ({
     <aside 
       className={`h-screen bg-gradient-to-b from-gray-800 to-gray-700 text-white fixed top-0 left-0 transition-all duration-300 ease-in-out z-50 shadow-xl
         ${getSidebarWidth()} flex flex-col overflow-hidden`}
-      onMouseEnter={() => !isSidebarOpen && setIsHovered(true)}
-      onMouseLeave={() => !isSidebarOpen && setIsHovered(false)}
+      onMouseEnter={() => !isSidebarOpen && typeof setIsHovered === 'function' && setIsHovered(true)}
+      onMouseLeave={() => !isSidebarOpen && typeof setIsHovered === 'function' && setIsHovered(false)}
     >
       <div className="flex items-center justify-start p-[0.8rem] border-b border-gray-600">
         <button 
