@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import LogoImage from '../assets/full_logo.webp';
 import GamesPanel from './GamesPanel.js';
+import { useAuth } from '../Contexts/AuthContext.js'; // Import the auth context
 
 const Navbar = ({ 
   isSidebarOpen, 
-  isHovered = false,
-  userRole = "Teacher" 
+  isHovered = false
 }) => {
   const [isGamesPanelOpen, setIsGamesPanelOpen] = useState(false);
+  const { authState } = useAuth(); // Get auth state from context
+  
+  // Get the actual user role from auth state
+  const userRole = authState?.user?.role || "Guest";
 
   // Determine navbar left position based on sidebar state
   const getNavbarLeftPosition = () => {

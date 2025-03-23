@@ -62,7 +62,12 @@ const requestPasswordReset = async (req, res) => {
       return res.status(400).json({ message: "Reset request already submitted" });
     }
 
-    await ResetRequest.create({ username, fullName, role: user.role });
+    // Save the user's role in the reset request
+    await ResetRequest.create({ 
+      username, 
+      fullName, 
+      role: user.role // Include the role
+    });
 
     res.status(201).json({ message: "Reset request submitted" });
   } catch (error) {

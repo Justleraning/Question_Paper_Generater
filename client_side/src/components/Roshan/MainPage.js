@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {File, PlusSquare} from 'lucide-react'
 
 function MainPage() {
   const navigate = useNavigate();
@@ -217,7 +218,7 @@ function MainPage() {
               className="action-button"
             >
               <div className="shine-effect"></div>
-              <span className="button-icon">&#43;</span>
+              <span className="button-icon"><PlusSquare/></span>
               Create
             </button>
 
@@ -227,7 +228,7 @@ function MainPage() {
               className="action-button"
             >
               <div className="shine-effect"></div>
-              <span className="button-icon">&#128196;</span>
+              <span className="button-icon"><File/></span>
               Saved Papers
             </button>
           </div>

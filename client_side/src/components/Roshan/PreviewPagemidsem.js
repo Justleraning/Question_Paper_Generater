@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Save, Edit, FileText, CheckCircle, Plus, Trash } from "lucide-react"; 
 import ModalRosh from "./ModalRosh.js";
 
 const PreviewPage = () => {
@@ -239,7 +240,7 @@ const PreviewPage = () => {
       navigate(`/viewpaper/${paperId}`); // Navigate to ViewPaper.js with the paper ID
     } else {
       console.warn("No paper ID available for navigation");
-      alert("Paper saved, but could not navigate to view page");
+      alert("⚠️ Please save the paper");
     }
   };
 
@@ -250,464 +251,265 @@ const PreviewPage = () => {
   };
 
   return (
-    <div style={{ 
-      flexGrow: 1, 
-      padding: '20px', 
-      textAlign: 'center',
-      fontFamily: 'sans-serif',
-      background: "linear-gradient( #091979, #0059ff)",
-      minHeight: '100vh'
-    }}>
-      <h2 style={{ 
-        marginBottom: '20px', 
-        color: 'white', 
-        fontFamily:'verdana',
-        fontSize: '26px',
-        fontWeight: 'bold',
-        textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
-      }}>Preview Questions</h2>
-
-      {/* Modal Component */}
-      <ModalRosh 
-        isOpen={modalOpen} 
-        onClose={() => setModalOpen(false)} 
-        title="Paper Finalized Successfully!"
-      >
-        <div style={{ textAlign: 'center', padding: '20px 10px' }}>
-          <p style={{ marginBottom: '20px', fontSize: '16px' }}>
-            Your question paper has been saved successfully. You can now view the final paper for approval.
-          </p>
-          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
-            <button 
-              onClick={() => setModalOpen(false)}
-              style={{ 
-                padding: '10px 15px', 
-                backgroundColor: '#6c757d', 
-                color: 'white', 
-                border: 'none',
-                borderRadius: '5px', 
-                fontSize: '16px', 
-                cursor: 'pointer' 
-              }}
-            >
-              Close
-            </button>
-            <button 
-              onClick={handleViewPaper}
-              style={{ 
-                padding: '10px 20px', 
-                backgroundColor: '#28a745', 
-                color: 'white', 
-                border: 'none',
-                borderRadius: '5px', 
-                fontSize: '16px', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <span>View Paper</span> 
-              <span style={{ fontSize: '20px' }}>➔</span>
-            </button>
-          </div>
+    <div className="min-h-screen bg-amber-200 py-6 px-4 font-sans">
+      <div className="w-32 h-20 flex-inline text-red-800 p-1 bg-orange-200 rounded-md border border-red-200 font-semibold text-center text-sm mb-6 ml-auto">
+        <span className="flex items-center gap-3">    
+          NOTE: <br></br>THIS IS THE FINAL PREVIEW
+          </span>
         </div>
-      </ModalRosh>
+      <div className="max-w-4xl mx-auto">
+        <h2 className="text-2xl md:text-3xl font-bold text-black text-center mb-6 font-sans drop-shadow-md">
+          Preview Questions
+        </h2>
 
-      <div style={{
-        backgroundColor: 'white',
-        padding: '15px',
-        borderRadius: '8px',
-        marginBottom: '20px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
-      }}>
-        <h3 style={{ 
-          color: '#333', 
-          margin: '0 0 5px 0',
-          fontSize: '20px'
-        }}>BCA - {semester}</h3>
-        <h4 style={{ 
-          color: '#444', 
-          margin: '0',
-          fontSize: '18px'
-        }}>{selectedSubject}</h4>
-      </div>
-
-      {Object.entries(questionsData).map(([unit, questions]) => (
-        <div key={unit} style={{ 
-          marginBottom: '30px', 
-          padding: '20px', 
-          border: '2px solid #ddd', 
-          borderRadius: '10px', 
-          backgroundColor: '#f9f9f9', 
-          textAlign: 'center',
-          boxShadow: '0 3px 6px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ 
-            color: '#333', 
-            textAlign: 'center',
-            borderBottom: '1px solid #ddd',
-            paddingBottom: '8px',
-            marginBottom: '15px',
-            fontSize: '20px'
-          }}>Unit {unit}</h3>
-
-          {/* Part A - 2 Marks Questions */}
-          <div style={{ marginBottom: '15px' }}>
-            <h4 style={{ 
-              color: '#d9534f', 
-              textAlign: 'center', 
-              fontSize: '15px', 
-              fontWeight:'bold',
-              backgroundColor: '#f8f9fa',
-              padding: '8px',
-              borderRadius: '5px',
-              marginBottom: '10px'
-            }}>Part A - 2 Marks Questions</h4>
-            
-            {questions
-              .filter(q => q.marks === '2')
-              .map((q, index) => {
-                // Get the actual question number for this mark category
-                const questionIndex = questionsData[unit].findIndex(question => question === q);
-                const questionNumber = getQuestionNumber(unit, questionIndex, '2');
-                
-                return (
-                  <div key={index} style={{ 
-                    padding: '10px', 
-                    borderBottom: '1px solid #ddd', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '10px',
-                    textAlign: 'left'
-                  }}>
-                    {isEditing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                        <input
-                          value={typeof q.text === 'string' && !q.text.startsWith('<') ? q.text : ''}
-                          onChange={(e) => handleQuestionChange(unit, questionIndex, e.target.value)}
-                          style={{ 
-                            flex: 1,
-                            width: "95%",
-                            padding: '8px', 
-                            border: '1px solid #ccc', 
-                            borderRadius: '5px',
-                            marginBottom: '5px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        
-                        {/* Delete button if in edit mode */}
-                        <button 
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to delete this question?")) {
-                              setQuestionsData(prev => ({
-                                ...prev,
-                                [unit]: prev[unit].filter((_, i) => i !== questionIndex)
-                              }));
-                            }
-                          }}
-                          style={{
-                            alignSelf: 'flex-end',
-                            padding: '3px 8px',
-                            backgroundColor: "#dc3545",
-                            color: "white",
-                            display: 'flex',
-                            fontSize: '18px',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            borderRadius: "30%",
-                          }}
-                        >
-                        &#10799;
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{
-                        fontWeight: "none",
-                        fontStyle: "none",
-                        textDecoration: "none",
-                        margin: '0',
-                        fontSize: '14px',
-                        width: '100%'
-                      }}>
-                        <strong style={{fontSize: '15px'}}>Q{questionNumber}:</strong>{' '}
-                        <span dangerouslySetInnerHTML={{ __html: q.text }} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              
-            {isEditing && (
+        {/* Modal Component */}
+        <ModalRosh 
+          isOpen={modalOpen} 
+          onClose={() => setModalOpen(false)} 
+          title="Paper Finalized Successfully!"
+        >
+          <div className="text-center p-4">
+            <p className="mb-6 text-gray-700">
+              Your question paper has been saved successfully. You can now view the final paper for approval.
+            </p>
+            <div className="flex justify-center gap-4 mt-4">
               <button 
-                onClick={() => handleAddQuestion(unit, '2')} 
-                style={{ 
-                  marginTop: '10px', 
-                  padding: '8px 10px', 
-                  backgroundColor: '#28a745', 
-                  color: 'white', 
-                  fontSize:'15px',
-                  border: 'none',
-                  borderRadius: '15px', 
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                }}
+                onClick={() => setModalOpen(false)}
+                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
               >
-                + Add 2 Mark Question
+                Close
               </button>
-            )}
+              <button 
+                onClick={handleViewPaper}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <span>View Paper</span> 
+                <span className="text-xl">➔</span>
+              </button>
+            </div>
           </div>
+        </ModalRosh>
 
-          {/* Part B - 4 Marks Questions */}
-          <div style={{ marginTop: '25px' }}>
-            <h4 style={{ 
-              color: '#0275d8', 
-              textAlign: 'center', 
-              fontSize: '15px', 
-              fontWeight: 'bold',
-              backgroundColor: '#f8f9fa',
-              padding: '8px',
-              borderRadius: '5px',
-              marginBottom: '10px'
-            }}>Part B - 4 Marks Questions</h4>
-            
-            {questions
-              .filter(q => q.marks === '4')
-              .map((q, index) => {
-                // Get the actual question number for this mark category
-                const questionIndex = questionsData[unit].findIndex(question => question === q);
-                const questionNumber = getQuestionNumber(unit, questionIndex, '4');
-                
-                return (
-                  <div key={index} style={{ 
-                    padding: '10px', 
-                    borderBottom: '1px solid #ddd', 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '10px',
-                    textAlign: 'left'
-                  }}>
-                    {isEditing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                        <textarea
-                          value={typeof q.text === 'string' && !q.text.startsWith('<') ? q.text : ''}
-                          onChange={(e) => handleQuestionChange(unit, questionIndex, e.target.value)}
-                          style={{ 
-                            flex: 1, 
-                            width: "95%",
-                            padding: '8px', 
-                            border: '1px solid #ccc', 
-                            borderRadius: '5px',
-                            marginBottom: '5px',
-                            fontSize: '15px'
-                          }}
-                        />
-                        
-                        {/* Image upload for 4-mark questions */}
-                        <div style={{ marginTop: '5px', marginBottom: '5px' }}>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageChange(unit, questionIndex, e.target.files[0])}
-                            style={{ 
-                              display: 'block',
-                              marginBottom: '5px',
-                              fontSize: '14px'
-                            }}
-                          />
-                        </div>
-                        
-                        {/* Delete button if in edit mode */}
-                        <button 
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to delete this question?")) {
-                              setQuestionsData(prev => ({
-                                ...prev,
-                                [unit]: prev[unit].filter((_, i) => i !== questionIndex)
-                              }));
-                            }
-                          }}
-                          style={{
-                            alignSelf: 'flex-end',
-                            padding: '3px 8px',
-                            backgroundColor: "#dc3545",
-                            color: "white",
-                            display: 'flex',
-                            fontSize: '18px',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            borderRadius: "30%",
-                          }}
-                        >
-                        &#10799;
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{
-                          fontWeight: "none",
-                          fontStyle: "none",
-                          textDecoration: "none",
-                          margin: '0',
-                          fontSize: '14px',
-                          width: '100%'
-                        }}>
-                          <strong style={{fontSize: '15px'}}>Q{questionNumber}:</strong>{' '}
-                          <span dangerouslySetInnerHTML={{ __html: q.text }} />
-                        </div>
-                        
-                        {q.image && (
-                          <img 
-                            src={q.image} 
-                            alt="Question diagram" 
-                            style={{ 
-                              maxWidth: '200px', 
-                              maxHeight: '150px', 
-                              border: '1px solid #ddd',
-                              borderRadius: '4px',
-                              margin: '5px 0'
-                            }} 
-                          />
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6 text-center">
+          <h3 className="text-xl font-semibold text-gray-800 mb-1 text-center">BCA - {semester}</h3>
+          <h4 className="text-lg text-gray-700">{selectedSubject}</h4>
+        </div>
+
+        {/* Question Units */}
+        {Object.entries(questionsData).map(([unit, questions]) => (
+          <div key={unit} className="mb-8 bg-white rounded-lg shadow-md p-5">
+            <h3 className="text-xl font-semibold text-gray-800 border-b pb-2 mb-4 text-center">
+              Unit {unit}
+            </h3>
+
+            {/* Part A - 2 Marks Questions */}
+            <div className="mb-6">
+              <h4 className="text-red-600 font-semibold bg-gray-100 p-2 rounded-md mb-3 text-center">
+                Part A - 2 Marks Questions
+              </h4>
+              
+              <div className="space-y-2">
+                {questions
+                  .filter(q => q.marks === '2')
+                  .map((q, index) => {
+                    const questionIndex = questionsData[unit].findIndex(question => question === q);
+                    const questionNumber = getQuestionNumber(unit, questionIndex, '2');
+                    
+                    return (
+                      <div key={index} className="p-3 border-b border-gray-200 text-left">
+                        {isEditing ? (
+                          <div className="flex flex-col w-full">
+                            <input
+                              value={typeof q.text === 'string' && !q.text.startsWith('<') ? q.text : ''}
+                              onChange={(e) => handleQuestionChange(unit, questionIndex, e.target.value)}
+                              className="w-full p-2 border border-gray-300 rounded-md mb-2 text-sm"
+                            />
+                            
+                            <button 
+                              onClick={() => {
+                                if (window.confirm("Are you sure you want to delete this question?")) {
+                                  setQuestionsData(prev => ({
+                                    ...prev,
+                                    [unit]: prev[unit].filter((_, i) => i !== questionIndex)
+                                  }));
+                                }
+                              }}
+                              className="self-end flex items-center justify-center w-7 h-7 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+                              title="Delete question"
+                            >
+                              <Trash size={15}/>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-sm">
+                            <span className="font-semibold text-base">Q{questionNumber}:</span>{' '}
+                            <span dangerouslySetInnerHTML={{ __html: q.text }} />
+                          </div>
                         )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                      </div>
+                    );
+                  })}
+              </div>
               
-            {isEditing && (
-              <button 
-                onClick={() => handleAddQuestion(unit, '4')} 
-                style={{ 
-                  marginTop: '10px', 
-                  padding: '8px 10px', 
-                  backgroundColor: '#ff5733', 
-                  color: 'white', 
-                  fontSize: '15px', 
-                  border: 'none',
-                  borderRadius: '15px', 
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                }}
-              >
-                + Add 4 Mark Question
-              </button>
-            )}
+              {isEditing && (
+                <button 
+                  onClick={() => handleAddQuestion(unit, '2')} 
+                  className="mt-1 px-3 py-1 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors text-sm text-center"
+                  title="Add 2 mark question"
+                >
+                  <Plus size={16}/>
+                </button>
+              )}
+            </div>
+
+            {/* Part B - 4 Marks Questions */}
+            <div className="mt-6">
+              <h4 className="text-blue-600 font-semibold bg-gray-100 p-2 rounded-md mb-3 text-center">
+                Part B - 4 Marks Questions
+              </h4>
+              
+              <div className="space-y-4">
+                {questions
+                  .filter(q => q.marks === '4')
+                  .map((q, index) => {
+                    const questionIndex = questionsData[unit].findIndex(question => question === q);
+                    const questionNumber = getQuestionNumber(unit, questionIndex, '4');
+                    
+                    return (
+                      <div key={index} className="p-3 border-b border-gray-200 text-left">
+                        {isEditing ? (
+                          <div className="flex flex-col w-full">
+                            <textarea
+                              value={typeof q.text === 'string' && !q.text.startsWith('<') ? q.text : ''}
+                              onChange={(e) => handleQuestionChange(unit, questionIndex, e.target.value)}
+                              className="w-full p-2 border border-gray-300 rounded-md mb-2 text-sm"
+                              rows={3}
+                            />
+                            
+                            <div className="mb-2">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageChange(unit, questionIndex, e.target.files[0])}
+                                className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                              />
+                            </div>
+                            
+                            <button 
+                              onClick={() => {
+                                if (window.confirm("Are you sure you want to delete this question?")) {
+                                  setQuestionsData(prev => ({
+                                    ...prev,
+                                    [unit]: prev[unit].filter((_, i) => i !== questionIndex)
+                                  }));
+                                }
+                              }}
+                              className="self-end flex items-center justify-center w-7 h-7 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+                              title="Delete question"
+                            >
+                              <Trash size={15}/>
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="text-sm">
+                              <span className="font-semibold text-base">Q{questionNumber}:</span>{' '}
+                              <span dangerouslySetInnerHTML={{ __html: q.text }} />
+                            </div>
+                            
+                            {q.image && (
+                              <img 
+                                src={q.image} 
+                                alt="Question diagram" 
+                                className="mt-2 max-h-40 object-contain border border-gray-200 rounded-md" 
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+              
+              {isEditing && (
+                <button 
+                  onClick={() => handleAddQuestion(unit, '4')} 
+                  className="mt-1 px-3 py-1 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors text-sm text-center"
+                  title="Add 4 mark question"
+                >
+                <Plus size={15}/>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      <div style={{ marginBottom: '30px' }}>
-        {isEditing ? (
-          <>
-            <button 
-              onClick={handleCancel} 
-              style={{ 
-                padding: '10px 15px', 
-                backgroundColor: '#d9534f', 
-                color: 'white', 
-                borderRadius: '5px', 
-                fontSize:'16px', 
-                border: 'none',
-                cursor: 'pointer', 
-                marginRight: '10px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-              }}
-            >
-              Cancel
-            </button>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap justify-center gap-3 mb-8">
+          {isEditing ? (
+            <>
+              <button 
+                onClick={handleCancel} 
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 shadow-md transition-colors"
+              >
+                Cancel
+              </button>
 
-            <button 
-              onClick={handleSaveToBackend} 
-              disabled={isLoading} 
-              style={{ 
-                padding: '10px 15px', 
-                backgroundColor: '#ff5733', 
-                color: 'white', 
-                border: '1px dotted black', 
-                borderRadius: '5px', 
-                cursor: isLoading ? 'not-allowed' : 'pointer', 
-                fontSize: '16px', 
-                marginRight: '10px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                opacity: isLoading ? 0.7 : 1
-              }}
-            >
-              {isLoading ? "Saving..." : "Confirm & Save ✅"}
-            </button>
-          </>
-        ) : (
+              <button 
+                onClick={handleSaveToBackend} 
+                disabled={isLoading} 
+                className={`px-4 py-2 bg-blue-600 text-white rounded-md border border-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 shadow-md transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+              >
+                {isLoading ? "Saving..." : (
+                  <span className="flex items-center gap-2">
+                    Save Changes <Save size={18} />
+                  </span>
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={handleEdit} 
+                className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 shadow-md transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  Edit Questions <Edit size={18} />
+                </span>
+              </button>
+              
+              <button 
+                onClick={handleSaveToBackend} 
+                disabled={isLoading} 
+                className={`px-4 py-2 bg-blue-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-md transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+              >
+                {isLoading ? "Saving..." : (
+                  <span className="flex items-center gap-2">
+                    Save Draft <CheckCircle size={18} />
+                  </span>
+                )}
+              </button>
+            </>
+          )}
+
           <button 
-            onClick={handleEdit} 
-            style={{ 
-              padding: '10px 15px', 
-              backgroundColor: '#f6da08', 
-              color: 'black', 
-              fontSize:'16px', 
-              borderRadius: '5px', 
-              border: 'none',
-              cursor: 'pointer', 
-              marginRight:'10px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-            }}
+            onClick={handleFinalPaper} 
+            disabled={isLoading}
+            className={`px-4 py-2 bg-green-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-green-700'}`}
           >
-            Edit
+            {isLoading ? "Processing..." : (
+              <span className="flex items-center gap-2">
+                Final Paper <FileText size={18} />
+              </span>
+            )}
           </button>
-        )}
-
-        <button 
-          onClick={handleSaveToBackend} 
-          disabled={isLoading} 
-          style={{ 
-            padding: '10px 15px', 
-            backgroundColor: '#f92e00', 
-            color: 'white', 
-            borderRadius: '5px', 
-            border: 'none',
-            cursor: isLoading ? 'not-allowed' : 'pointer', 
-            fontSize: '16px',
-            marginRight: '10px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            opacity: isLoading ? 0.7 : 1
-          }}
-        >
-          {isLoading ? "Saving..." : "Save All ✔"}
-        </button>
-
-        <button 
-          onClick={handleFinalPaper} 
-          disabled={isLoading}
-          style={{ 
-            padding: '10px 15px', 
-            backgroundColor: '#16ac13', 
-            color: 'white', 
-            borderRadius: '5px', 
-            border: 'none',
-            cursor: isLoading ? 'not-allowed' : 'pointer', 
-            fontSize: '16px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            opacity: isLoading ? 0.7 : 1
-          }}
-        >
-          {isLoading ? "Processing..." : "Final Paper 📄"}
-        </button>
-      </div>
-      
-      <div style={{
-        backgroundColor: '#f8d7da',
-        color: '#721c24',
-        padding: '10px',
-        borderRadius: '5px',
-        border: '1px solid #f5c6cb',
-        marginTop: '20px',
-        fontWeight: 'bold',
-        textAlign: 'center'
-      }}>
-        ⚠️ WARNING: MOVING BACK TO THE PREVIOUS PAGE CAN CAUSE YOU TO LOSE EVERYTHING ⚠️
+        </div>
+        
+        {/* Warning Message */}
+        <div className="bg-red-100 text-red-800 p-3 rounded-md border border-red-200 font-semibold text-center mb-6">
+          ⚠️ WARNING: MOVING BACK TO THE PREVIOUS PAGE CAN CAUSE YOU TO LOSE EVERYTHING ⚠️ 
+        </div>
       </div>
     </div>
   );
