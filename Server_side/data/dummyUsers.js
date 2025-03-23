@@ -10,7 +10,7 @@ const users = [
     {
       username: "HODPranshanti",
       fullName: "B G Pranshanti",
-      password: "@HOD2Admin025",
+      password: "@HOD2Admin02",
       role: "Admin",
     },
     // Teachers
