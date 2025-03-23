@@ -44,15 +44,27 @@ const createOpenPaper = async (req, res) => {
 };
 
 // Get all open papers
+// Get all open papers with creator isolation
 const getAllOpenPapers = async (req, res) => {
   try {
-    const papers = await OpenPapers.find()
-  .populate({
-    path: "createdBy",
-    select: "name email", // Make sure these fields are explicitly selected
-    model: "User" // Ensure correct model name
-  })
-  .sort({ createdAt: -1 });
+    const userId = req.user?._id;
+    const userRole = req.user?.role;
+    
+    // Build query based on user role and ID
+    let query = {};
+    
+    // If not admin, only show papers created by this user
+    if (userRole !== "Admin" && userRole !== "SuperAdmin" && userId) {
+      query = { createdBy: userId };
+    }
+    
+    const papers = await OpenPapers.find(query)
+      .populate({
+        path: "createdBy",
+        select: "_id", // Just populate the ID since we use creatorName for display
+        model: "User"
+      })
+      .sort({ createdAt: -1 });
     
     res.status(200).json({
       success: true,
