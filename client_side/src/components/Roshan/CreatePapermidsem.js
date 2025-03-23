@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye } from 'lucide-react'
+import { Eye, Trash2 } from 'lucide-react'
 
 const CreatePaper = () => {
   const [papers, setPapers] = useState([]);
@@ -108,7 +108,7 @@ const CreatePaper = () => {
                 transition-all duration-300 transform
                 ${deleting === paper._id ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}
               `}
-              onMouseOver={(e) => e.target.style.color = "#0056b3"}
+              onMouseOver={(e) => e.target.style.color = " #0056b3"}
               onMouseOut={(e) => e.target.style.color = ""}
             > 
               {/* Delete Button */}
@@ -120,10 +120,10 @@ const CreatePaper = () => {
                 className="
                   absolute -top-2.5 -right-2.5 bg-red-500 text-white text-2xl font-bold
                   rounded-full w-8 h-8 flex justify-center items-center cursor-pointer shadow-md
-                  hover:bg-red-500 text-gray-40  transition-colors
+                  hover:bg-red-500 text-gray-100  transition-colors
                 "
               >
-                &#10799;
+              <Trash2 size={18}/>
               </span>
 
               {/* Title Section */}
@@ -143,9 +143,8 @@ const CreatePaper = () => {
               <button 
                 onClick={() => handleViewPaper(paper._id)} 
                 className="
-                  mt-2 px-3 py-2 bg-blue-200 text-white-300 border-none rounded-lg text-base
-                  cursor-pointer transform transition-all duration-200
-                "
+                  text-blue-500 hover:bg-blue-100 p-2 rounded-full transition-colors"
+                  title="View Paper"
               >
                 <Eye />
               </button>

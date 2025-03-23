@@ -575,15 +575,16 @@ const ViewPaper = () => {
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "20px", textAlign: "center", background: "rgb(200, 203, 206)", minHeight: "100vh" }}>
-      <button onClick={() => navigate(-1)} style={{ 
-        textDecoration: "none", 
-        color: "#072b52", 
-        fontWeight: "bold", 
-        fontSize: "18px", 
-        display: "inline-block", 
-        padding: "15px" 
-      }}>
+      <button onClick={() => navigate(-1) } 
+      className= "text-blue-700 hover:bg-blue-300 p-2 rounded-full transition-colors mr-5 mb-4" 
+      title="Previous Page">
         &#129136; &nbsp; Back
+      </button>
+
+      <button onClick={() => navigate("/midsemester") } 
+      className= " text-emerald-700 hover:bg-emerald-300 p-2 rounded-full transition-colors"
+      title="Mid Semester Papers">
+        Next &nbsp; &#129138;
       </button>
 
       <div style={{ 

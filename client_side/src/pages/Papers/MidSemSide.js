@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../Contexts/AuthContext.js";
-import { FileText, Eye, Edit ,Trash2, Check, X, Upload, RefreshCw, AlertCircle } from 'lucide-react';
+import { FileText, Eye, Edit, Trash2, Check, X, RefreshCw, AlertCircle, Send, Plus } from 'lucide-react';
 
 const MidSemSide = () => {
   const { authState } = useAuth();
@@ -25,8 +25,19 @@ const MidSemSide = () => {
   useEffect(() => {
     console.log("Fetching papers...");
     
-    // Fetch papers with a more robust approach
-    fetch("http://localhost:5000/get-questions")
+    // Prepare query params based on user role
+    const params = new URLSearchParams();
+    
+    if (authState?.user?._id) {
+      params.append('userId', authState.user._id);
+    }
+    
+    if (authState?.user?.role) {
+      params.append('role', authState.user.role);
+    }
+    
+    // Fetch papers with user-specific filtering
+    fetch(`http://localhost:5000/get-questions?${params.toString()}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Server responded with status ${res.status}`);
@@ -46,6 +57,8 @@ const MidSemSide = () => {
           setAvailableSemesters(semesters);
         } else {
           console.log("No papers received or data is not an array:", data);
+          setPapers([]);
+          setFilteredPapers([]);
         }
         
         setLoading(false);
@@ -54,7 +67,7 @@ const MidSemSide = () => {
         console.error("❌ Error fetching questions:", error);
         setLoading(false);
       });
-  }, []);
+  }, [authState]);
 
   // Apply filters when filter states change
   useEffect(() => {
@@ -80,7 +93,18 @@ const MidSemSide = () => {
     setLoading(true);
     console.log("Manually refreshing papers...");
     
-    fetch("http://localhost:5000/get-questions")
+    // Prepare query params based on user role
+    const params = new URLSearchParams();
+    
+    if (authState?.user?._id) {
+      params.append('userId', authState.user._id);
+    }
+    
+    if (authState?.user?.role) {
+      params.append('role', authState.user.role);
+    }
+    
+    fetch(`http://localhost:5000/get-questions?${params.toString()}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Server responded with status ${res.status}`);
@@ -100,6 +124,8 @@ const MidSemSide = () => {
           setAvailableSemesters(semesters);
         } else {
           console.log("No papers received or data is not an array:", data);
+          setPapers([]);
+          setFilteredPapers([]);
         }
         
         setLoading(false);
@@ -314,15 +340,15 @@ const MidSemSide = () => {
   const getStatusBadgeColor = (status) => {
     switch(status) {
       case 'Draft':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-300 text-yellow-800';
       case 'Submitted':
-        return 'bg-blue-100 text-blue-800';  
+        return 'bg-blue-300 text-blue-800';  
       case 'Approved':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-300 text-green-800';
       case 'Rejected':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-300 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';  
+        return 'bg-gray-300 text-gray-800';  
     }
   };
 
@@ -331,68 +357,78 @@ const MidSemSide = () => {
     setStatusFilter("All");
     setSemesterFilter("All");
   };
+  const navigateToCreatePaper = () => {
+    navigate('/mainp', { state: { createdBy: authState?.user?._id } });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Mid Semester Question Papers</h1>
 
-    {/* Filter Section */}
-    <div className="flex items-center justify-between gap-4 mb-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
-        {/* Status Filter */}
-        <div className="w-full">
-          <select
-            id="statusFilter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full block rounded-lg border border-gray-200 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-3"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Draft">Draft</option>
-            <option value="Submitted">Submitted</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-          </select>
-        </div>
+      {/* Filter Section */}
+      <div className="flex items-center justify-between gap-0 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 w-full">
+          {/* Status Filter */}
+          <div className="w-full">
+            <select
+              id="statusFilter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full block rounded-md border border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Draft">Draft</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
 
-        {/* Semester Filter */}
-        <div className="w-full">
-          <select
-            id="semesterFilter"
-            value={semesterFilter}
-            onChange={(e) => setSemesterFilter(e.target.value)}
-            className="w-full block rounded-lg border border-gray-200 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-3"
-          >
-            <option value="All">All Semesters</option>
-            {availableSemesters.map((semester) => (
-              <option key={semester} value={semester}>
-                {semester}
-              </option>
-            ))}
-          </select>
-        </div>
+          {/* Semester Filter */}
+          <div className="w-full">
+            <select
+              id="semesterFilter"
+              value={semesterFilter}
+              onChange={(e) => setSemesterFilter(e.target.value)}
+              className="w-full block rounded-md border border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2"
+            >
+              <option value="All">All Semesters</option>
+              {availableSemesters.map((semester) => (
+                <option key={semester} value={semester}>
+                  {semester}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Reset Filters Button */}
-        <div className="w-half">
-          <button
-            onClick={resetFilters}
-            className="w-half px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm border border-gray-200 shadow-sm"
-          >
-            Reset Filters
-          </button>
+          {/* Reset Filters Button */}
+          <div className="flex gap-4">
+            <button
+              onClick={resetFilters}
+              className="px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-50 transition text-sm border border-gray-300 shadow-sm"
+            >
+              Reset Filters
+            </button>
+          </div>
+
+          {/* Refresh and Create New Paper Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={refreshPapers}
+              className="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md transition gap-2 text-sm gap-2"
+              title="Refresh"
+            >
+              <RefreshCw size={18} /> Refresh
+            </button>
+            <button
+              onClick={navigateToCreatePaper}
+              className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md transition text-sm gap-1"
+            >
+              <Plus size={15}/> New Paper
+            </button>
+          </div>
         </div>
       </div>
-    
-    {/* Refresh Button */}
-    <div className="w-half">
-      <button
-        onClick={refreshPapers}
-        className="w-half px-4 py-3 bg-blue-0 text-blue-700 rounded-lg transition-colors text-sm flex items-center justify-center"
-      >
-      <RefreshCw className="w-4 h-4 mr-2" />
-      </button>
-    </div>
-    </div>
       {loading ? (
         <div className="text-center py-8">
           <p className="text-lg text-gray-600">Loading...</p>
@@ -412,68 +448,74 @@ const MidSemSide = () => {
       ) : (
         <div className="grid gap-4">
           {filteredPapers.map((paper) => (
-            <div
-              key={paper._id}
-              className={`relative bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 ${
-                deleting === paper._id ? "opacity-0 scale-90" : "opacity-100 scale-100"
-              }`}
-            >
-              <div className="flex items-center justify-between p-4">
-                {/* Left side with icon and information */}
-                <div className="flex items-center space-x-4">
-                  <FileText className="text-blue-500 w-10 h-10" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      {paper.subject || "Untitled"} {paper.subjectCode ? `- ${paper.subjectCode}` : ""}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {paper.course || "BCA"} | {paper.semester || " "} | Units: {extractUnits(paper)}
-                    </p>
-                    <div className="flex flex-col mt-1">
-                      <div className="flex items-center space-x-2">
-                        <span 
-                          className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusBadgeColor(paper.status || 'Draft')}`}
-                        >
-                          {paper.status || 'Draft'}
-                        </span>
-                        
-                        {/* Show submission/approval/rejection date if available */}
-                        {paper.submittedAt && paper.status === 'Submitted' && (
-                          <span className="text-xs text-gray-500">
-                            Submitted on: {new Date(paper.submittedAt).toLocaleDateString()}
-                          </span>
-                        )}
-                        
-                        {paper.approvedAt && paper.status === 'Approved' && (
-                          <span className="text-xs text-gray-500">
-                            Approved on : {new Date(paper.approvedAt).toLocaleDateString()}
-                          </span>
-                        )}
-                        
-                        {paper.rejectedAt && paper.status === 'Rejected' && (
-                          <span className="text-xs text-gray-500">
-                            Rejected on : {new Date(paper.rejectedAt).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Show rejection reason if available */}
-                      {paper.status === 'Rejected' && paper.rejectionReason && (
-                        <div className="flex items-start mt-1 text-xs text-red-600">
-                          <AlertCircle className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" />
-                          <span>{paper.rejectionReason}</span>
-                        </div>
-                      )}
-
-                      {/* Show number of questions */}
-                      <div className="text-xs text-gray-500 mt-1">
-                        Questions: {paper.questions ? paper.questions.length : 0}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right side with action buttons */}
+  <div
+    key={paper._id}
+    className={`relative bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 ${
+      deleting === paper._id ? "opacity-0 scale-90" : "opacity-100 scale-100"
+    }`}
+  >
+    <div className="flex items-center justify-between p-4">
+      {/* Left side with icon and information */}
+      <div className="flex items-center space-x-4">
+        <FileText className="text-blue-500 w-10 h-10" />
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">
+            {paper.subject || "Untitled"} {paper.subjectCode ? `- ${paper.subjectCode}` : ""}
+          </h3>
+          <p className="text-sm text-gray-600">
+            {paper.course || "BCA"} | {paper.semester || " "} | Units: {extractUnits(paper)}
+          </p>
+          
+          {/* Show teacher name for admins */}
+          {isAdmin && paper.createdBy && (
+            <p className="text-xs text-gray-500 mt-1">
+              Created by: {
+                paper.createdBy.fullName || 
+                paper.createdBy.username || 
+                "Unknown teacher"
+              }
+            </p>
+          )}
+          
+          <div className="flex flex-col mt-1">
+            <div className="flex items-center space-x-2">
+              <span 
+                className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusBadgeColor(paper.status || 'Draft')}`}
+              >
+                {paper.status || 'Draft'}
+              </span>
+              
+              {/* Show submission/approval/rejection date if available */}
+              {paper.submittedAt && paper.status === 'Submitted' && (
+                <span className="text-xs text-gray-500">
+                  Submitted on: {new Date(paper.submittedAt).toLocaleDateString()}
+                </span>
+              )}
+              
+              {paper.approvedAt && paper.status === 'Approved' && (
+                <span className="text-xs text-gray-500">
+                  Approved on: {new Date(paper.approvedAt).toLocaleDateString()}
+                </span>
+              )}
+              
+              {paper.rejectedAt && paper.status === 'Rejected' && (
+                <span className="text-xs text-gray-500">
+                  Rejected on: {new Date(paper.rejectedAt).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+            
+            {/* Show rejection reason if available */}
+            {paper.status === 'Rejected' && paper.rejectionReason && (
+              <div className="flex items-start mt-1 text-xs text-red-600">
+                <AlertCircle className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" />
+                <span>{paper.rejectionReason}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        </div>
+          {/* Right side with action buttons */}
                 <div className="flex space-x-2">
                   {/* Send for Approval - only for teachers with Draft/Rejected papers */}
                   {!isAdmin && (paper.status === 'Draft' || paper.status === 'Rejected') && (
@@ -482,8 +524,7 @@ const MidSemSide = () => {
                       className="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg flex items-center hover:bg-purple-200 text-sm"
                       title="Submit for Approval"
                     >
-                      <Upload className="w-4 h-4 mr-1" />
-                      Submit for Approval
+                      <Send size={18} />
                     </button>
                   )}
                   
@@ -517,8 +558,8 @@ const MidSemSide = () => {
 
                   {(paper.status === 'Draft' || paper.status === 'Rejected' || isAdmin) && (
                     <button
-                      oonClick={() => handleViewPaper(paper._id)}
-                      className="text-yellow-500 hover:bg-yellow-50 p-2 rounded-full transition-colors"
+                      onClick={() => handleViewPaper(paper._id)}
+                      className="text-yellow-500 hover:bg-yellow-100 p-2 rounded-full transition-colors"
                       title="Edit Paper"
                     >
                       <Edit className="w-5 h-5" />
@@ -531,7 +572,7 @@ const MidSemSide = () => {
                         e.stopPropagation();
                         handleDelete(paper._id);
                       }}
-                      className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                      className="text-red-500 hover:bg-red-100 p-2 rounded-full transition-colors"
                       title="Delete Paper"
                     >
                       <Trash2 className="w-5 h-5" />

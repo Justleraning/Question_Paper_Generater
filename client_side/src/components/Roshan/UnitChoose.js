@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { MessageCircleWarning } from 'lucide-react'
 
 const UnitChoose = () => {
   const navigate = useNavigate();
@@ -46,7 +47,8 @@ const UnitChoose = () => {
       gradientText: {
         fontSize: "25px",
         fontWeight: "bold",
-        background: "linear-gradient(to right, #e10c0c, rgb(115, 48, 9))",
+        display: "inline-flex",
+        background: "rgb(230, 221, 43)",
         WebkitBackgroundClip: "text",
         WebkitTextFillColor: "transparent",
       },
@@ -97,7 +99,7 @@ const UnitChoose = () => {
   return(
   <div style={styles.page}>
   <div style={styles.textWrapper}>
-    <p style={styles.gradientText}>&#9888; Kindly choose units orderwise &#9888;</p>
+    <span style={styles.gradientText}>&nbsp; Kindly choose units orderwise &nbsp; <MessageCircleWarning color='rgb(230, 221, 43)'/></span>
   </div>
   <div style={styles.container}>
       <h2>Select Units </h2>

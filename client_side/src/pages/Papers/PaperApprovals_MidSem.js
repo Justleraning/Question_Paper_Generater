@@ -108,6 +108,32 @@ const PaperApprovals_MidSem = () => {
     setViewingPaper(null);
   };
 
+  const refreshPapers = () => {
+    setLoading(true);
+    
+    fetch("http://localhost:5000/get-submitted-papers")
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Server responded with status ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        console.log("✅ Refreshed Papers API response:", data);
+        if (Array.isArray(data)) {
+          setPapers(data);
+        } else {
+          console.error("API didn't return an array:", data);
+          setPapers([]);
+        }
+      })
+      .catch((error) => {
+        console.error("❌ Error refreshing papers:", error);
+        alert("Failed to refresh papers. Please try again.");
+      })
+      .finally(() => setLoading(false));
+  };
+
   // Approve paper
   const handleApprovePaper = async (paperId) => {
     if (!window.confirm("Are you sure you want to approve this paper?")) {
@@ -192,7 +218,7 @@ const PaperApprovals_MidSem = () => {
 
       // Update UI
       setPapers(papers.filter(paper => paper._id !== rejectingPaperId));
-      alert("Paper rejected. Feedback sent to teacher.");
+      alert("Paper rejected ⛔ Feedback sent to teacher 📩");
       
       // Reset state
       cancelRejection();
@@ -218,8 +244,19 @@ const PaperApprovals_MidSem = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Paper Approval Requests</h1>
-      
+      <h1 className="flex-inline text-2xl font-bold text-gray-800">Mid Semester Paper Approvals</h1>
+      <button 
+          onClick={refreshPapers}
+          className="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm transition-colors mb-6 ml-auto"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 2v6h-6"></path>
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+            <path d="M3 22v-6h6"></path>
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+          </svg>
+          Refresh
+        </button>
       {loading ? (
         <div className="text-center py-8">
           <p className="text-lg text-gray-600">Loading paper approval requests...</p>
