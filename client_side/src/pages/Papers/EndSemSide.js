@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Download, Edit, Trash2, Eye, Send, Calendar, AlertTriangle, ArrowLeft, Printer } from 'lucide-react';
+import { FileText, Download, Edit, Trash2, Eye, Send, Calendar, AlertTriangle, ArrowLeft, Printer, Filter, User } from 'lucide-react';
 import axios from 'axios';
 
 // Helper function to check if a paper can be submitted for approval
@@ -59,7 +59,7 @@ export function EndSemSide() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   
-  // State for view mode - Using the same approach as PaperApprovals_EndSem
+  // State for view mode
   const [previewingPaper, setPreviewingPaper] = useState(null);
   const [showPaper, setShowPaper] = useState(false);
   const componentRef = useRef();
@@ -74,6 +74,513 @@ export function EndSemSide() {
   // Unique semesters from papers
   const [uniqueSemesters, setUniqueSemesters] = useState([]);
   const [uniqueSubjectCodes, setUniqueSubjectCodes] = useState([]);
+
+  // Add enhanced styles to the page
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      /* Enhanced End Semester Papers Stylesheet */
+      
+      /* Reset and Base Styles */
+      :root {
+        --primary: #4f46e5;
+        --primary-light: #818cf8;
+        --primary-dark: #3730a3;
+        --secondary: #0ea5e9;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --success: #10b981;
+        --info: #6366f1;
+        --white: #ffffff;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-400: #9ca3af;
+        --gray-500: #6b7280;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --transition: all 0.2s ease-in-out;
+      }
+      
+      /* Layout and Container Styles */
+      .din8-container {
+        max-width: 1280px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 2rem 1.5rem;
+      }
+      
+      /* Page Header */
+      .din8-page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--gray-200);
+        padding-bottom: 1rem;
+      }
+      
+      .din8-page-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        letter-spacing: -0.025em;
+        position: relative;
+        padding-left: 1rem;
+      }
+      
+      .din8-page-header h1:before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 15%;
+        height: 70%;
+        width: 4px;
+        background: var(--primary);
+        border-radius: 4px;
+      }
+      
+      /* Filter Section */
+      .din8-filters-container {
+        background-color: var(--white);
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        transition: var(--transition);
+      }
+      
+      .din8-filters-container:hover {
+        box-shadow: var(--shadow-lg);
+      }
+      
+      .din8-filters-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      
+      .din8-filters-header h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-800);
+      }
+      
+      .din8-filters-header .din8-icon {
+        margin-right: 0.75rem;
+        color: var(--primary);
+      }
+      
+      .din8-filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+      }
+      
+      .din8-filter-select {
+        position: relative;
+      }
+      
+      .din8-filter-select select {
+        appearance: none;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        padding-right: 2.5rem;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        background-color: var(--white);
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        color: var(--gray-800);
+        cursor: pointer;
+        transition: var(--transition);
+      }
+      
+      .din8-filter-select select:focus {
+        outline: none;
+        border-color: var(--primary-light);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+      }
+      
+      .din8-filter-select:after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: 1rem;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 6px solid var(--gray-600);
+        pointer-events: none;
+      }
+      
+      /* Paper Cards */
+      .din8-papers-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      
+      .din8-paper-card {
+        background-color: var(--white);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        transition: var(--transition);
+        position: relative;
+      }
+      
+      .din8-paper-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+      }
+      
+      .din8-paper-card-inner {
+        padding: 1.5rem;
+      }
+      
+      .din8-paper-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+      
+      .din8-paper-card-content {
+        display: flex;
+        align-items: flex-start;
+        flex-grow: 1;
+      }
+      
+      .din8-paper-card-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 3rem;
+        height: 3rem;
+        margin-right: 1rem;
+        background-color: rgba(79, 70, 229, 0.1);
+        border-radius: 12px;
+        color: var(--primary);
+      }
+      
+      .din8-paper-card-info {
+        flex-grow: 1;
+      }
+      
+      .din8-paper-card-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 0.25rem;
+      }
+      
+      .din8-paper-card-subtitle {
+        font-size: 0.95rem;
+        color: var(--gray-600);
+        margin-bottom: 0.5rem;
+      }
+      
+      .din8-paper-card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+      }
+      
+      .din8-paper-card-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 9999px;
+      }
+      
+      .din8-status-draft {
+        background-color: rgba(79, 70, 229, 0.1);
+        color: var(--primary);
+      }
+      
+      .din8-status-submitted {
+        background-color: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+      }
+      
+      .din8-status-approved {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+      }
+      
+      .din8-status-rejected {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: var(--danger);
+      }
+      
+      .din8-paper-card-creator,
+      .din8-paper-card-date {
+        display: flex;
+        align-items: center;
+        font-size: 0.75rem;
+        color: var(--gray-500);
+      }
+      
+      .din8-paper-card-creator svg,
+      .din8-paper-card-date svg {
+        margin-right: 0.25rem;
+      }
+      
+      .din8-paper-card-actions {
+        display: flex;
+        gap: 0.25rem;
+      }
+      
+      .din8-paper-card-action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 9999px;
+        border: none;
+        background-color: var(--white);
+        transition: var(--transition);
+        cursor: pointer;
+        position: relative;
+      }
+      
+      .din8-paper-card-action-btn svg {
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+      
+      .din8-paper-card-action-btn:hover {
+        transform: translateY(-2px);
+      }
+      
+      .din8-action-view { color: var(--secondary); }
+      .din8-action-view:hover { background-color: rgba(14, 165, 233, 0.1); }
+      
+      .din8-action-download { color: var(--success); }
+      .din8-action-download:hover { background-color: rgba(16, 185, 129, 0.1); }
+      
+      .din8-action-edit { color: var(--warning); }
+      .din8-action-edit:hover { background-color: rgba(245, 158, 11, 0.1); }
+      
+      .din8-action-approve { color: var(--primary); }
+      .din8-action-approve:hover { background-color: rgba(79, 70, 229, 0.1); }
+      
+      .din8-action-delete { color: var(--danger); }
+      .din8-action-delete:hover { background-color: rgba(239, 68, 68, 0.1); }
+      
+      .din8-paper-card-rejection {
+        margin-top: 1rem;
+        padding: 1rem;
+        background-color: rgba(239, 68, 68, 0.05);
+        border-left: 3px solid var(--danger);
+        border-radius: 4px;
+      }
+      
+      .din8-paper-card-rejection-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+      }
+      
+      .din8-paper-card-rejection-header svg {
+        margin-right: 0.5rem;
+        color: var(--danger);
+        flex-shrink: 0;
+      }
+      
+      .din8-paper-card-rejection-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--danger);
+      }
+      
+      .din8-paper-card-rejection-text {
+        font-size: 0.95rem;
+        color: var(--gray-700);
+        margin-left: 1.75rem;
+      }
+      
+      /* Empty State */
+      .din8-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--white);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        padding: 3rem 2rem;
+        text-align: center;
+      }
+      
+      .din8-empty-state svg {
+        color: var(--gray-400);
+        margin-bottom: 1.5rem;
+      }
+      
+      .din8-empty-state-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 0.5rem;
+      }
+      
+      .din8-empty-state-text {
+        color: var(--gray-600);
+        max-width: 24rem;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      
+      /* Paper Preview Styles */
+      .din8-approval-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem;
+      }
+      
+      .din8-preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--gray-200);
+        padding-bottom: 1rem;
+      }
+      
+      .din8-preview-header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900);
+      }
+      
+      .din8-preview-actions {
+        display: flex;
+        gap: 0.75rem;
+      }
+      
+      .din8-preview-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        background-color: var(--white);
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--gray-700);
+        transition: var(--transition);
+        cursor: pointer;
+      }
+      
+      .din8-preview-button:hover {
+        background-color: var(--gray-100);
+        color: var(--gray-900);
+      }
+      
+      .din8-preview-button svg {
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+      
+      .din8-a4-paper {
+        background-color: var(--white);
+        box-shadow: var(--shadow-lg);
+        margin: 2rem auto;
+        width: 210mm;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      
+      /* Loading Animation */
+      .din8-loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      
+      .din8-loading-spinner {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        border: 3px solid var(--gray-200);
+        border-top-color: var(--primary);
+        animation: spinner 1s linear infinite;
+      }
+      
+      @keyframes spinner {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* PDF download loading styles */
+      .din8-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        color: white;
+        font-size: 1.125rem;
+        backdrop-filter: blur(3px);
+      }
+      
+      /* Responsive Styles */
+      @media (min-width: 768px) {
+        .din8-filters-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      
+      /* Print Styles */
+      @media print {
+        .din8-preview-header,
+        .din8-preview-actions,
+        .din8-paper-card-actions {
+          display: none !important;
+        }
+      
+        .din8-a4-paper {
+          box-shadow: none;
+          margin: 0;
+          width: 100%;
+        }
+      
+        body {
+          background-color: var(--white);
+        }
+      }
+    `;
+    
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchPapers = async () => {
@@ -106,7 +613,7 @@ export function EndSemSide() {
     fetchPapers();
   }, []);
 
-  // Apply filters - updated to use root level status
+  // Apply filters
   useEffect(() => {
     let result = papers;
 
@@ -119,7 +626,6 @@ export function EndSemSide() {
     }
 
     if (filters.status) {
-      // Use the root level status property
       result = result.filter(p => p.status === filters.status);
     }
 
@@ -136,13 +642,12 @@ export function EndSemSide() {
     });
   };
 
-  // View/Preview Paper - Using the same approach as PaperApprovals_EndSem
+  // View/Preview Paper
   const viewPaper = (paper) => {
     try {
       console.log("View paper requested for:", paper._id);
       setPreviewingPaper(paper);
       setShowPaper(true);
-      // Scroll to top when viewing paper
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error("Error in viewPaper function:", error);
@@ -161,7 +666,7 @@ export function EndSemSide() {
     window.print();
   };
 
-  // Edit Paper - No replace buttons
+  // Edit Paper
   const editPaper = (paper) => {
     navigate('/create-papers', { 
       state: { 
@@ -175,7 +680,6 @@ export function EndSemSide() {
     });
   };
 
-  // Download Paper
   const downloadPaper = (paper) => {
     // Show loading indicator
     const loadingOverlay = document.createElement('div');
@@ -533,7 +1037,7 @@ export function EndSemSide() {
     };
   };
 
-  // Delete Paper - Updated to use sessionStorage
+  // Delete Paper
   const deletePaper = async (paper) => {
     const confirmDelete = window.confirm('Are you sure you want to delete this paper?');
     
@@ -602,7 +1106,7 @@ export function EndSemSide() {
           p._id === paper._id 
             ? { 
                 ...p, 
-                status: 'Submitted',  // Use consistent capitalization with other parts of the app
+                status: 'Submitted',
                 metadata: { 
                   ...p.metadata, 
                   status: 'submitted'
@@ -651,265 +1155,42 @@ export function EndSemSide() {
     }
   };
 
-  // Status color mapping - Updated to include Submitted status
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'Draft': return 'bg-blue-100 text-blue-800';       // Draft (blue)
-      case 'draft': return 'bg-blue-100 text-blue-800';       // draft (blue)
-      case 'Submitted': return 'bg-yellow-100 text-yellow-800'; // Submitted papers (yellow)
-      case 'submitted': return 'bg-yellow-100 text-yellow-800'; // Same as 'Submitted'
-      case 'Approved': return 'bg-green-100 text-green-800';    // Approved papers (green)
-      case 'approved': return 'bg-green-100 text-green-800';    // Same as 'Approved'
-      case 'Rejected': return 'bg-red-100 text-red-800';        // Rejected papers (red)
-      case 'rejected': return 'bg-red-100 text-red-800';        // Same as 'Rejected'
-      default: return 'bg-gray-100 text-gray-800';
+  // Get status class based on paper status
+  const getStatusClass = (status) => {
+    const statusLower = (status || '').toLowerCase();
+    switch(statusLower) {
+      case 'draft': return 'din8-status-draft';
+      case 'submitted': return 'din8-status-submitted';
+      case 'approved': return 'din8-status-approved';
+      case 'rejected': return 'din8-status-rejected';
+      default: return 'din8-status-draft';
     }
   };
 
-  // Add CSS styles for paper preview - Using the same CSS as PaperApprovals_EndSem
-  useEffect(() => {
-    const styleElement = document.createElement('style');
-    styleElement.textContent = `
-      .approval-container {
-        max-width: 100%;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: Arial, sans-serif;
-      }
+  // If we're in loading state, show loading spinner
+  if (loading) {
+    return (
+      <div className="din8-loading-container">
+        <div className="din8-loading-spinner"></div>
+      </div>
+    );
+  }
 
-      .preview-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-      }
-
-      .preview-actions {
-        display: flex;
-        gap: 10px;
-      }
-
-      .preview-button {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        padding: 8px 16px;
-        background-color: #f3f4f6;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
-        transition: background-color 0.2s;
-      }
-
-      .preview-button:hover {
-        background-color: #e5e7eb;
-      }
-
-      .din8-paper-container {
-        position: relative;
-      }
-      
-      .din8-a4-paper {
-        background-color: white;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        margin: 20px auto;
-        position: relative;
-        width: 210mm;
-        height: auto;
-        min-height: auto;
-      }
-      
-      .din8-a4-page {
-        width: 210mm;
-        height: auto;
-        min-height: auto;
-        padding: 20mm 15mm 15mm 15mm;
-        position: relative;
-        box-sizing: border-box;
-        overflow: visible;
-      }
-      
-      .din8-university-header {
-        text-align: center;
-        margin-bottom: 20px;
-      }
-      
-      .din8-header-flex {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      
-      .din8-university-logo {
-        width: 130px;
-        height: auto;
-        margin-right: 15px;
-      }
-      
-      .din8-header-text {
-        text-align: center;
-      }
-      
-      .din8-university-name {
-        font-size: 16px;
-        font-weight: bold;
-        margin-bottom: 5px;
-      }
-      
-      .din8-course-details {
-        font-size: 16px;
-        margin-bottom: 3px;
-      }
-      
-      .din8-paper-title {
-        font-size: 14px;
-        font-weight: bold;
-        margin: 8px 0;
-      }
-      
-      .din8-registration-box {
-        border: 1px solid #000;
-        padding: 5px;
-        position: absolute;
-        top: 5mm;
-        right: 5mm;
-        width: 50mm;
-        font-size: 12px;
-      }
-      
-      .din8-exam-info {
-        display: flex;
-        justify-content: space-between;
-        margin: 15px 0;
-        font-size: 16px;
-      }
-      
-      .din8-paper-info {
-        text-align: center;
-        margin: 10px 0;
-        font-weight: normal;
-      }
-      
-      .din8-part-title {
-        font-size: 14px;
-        font-weight: bold;
-        margin: 15px 0 5px 0;
-      }
-      
-      .din8-part-instructions {
-        font-size: 16px;
-        margin-bottom: 10px;
-      }
-      
-      .din8-question-list {
-        margin-bottom: 20px;
-      }
-      
-      .din8-question {
-        display: flex;
-        margin-bottom: 15px;
-        align-items: flex-start;
-      }
-      
-      .din8-question-number {
-        margin-right: 10px;
-        font-weight: bold;
-        min-width: 20px;
-      }
-      
-      .din8-question-text {
-        flex: 1;
-      }
-      
-      .din8-question-image-container {
-        margin-top: 10px;
-        margin-bottom: 10px;
-        text-align: center;
-        position: relative;
-        min-height: 50px;
-      }
-      
-      .din8-question-image {
-        max-width: 100%;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      
-      .din8-no-questions {
-        padding: 10px;
-        margin: 10px 0;
-        font-style: italic;
-        color: #888;
-        text-align: center;
-        background-color: #f8f8f8;
-        border-radius: 4px;
-        border: 1px dashed #ccc;
-      }
-
-      .din8-loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        color: white;
-        font-size: 18px;
-      }
-
-      .din8-loading-spinner {
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top: 4px solid white;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-      }
-
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-
-      .action-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        margin-top: 20px;
-        margin-bottom: 30px;
-      }
-
-      @media print {
-        .preview-header, .preview-actions, .action-buttons {
-          display: none;
-        }
-        
-        .din8-a4-paper {
-          box-shadow: none;
-          border: none;
-        }
-
-        body {
-          margin: 0;
-          padding: 0;
-          background: white;
-        }
-      }
-    `;
-    
-    document.head.appendChild(styleElement);
-    
-    return () => {
-      document.head.removeChild(styleElement);
-    };
-  }, []);
+  // If there was an error fetching the papers
+  if (error) {
+    return (
+      <div className="din8-container">
+        <div className="din8-page-header">
+          <h1>Question Papers</h1>
+        </div>
+        <div className="din8-empty-state">
+          <AlertTriangle size={48} />
+          <h3 className="din8-empty-state-title">Error Loading Papers</h3>
+          <p className="din8-empty-state-text">Something went wrong: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   // If we're previewing a paper, render the preview
   if (previewingPaper && showPaper) {
@@ -968,308 +1249,312 @@ export function EndSemSide() {
     };
 
     return (
-      <div className="approval-container">
-        <div className="preview-header">
-          <h1 className="text-2xl font-bold">Paper Preview: {examDetails?.subjectCode} - {examDetails?.subjectName}</h1>
-          <div className="preview-actions">
-            <button className="preview-button" onClick={exitPreview}>
+      <div className="din8-approval-container">
+        <div className="din8-preview-header">
+          <h1>Paper Preview: {examDetails?.subjectCode} - {examDetails?.subjectName}</h1>
+          <div className="din8-preview-actions">
+            <button className="din8-preview-button" onClick={exitPreview}>
               <ArrowLeft size={16} /> Back to Papers
+            </button>
+            <button className="din8-preview-button" onClick={printPaper}>
+              <Printer size={16} /> Print
             </button>
           </div>
         </div>
 
-        {showPaper && (
-          <div className="din8-paper-container" id="din8-paper-container">
-            <div className="din8-a4-paper" ref={componentRef}>
-              {/* Page content with auto height instead of fixed height */}
-              <div className="din8-a4-page">
-                <div className="din8-university-header">
-                  <div className="din8-header-flex">
-                    <img 
-                      src={university?.logoUrl || "/SJU.png"} 
-                      alt="St. Joseph's University" 
-                      className="din8-university-logo"
-                      crossOrigin="anonymous"
-                    />
-                    <div className="din8-header-text">
-                      <div className="din8-university-name">{paperDetails.university}</div>
-                      <div className="din8-course-details">{examDetails.course} - {examDetails.semester} SEMESTER</div>
-                      <div className="din8-course-details">SEMESTER EXAMINATION: {examDetails.semesterExamination}</div>
-                      <div className="din8-course-details">(Examination conducted in {examDetails.examinationConducted})</div>
-                      <div className="din8-paper-title">{examDetails.subjectCode}: {examDetails.subjectName}</div>
-                      <div className="din8-course-details">( For current batch students only )</div>
-                    </div>
+        <div className="din8-paper-container" id="din8-paper-container">
+          <div className="din8-a4-paper" ref={componentRef}>
+            <div className="din8-a4-page">
+              <div className="din8-university-header">
+                <div className="din8-header-flex">
+                  <img 
+                    src={university?.logoUrl || "/SJU.png"} 
+                    alt="University Logo" 
+                    className="din8-university-logo"
+                    crossOrigin="anonymous"
+                  />
+                  <div className="din8-header-text">
+                    <div className="din8-university-name">{paperDetails.university}</div>
+                    <div className="din8-course-details">{examDetails.course} - {examDetails.semester} SEMESTER</div>
+                    <div className="din8-course-details">SEMESTER EXAMINATION: {examDetails.semesterExamination}</div>
+                    <div className="din8-course-details">(Examination conducted in {examDetails.examinationConducted})</div>
+                    <div className="din8-paper-title">{examDetails.subjectCode}: {examDetails.subjectName}</div>
+                    <div className="din8-course-details">( For current batch students only )</div>
                   </div>
                 </div>
-                
-                <div className="din8-registration-box">
-                  <div>Registration Number:</div>
-                  <div>Date:</div>
-                </div>
-                
-                <div className="din8-exam-info">
-                  <div>Time: {examDetails.examTimings}</div>
-                  <div>Max Marks: {paperDetails.maxMarks}</div>
-                </div>
-                
-                <div className="din8-course-details din8-paper-info">
-                  This paper contains {paperStructure.totalPages || 2} printed pages and {paperStructure.parts.length} parts
-                </div>
-                
-                {/* Part A */}
-                <div className="din8-part-title">PART-A</div>
-                <div className="din8-part-instructions">
-                  <div>{paperStructure.parts.find(p => p.partId === 'A')?.instructions[0] || "Answer all FIVE questions"}</div>
-                  <div>{paperStructure.parts.find(p => p.partId === 'A')?.instructions[1] || "(2 X 5 = 10)"}</div>
-                </div>
-                
-                <div className="din8-question-list">
-                  {questions.partA.length > 0 ? (
-                    questions.partA.map((question, index) => (
-                      <div className="din8-question" id={question._id} key={question._id || index}>
-                        <span className="din8-question-number">{question.questionNumber}.</span>
-                        <span className="din8-question-text">{question.question}</span>
-                        
-                        {/* Show image if available */}
-                        {question.hasImage && question.imageUrl && (
-                          <div className="din8-question-image-container">
-                            <img 
-                              src={question.imageUrl} 
-                              alt={`Image for question ${question.questionNumber}`}
-                              className="din8-question-image"
-                              loading="eager"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="din8-no-questions">Not enough questions available for Part A</div>
-                  )}
-                </div>
-                
-                {/* Part B */}
-                <div className="din8-part-title">PART-B</div>
-                <div className="din8-part-instructions">
-                  <div>{paperStructure.parts.find(p => p.partId === 'B')?.instructions[0] || "Answer any FIVE questions"}</div>
-                  <div>{paperStructure.parts.find(p => p.partId === 'B')?.instructions[1] || "(4 X 5 = 20)"}</div>
-                </div>
-                
-                <div className="din8-question-list">
-                  {questions.partB.length > 0 ? (
-                    questions.partB.map((question, index) => (
-                      <div className="din8-question" id={question._id} key={question._id || index}>
-                        <span className="din8-question-number">{question.questionNumber}.</span>
-                        <span className="din8-question-text">{question.question}</span>
-                        
-                        {/* Show image if available */}
-                        {question.hasImage && question.imageUrl && (
-                          <div className="din8-question-image-container">
-                            <img 
-                              src={question.imageUrl} 
-                              alt={`Image for question ${question.questionNumber}`}
-                              className="din8-question-image"
-                              loading="eager"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="din8-no-questions">Not enough questions available for Part B</div>
-                  )}
-                </div>
-                
-                {/* Part C */}
-                <div className="din8-part-title">PART-C</div>
-                <div className="din8-part-instructions">
-                  <div>{paperStructure.parts.find(p => p.partId === 'C')?.instructions[0] || "Answer any THREE questions"}</div>
-                  <div>{paperStructure.parts.find(p => p.partId === 'C')?.instructions[1] || "(10 X 3 = 30)"}</div>
-                </div>
-                
-                <div className="din8-question-list">
-                  {questions.partC.length > 0 ? (
-                    questions.partC.map((question, index) => (
-                      <div className="din8-question" id={question._id} key={question._id || index}>
-                        <span className="din8-question-number">{question.questionNumber}.</span>
-                        <span className="din8-question-text">{question.question}</span>
-                        
-                        {/* Show image if available */}
-                        {question.hasImage && question.imageUrl && (
-                          <div className="din8-question-image-container">
-                            <img 
-                              src={question.imageUrl} 
-                              alt={`Image for question ${question.questionNumber}`}
-                              className="din8-question-image"
-                              loading="eager"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="din8-no-questions">Not enough questions available for Part C</div>
-                  )}
-                </div>
+              </div>
+              
+              <div className="din8-registration-box">
+                <div>Registration Number:</div>
+                <div>Date:</div>
+              </div>
+              
+              <div className="din8-exam-info">
+                <div>Time: {examDetails.examTimings}</div>
+                <div>Max Marks: {paperDetails.maxMarks}</div>
+              </div>
+              
+              <div className="din8-course-details din8-paper-info">
+                This paper contains {paperStructure.totalPages || 2} printed pages and {paperStructure.parts.length} parts
+              </div>
+              
+              {/* Part A */}
+              <div className="din8-part-title">PART-A</div>
+              <div className="din8-part-instructions">
+                <div>{paperStructure.parts.find(p => p.partId === 'A')?.instructions[0] || "Answer all FIVE questions"}</div>
+                <div>{paperStructure.parts.find(p => p.partId === 'A')?.instructions[1] || "(2 X 5 = 10)"}</div>
+              </div>
+              
+              <div className="din8-question-list">
+                {questions.partA.length > 0 ? (
+                  questions.partA.map((question, index) => (
+                    <div className="din8-question" id={question._id} key={question._id || index}>
+                      <span className="din8-question-number">{question.questionNumber}.</span>
+                      <span className="din8-question-text">{question.question}</span>
+                      
+                      {/* Show image if available */}
+                      {question.hasImage && question.imageUrl && (
+                        <div className="din8-question-image-container">
+                          <img 
+                            src={question.imageUrl} 
+                            alt={`Image for question ${question.questionNumber}`}
+                            className="din8-question-image"
+                            loading="eager"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="din8-no-questions">Not enough questions available for Part A</div>
+                )}
+              </div>
+              
+              {/* Part B */}
+              <div className="din8-part-title">PART-B</div>
+              <div className="din8-part-instructions">
+                <div>{paperStructure.parts.find(p => p.partId === 'B')?.instructions[0] || "Answer any FIVE questions"}</div>
+                <div>{paperStructure.parts.find(p => p.partId === 'B')?.instructions[1] || "(4 X 5 = 20)"}</div>
+              </div>
+              
+              <div className="din8-question-list">
+                {questions.partB.length > 0 ? (
+                  questions.partB.map((question, index) => (
+                    <div className="din8-question" id={question._id} key={question._id || index}>
+                      <span className="din8-question-number">{question.questionNumber}.</span>
+                      <span className="din8-question-text">{question.question}</span>
+                      
+                      {/* Show image if available */}
+                      {question.hasImage && question.imageUrl && (
+                        <div className="din8-question-image-container">
+                          <img 
+                            src={question.imageUrl} 
+                            alt={`Image for question ${question.questionNumber}`}
+                            className="din8-question-image"
+                            loading="eager"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="din8-no-questions">Not enough questions available for Part B</div>
+                )}
+              </div>
+              
+              {/* Part C */}
+              <div className="din8-part-title">PART-C</div>
+              <div className="din8-part-instructions">
+                <div>{paperStructure.parts.find(p => p.partId === 'C')?.instructions[0] || "Answer any THREE questions"}</div>
+                <div>{paperStructure.parts.find(p => p.partId === 'C')?.instructions[1] || "(10 X 3 = 30)"}</div>
+              </div>
+              
+              <div className="din8-question-list">
+                {questions.partC.length > 0 ? (
+                  questions.partC.map((question, index) => (
+                    <div className="din8-question" id={question._id} key={question._id || index}>
+                      <span className="din8-question-number">{question.questionNumber}.</span>
+                      <span className="din8-question-text">{question.question}</span>
+                      
+                      {/* Show image if available */}
+                      {question.hasImage && question.imageUrl && (
+                        <div className="din8-question-image-container">
+                          <img 
+                            src={question.imageUrl} 
+                            alt={`Image for question ${question.questionNumber}`}
+                            className="din8-question-image"
+                            loading="eager"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="din8-no-questions">Not enough questions available for Part C</div>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     );
   }
 
-  if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
-  if (error) return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
-
+  // Main component rendering
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Question Papers</h1>
-
-      {/* Filters - Updated to include both status types */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <select 
-          name="semester"
-          value={filters.semester}
-          onChange={(e) => setFilters({...filters, semester: e.target.value})}
-          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Semesters</option>
-          {uniqueSemesters.map(semester => (
-            <option key={semester} value={semester}>{semester}</option>
-          ))}
-        </select>
-
-        <select 
-          name="subjectCode"
-          value={filters.subjectCode}
-          onChange={(e) => setFilters({...filters, subjectCode: e.target.value})}
-          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Subjects</option>
-          {uniqueSubjectCodes.map(subjectCode => (
-            <option key={subjectCode} value={subjectCode}>{subjectCode}</option>
-          ))}
-        </select>
-
-        <select 
-          name="status"
-          value={filters.status}
-          onChange={(e) => setFilters({...filters, status: e.target.value})}
-          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Statuses</option>
-          <option value="Draft">Draft</option>
-          <option value="draft">draft</option>
-          <option value="Submitted">Submitted</option>
-          <option value="Approved">Approved</option>
-          <option value="Rejected">Rejected</option>
-        </select>
+    <div className="din8-container">
+      <div className="din8-page-header">
+        <h1>Question Papers for End Semester</h1>
       </div>
 
-      {/* Papers List - Updated to use the paper's root status and include creation date */}
-      <div className="grid gap-4">
+      {/* Filters Section */}
+      <div className="din8-filters-container">
+        <div className="din8-filters-header">
+          <span className="din8-icon">
+            <Filter size={20} />
+          </span>
+          <h2>Filter Papers</h2>
+        </div>
+        <div className="din8-filters-grid">
+          <div className="din8-filter-select">
+            <select 
+              name="semester"
+              value={filters.semester}
+              onChange={(e) => setFilters({...filters, semester: e.target.value})}
+            >
+              <option value="">All Semesters</option>
+              {uniqueSemesters.map(semester => (
+                <option key={semester} value={semester}>{semester}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="din8-filter-select">
+            <select 
+              name="subjectCode"
+              value={filters.subjectCode}
+              onChange={(e) => setFilters({...filters, subjectCode: e.target.value})}
+            >
+              <option value="">All Subjects</option>
+              {uniqueSubjectCodes.map(subjectCode => (
+                <option key={subjectCode} value={subjectCode}>{subjectCode}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="din8-filter-select">
+            <select 
+              name="status"
+              value={filters.status}
+              onChange={(e) => setFilters({...filters, status: e.target.value})}
+            >
+              <option value="">All Statuses</option>
+              <option value="Draft">Draft</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Papers List */}
+      <div className="din8-papers-grid">
         {filteredPapers.map((paper, index) => (
-          <div 
-            key={paper._id} 
-            className="bg-white shadow-md rounded-lg p-4"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4 flex-grow">
-                <div className="flex-shrink-0">
-                  <span className="font-bold text-gray-500 mr-2">
-                    {filteredPapers.length - index}.
-                  </span>
-                  <FileText className="text-blue-500 w-10 h-10" />
-                </div>
-                <div className="flex-grow">
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    {paper.examDetails.subjectName} - {paper.examDetails.subjectCode}
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    {paper.examDetails.course} | {paper.examDetails.semester} Semester
-                  </p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span 
-                      className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(paper.status)}`}
-                    >
-                      {paper.status}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      Created by: {paper.metadata?.creatorName || "Unknown"}
-                    </span>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      Created: {formatDate(paper.metadata?.createdAt)}
+          <div key={paper._id} className="din8-paper-card">
+            <div className="din8-paper-card-inner">
+              <div className="din8-paper-card-top">
+                <div className="din8-paper-card-content">
+                  <div className="din8-paper-card-icon">
+                    <FileText size={24} />
+                  </div>
+                  <div className="din8-paper-card-info">
+                    <h2 className="din8-paper-card-title">
+                      {paper.examDetails.subjectName} - {paper.examDetails.subjectCode}
+                    </h2>
+                    <p className="din8-paper-card-subtitle">
+                      {paper.examDetails.course} | {paper.examDetails.semester} Semester
+                    </p>
+                    <div className="din8-paper-card-meta">
+                      <span className={`din8-paper-card-status ${getStatusClass(paper.status)}`}>
+                        {paper.status}
+                      </span>
+                      <span className="din8-paper-card-creator">
+                        <User size={12} />
+                        {paper.metadata?.creatorName || "Unknown"}
+                      </span>
+                      <span className="din8-paper-card-date">
+                        <Calendar size={12} />
+                        {formatDate(paper.metadata?.createdAt)}
+                      </span>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex space-x-2">
-                {/* All buttons are always visible */}
-                <button 
-                  onClick={() => viewPaper(paper)}
-                  className="text-blue-500 hover:bg-blue-50 p-2 rounded-full transition-colors"
-                  title="View"
-                >
-                  <Eye className="w-5 h-5" />
-                </button>
                 
-                <button 
-                  onClick={() => downloadPaper(paper)}
-                  className="text-green-500 hover:bg-green-50 p-2 rounded-full transition-colors"
-                  title="Download"
-                >
-                  <Download className="w-5 h-5" />
-                </button>
-                
-                <button 
-                  onClick={() => editPaper(paper)}
-                  className="text-yellow-500 hover:bg-yellow-50 p-2 rounded-full transition-colors"
-                  title="Edit"
-                >
-                  <Edit className="w-5 h-5" />
-                </button>
-                
-                <button 
-                  onClick={() => sendForApproval(paper)}
-                  className="text-purple-500 hover:bg-purple-50 p-2 rounded-full transition-colors"
-                  title="Send for Approval"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-                
-                <button 
-                  onClick={() => deletePaper(paper)}
-                  className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
-                  title="Delete"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            
-            {/* Show rejection comments if paper is rejected */}
-            {paper.status === 'Rejected' && paper.reviewComments && (
-              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-                <div className="flex items-start">
-                  <AlertTriangle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-semibold text-red-700">Rejection Reason:</h4>
-                    <p className="text-sm text-red-600">{paper.reviewComments}</p>
-                  </div>
+                <div className="din8-paper-card-actions">
+                  <button 
+                    onClick={() => viewPaper(paper)}
+                    className="din8-paper-card-action-btn din8-action-view"
+                    data-tooltip="View"
+                  >
+                    <Eye size={20} />
+                  </button>
+                  
+                  <button 
+                    onClick={() => downloadPaper(paper)}
+                    className="din8-paper-card-action-btn din8-action-download"
+                    data-tooltip="Download"
+                  >
+                    <Download size={20} />
+                  </button>
+                  
+                  <button 
+                    onClick={() => editPaper(paper)}
+                    className="din8-paper-card-action-btn din8-action-edit"
+                    data-tooltip="Edit"
+                  >
+                    <Edit size={20} />
+                  </button>
+                  
+                  <button 
+                    onClick={() => sendForApproval(paper)}
+                    className="din8-paper-card-action-btn din8-action-approve"
+                    data-tooltip="Send for Approval"
+                  >
+                    <Send size={20} />
+                  </button>
+                  
+                  <button 
+                    onClick={() => deletePaper(paper)}
+                    className="din8-paper-card-action-btn din8-action-delete"
+                    data-tooltip="Delete"
+                  >
+                    <Trash2 size={20} />
+                  </button>
                 </div>
               </div>
-            )}
+              
+              {/* Show rejection comments if paper is rejected */}
+              {paper.status === 'Rejected' && paper.reviewComments && (
+                <div className="din8-paper-card-rejection">
+                  <div className="din8-paper-card-rejection-header">
+                    <AlertTriangle size={16} />
+                    <h4 className="din8-paper-card-rejection-title">Rejection Reason:</h4>
+                  </div>
+                  <p className="din8-paper-card-rejection-text">{paper.reviewComments}</p>
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
       
+      {/* Empty state when no papers match the filters */}
       {filteredPapers.length === 0 && (
-        <div className="bg-gray-50 text-gray-600 p-8 rounded-md text-center">
-          <FileText className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-          <h3 className="text-lg font-medium mb-1">No Papers Found</h3>
-          <p>Try adjusting your filters or create a new paper.</p>
+        <div className="din8-empty-state">
+          <FileText size={48} />
+          <h3 className="din8-empty-state-title">No Papers Found</h3>
+          <p className="din8-empty-state-text">Try adjusting your filters or create a new paper.</p>
         </div>
       )}
     </div>
