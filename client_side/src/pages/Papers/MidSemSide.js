@@ -1,7 +1,83 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../Contexts/AuthContext.js";
-import { FileText, Eye, Edit, Trash2, Check, X, RefreshCw, AlertCircle, Send, Plus } from 'lucide-react';
+import { FileText, Eye, Edit, Trash2, Check, X, RefreshCw, AlertCircle, Send, Plus, XCircle, CheckCircle } from 'lucide-react';
+
+// Reusable Alert Component (integrated into the same file)
+const Alert = ({ isOpen, onClose, title, message, type = "success", action = null }) => {
+  if (!isOpen) return null;
+
+  // Define styles based on alert type
+  const styles = {
+    success: {
+      bgColor: "bg-green-50",
+      borderColor: "border-green-400",
+      iconBg: "bg-green-100",
+      textColor: "text-green-800",
+      icon: <CheckCircle className="text-green-500" size={24} />
+    },
+    error: {
+      bgColor: "bg-red-50",
+      borderColor: "border-red-400",
+      iconBg: "bg-red-100",
+      textColor: "text-red-800",
+      icon: <XCircle className="text-red-500" size={24} />
+    },
+    warning: {
+      bgColor: "bg-yellow-50",
+      borderColor: "border-yellow-400",
+      iconBg: "bg-yellow-100",
+      textColor: "text-yellow-800",
+      icon: <AlertCircle className="text-yellow-500" size={24} />
+    },
+    info: {
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-400",
+      iconBg: "bg-blue-100",
+      textColor: "text-blue-800",
+      icon: <AlertCircle className="text-blue-500" size={24} />
+    }
+  };
+
+  const style = styles[type];
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+      <div className={`max-w-md w-full ${style.bgColor} ${style.textColor} border ${style.borderColor} rounded-lg shadow-lg overflow-hidden`}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-opacity-25 border-gray-600">
+          <div className="flex items-center">
+            <div className={`${style.iconBg} rounded-full p-1 mr-3`}>
+              {style.icon}
+            </div>
+            <h3 className="font-bold text-lg">{title}</h3>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="px-4 py-3">
+          <p className="mb-4">{message}</p>
+          <div className="flex justify-center gap-2">
+            {action && (
+              <button
+                onClick={() => {
+                  action.onClick();
+                  onClose();
+                }}
+                className={`px-4 py-2 bg-${type === 'error' ? 'red' : type === 'warning' ? 'yellow' : type === 'info' ? 'blue' : 'green'}-500 text-white rounded-md hover:bg-${type === 'error' ? 'red' : type === 'warning' ? 'yellow' : type === 'info' ? 'blue' : 'green'}-600 transition-colors`}
+              >
+                {action.label}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const MidSemSide = () => {
   const { authState } = useAuth();
@@ -21,6 +97,31 @@ const MidSemSide = () => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [semesterFilter, setSemesterFilter] = useState("All");
   const [availableSemesters, setAvailableSemesters] = useState([]);
+
+  // Alert state
+  const [alert, setAlert] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "success",
+    action: null
+  });
+
+  // Helper function to show alerts
+  const showAlert = (title, message, type = "success", action = null) => {
+    setAlert({
+      isOpen: true,
+      title,
+      message,
+      type,
+      action
+    });
+  };
+
+  // Helper function to close the alert
+  const closeAlert = () => {
+    setAlert(prev => ({ ...prev, isOpen: false }));
+  };
 
   useEffect(() => {
     console.log("Fetching papers...");
@@ -133,7 +234,7 @@ const MidSemSide = () => {
       .catch((error) => {
         console.error("❌ Error fetching questions:", error);
         setLoading(false);
-        alert("Failed to refresh papers. Please try again.");
+        showAlert("Error", "Failed to refresh papers. Please try again.", "error");
       });
   };
 
@@ -141,34 +242,42 @@ const MidSemSide = () => {
     // Prevent deletion of non-draft papers for teachers
     const paperToDelete = papers.find(p => p._id === id);
     if (!isAdmin && paperToDelete && paperToDelete.status !== 'Draft' && paperToDelete.status !== 'Rejected') {
-      alert("You cannot delete papers that have been submitted or approved.");
+      showAlert("Action Not Allowed", "You cannot delete papers that have been submitted or approved.", "error");
       return;
     }
     
-    const confirmDelete = window.confirm("Are you sure you want to delete this paper?");
-    if (!confirmDelete) return;
-  
-    setDeleting(id);
-  
-    try {
-      const response = await fetch(`http://localhost:5000/delete-paper/${id}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      });
-  
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Server Error: ${text}`);
+    // Show confirmation dialog
+    showAlert(
+      "Confirm Deletion", 
+      "Are you sure you want to delete this paper?", 
+      "warning", 
+      {
+        label: "Delete",
+        onClick: async () => {
+          setDeleting(id);
+      
+          try {
+            const response = await fetch(`http://localhost:5000/delete-paper/${id}`, {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+            });
+        
+            if (!response.ok) {
+              const text = await response.text();
+              throw new Error(`Server Error: ${text}`);
+            }
+        
+            showAlert("Success", "Paper deleted successfully! ✅", "success");
+            setPapers((prevPapers) => prevPapers.filter((paper) => paper._id !== id));
+          } catch (error) {
+            console.error("❌ Error deleting paper:", error);
+            showAlert("Error", `Error: ${error.message}`, "error");
+          } finally {
+            setDeleting(null);
+          }
+        }
       }
-  
-      alert("Paper deleted successfully! ✅");
-      setPapers((prevPapers) => prevPapers.filter((paper) => paper._id !== id));
-    } catch (error) {
-      console.error("❌ Error deleting paper:", error);
-      alert(`Error: ${error.message}`);
-    } finally {
-      setDeleting(null);
-    }
+    );
   };
   
   const handleViewPaper = (paperId) => {
@@ -203,40 +312,52 @@ const MidSemSide = () => {
       const currentStatus = paper.status || 'Draft';
       
       if (currentStatus !== 'Draft' && currentStatus !== 'Rejected') {
-        alert(`This paper is already ${currentStatus.toLowerCase()}.`);
+        showAlert("Action Not Allowed", `This paper is already ${currentStatus.toLowerCase()}.`, "info");
         return;
       }
       
-      if (!window.confirm(`Are you sure you want to submit this "${paper.subject || 'paper'}" for approval?`)) {
-        return;
-      }
+      // Confirm submission
+      showAlert(
+        "Confirm Submission", 
+        `Are you sure you want to submit this "${paper.subject || 'paper'}" for approval?`,
+        "warning",
+        {
+          label: "Submit",
+          onClick: async () => {
+            try {
+              // Call API to update paper status
+              const response = await fetch(`http://localhost:5000/update-paper-status/${paper._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  status: 'Submitted',
+                  submittedBy: authState?.user?._id,
+                  submittedAt: new Date()
+                })
+              });
 
-      // Call API to update paper status
-      const response = await fetch(`http://localhost:5000/update-paper-status/${paper._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          status: 'Submitted',
-          submittedBy: authState?.user?._id,
-          submittedAt: new Date()
-        })
-      });
+              if (!response.ok) {
+                throw new Error("Failed to submit paper for approval");
+              }
 
-      if (!response.ok) {
-        throw new Error("Failed to submit paper for approval");
-      }
+              const result = await response.json();
 
-      const result = await response.json();
+              // Update state to reflect the new status
+              setPapers(prevPapers => prevPapers.map(p =>
+                p._id === paper._id ? { ...p, status: 'Submitted' } : p
+              ));
 
-      // Update state to reflect the new status
-      setPapers(prevPapers => prevPapers.map(p =>
-        p._id === paper._id ? { ...p, status: 'Submitted' } : p
-      ));
-
-      alert("Paper has been submitted for approval! ✅");
+              showAlert("Success", "Paper has been submitted for approval! ✅", "success");
+            } catch (error) {
+              console.error("❌ Error submitting paper:", error);
+              showAlert("Error", "Failed to submit paper. Please try again.", "error");
+            }
+          }
+        }
+      );
     } catch (error) {
       console.error("❌ Error submitting paper:", error);
-      alert("Failed to submit paper. Please try again.");
+      showAlert("Error", "Failed to submit paper. Please try again.", "error");
     }
   };
 
@@ -244,37 +365,43 @@ const MidSemSide = () => {
   const handleApprovePaper = async (paperId) => {
     if (!isAdmin) return;
     
-    if (!window.confirm("Are you sure you want to approve this paper?")) {
-      return;
-    }
+    showAlert(
+      "Confirm Approval", 
+      "Are you sure you want to approve this paper?",
+      "warning",
+      {
+        label: "Approve",
+        onClick: async () => {
+          try {
+            const response = await fetch(`http://localhost:5000/update-paper-status/${paperId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                status: "Approved",
+                approvedBy: authState?.user?._id,
+                approvedAt: new Date()
+              }),
+            });
 
-    try {
-      const response = await fetch(`http://localhost:5000/update-paper-status/${paperId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          status: "Approved",
-          approvedBy: authState?.user?._id,
-          approvedAt: new Date()
-        }),
-      });
+            if (!response.ok) {
+              throw new Error("Failed to approve paper");
+            }
 
-      if (!response.ok) {
-        throw new Error("Failed to approve paper");
+            // Update UI
+            setPapers(prevPapers => prevPapers.map(paper => 
+              paper._id === paperId 
+                ? { ...paper, status: "Approved", approvedAt: new Date() } 
+                : paper
+            ));
+            
+            showAlert("Success", "Paper approved successfully!", "success");
+          } catch (error) {
+            console.error("❌ Error approving paper:", error);
+            showAlert("Error", "Failed to approve paper. Please try again.", "error");
+          }
+        }
       }
-
-      // Update UI
-      setPapers(prevPapers => prevPapers.map(paper => 
-        paper._id === paperId 
-          ? { ...paper, status: "Approved", approvedAt: new Date() } 
-          : paper
-      ));
-      
-      alert("Paper approved successfully!");
-    } catch (error) {
-      console.error("❌ Error approving paper:", error);
-      alert("Failed to approve paper. Please try again.");
-    }
+    );
   };
 
   // For Admins: Open rejection dialog
@@ -294,7 +421,7 @@ const MidSemSide = () => {
     if (!isAdmin) return;
     
     if (!rejectionReason.trim()) {
-      alert("Please provide a reason for rejection");
+      showAlert("Missing Information", "Please provide a reason for rejection", "error");
       return;
     }
 
@@ -326,13 +453,13 @@ const MidSemSide = () => {
           : paper
       ));
       
-      alert("Paper rejected ⛔ Feedback sent to teacher 📩");
+      showAlert("Paper Rejected", "Feedback has been sent to the teacher.", "info");
       
       // Reset state
       cancelRejection();
     } catch (error) {
       console.error("❌ Error rejecting paper:", error);
-      alert("Failed to reject paper. Please try again.");
+      showAlert("Error", "Failed to reject paper. Please try again.", "error");
     }
   };
 
@@ -357,12 +484,23 @@ const MidSemSide = () => {
     setStatusFilter("All");
     setSemesterFilter("All");
   };
+  
   const navigateToCreatePaper = () => {
     navigate('/mainp', { state: { createdBy: authState?.user?._id } });
   };
 
   return (
     <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen">
+      {/* Alert Component */}
+      <Alert
+        isOpen={alert.isOpen}
+        onClose={closeAlert}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        action={alert.action}
+      />
+      
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Mid Semester Question Papers</h1>
 
       {/* Filter Section */}
@@ -448,62 +586,62 @@ const MidSemSide = () => {
       ) : (
         <div className="grid gap-4">
           {filteredPapers.map((paper) => (
-  <div
-    key={paper._id}
-    className={`relative bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 ${
-      deleting === paper._id ? "opacity-0 scale-90" : "opacity-100 scale-100"
-    }`}
-  >
-    <div className="flex items-center justify-between p-4">
-      {/* Left side with icon and information */}
-      <div className="flex items-center space-x-4">
-        <FileText className="text-blue-500 w-10 h-10" />
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">
-            {paper.subject || "Untitled"} {paper.subjectCode ? `- ${paper.subjectCode}` : ""}
-          </h3>
-          <p className="text-sm text-gray-600">
-            {paper.course || "BCA"} | {paper.semester || " "} | Units: {extractUnits(paper)}
-          </p>         
-          <div className="flex flex-col mt-1">
-            <div className="flex items-center space-x-2">
-              <span 
-                className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusBadgeColor(paper.status || 'Draft')}`}
-              >
-                {paper.status || 'Draft'}
-              </span>
-              
-              {/* Show submission/approval/rejection date if available */}
-              {paper.submittedAt && paper.status === 'Submitted' && (
-                <span className="text-xs text-gray-500">
-                  Submitted on: {new Date(paper.submittedAt).toLocaleDateString()}
-                </span>
-              )}
-              
-              {paper.approvedAt && paper.status === 'Approved' && (
-                <span className="text-xs text-gray-500">
-                  Approved on: {new Date(paper.approvedAt).toLocaleDateString()}
-                </span>
-              )}
-              
-              {paper.rejectedAt && paper.status === 'Rejected' && (
-                <span className="text-xs text-gray-500">
-                  Rejected on: {new Date(paper.rejectedAt).toLocaleDateString()}
-                </span>
-              )}
-            </div>
-            
-            {/* Show rejection reason if available */}
-            {paper.status === 'Rejected' && paper.rejectionReason && (
-              <div className="flex items-start mt-1 text-xs text-red-600">
-                <AlertCircle className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" />
-                <span>{paper.rejectionReason}</span>
-              </div>
-            )}
-          </div>
-        </div>
-        </div>
-          {/* Right side with action buttons */}
+            <div
+              key={paper._id}
+              className={`relative bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 ${
+                deleting === paper._id ? "opacity-0 scale-90" : "opacity-100 scale-100"
+              }`}
+            >
+              <div className="flex items-center justify-between p-4">
+                {/* Left side with icon and information */}
+                <div className="flex items-center space-x-4">
+                  <FileText className="text-blue-500 w-10 h-10" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {paper.subject || "Untitled"} {paper.subjectCode ? `- ${paper.subjectCode}` : ""}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {paper.course || "BCA"} | {paper.semester || " "} | Units: {extractUnits(paper)}
+                    </p>         
+                    <div className="flex flex-col mt-1">
+                      <div className="flex items-center space-x-2">
+                        <span 
+                          className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${getStatusBadgeColor(paper.status || 'Draft')}`}
+                        >
+                          {paper.status || 'Draft'}
+                        </span>
+                        
+                        {/* Show submission/approval/rejection date if available */}
+                        {paper.submittedAt && paper.status === 'Submitted' && (
+                          <span className="text-xs text-gray-500">
+                            Submitted on: {new Date(paper.submittedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                        
+                        {paper.approvedAt && paper.status === 'Approved' && (
+                          <span className="text-xs text-gray-500">
+                            Approved on: {new Date(paper.approvedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                        
+                        {paper.rejectedAt && paper.status === 'Rejected' && (
+                          <span className="text-xs text-gray-500">
+                            Rejected on: {new Date(paper.rejectedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Show rejection reason if available */}
+                      {paper.status === 'Rejected' && paper.rejectionReason && (
+                        <div className="flex items-start mt-1 text-xs text-red-600">
+                          <AlertCircle className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" />
+                          <span>{paper.rejectionReason}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Right side with action buttons */}
                 <div className="flex space-x-2">
                   {/* Send for Approval - only for teachers with Draft/Rejected papers */}
                   {!isAdmin && (paper.status === 'Draft' || paper.status === 'Rejected') && (

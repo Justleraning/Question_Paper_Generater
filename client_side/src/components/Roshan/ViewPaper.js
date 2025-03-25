@@ -563,16 +563,6 @@ const ViewPaper = () => {
     }
   };
 
-  
-  const handleApproval = async () => {
-    try {
-      await fetch("http://localhost:5000/api/questions/send-for-approval", { method: "POST" });
-      alert("Paper sent for approval!");
-    } catch (error) {
-      console.error("❌ Error sending for approval:", error);
-    }
-  };
-
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "20px", textAlign: "center", background: "rgb(200, 203, 206)", minHeight: "100vh" }}>
       <button onClick={() => navigate(-1) } 
