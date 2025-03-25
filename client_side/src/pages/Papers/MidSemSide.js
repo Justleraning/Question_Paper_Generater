@@ -464,19 +464,7 @@ const MidSemSide = () => {
           </h3>
           <p className="text-sm text-gray-600">
             {paper.course || "BCA"} | {paper.semester || " "} | Units: {extractUnits(paper)}
-          </p>
-          
-          {/* Show teacher name for admins */}
-          {isAdmin && paper.createdBy && (
-            <p className="text-xs text-gray-500 mt-1">
-              Created by: {
-                paper.createdBy.fullName || 
-                paper.createdBy.username || 
-                "Unknown teacher"
-              }
-            </p>
-          )}
-          
+          </p>         
           <div className="flex flex-col mt-1">
             <div className="flex items-center space-x-2">
               <span 
