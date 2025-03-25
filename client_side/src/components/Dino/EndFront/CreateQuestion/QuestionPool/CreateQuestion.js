@@ -12,6 +12,7 @@ function CreateQuestion() {
     { code: "CA 3222", name: "C# AND DOT NET FRAMEWORK" },
     { code: "CA 3233", name: "Java Programming" },
     { code: "CA 3244", name: "Python Basics" },
+    { code: "DAV02", name: "Power BI"},
   ];
   
   // State for subject details
