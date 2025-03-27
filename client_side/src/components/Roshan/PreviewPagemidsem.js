@@ -1,7 +1,83 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Save, Edit, FileText, CheckCircle, Plus, Trash } from "lucide-react"; 
+import { Save, Edit, FileText, CheckCircle, Plus, Trash, X, XCircle, AlertTriangle, AlertCircle } from "lucide-react"; 
 import ModalRosh from "./ModalRosh.js";
+
+// Reusable Alert Component (integrated into the same file)
+const Alert = ({ isOpen, onClose, title, message, type = "success", action = null }) => {
+  if (!isOpen) return null;
+
+  // Define styles based on alert type
+  const styles = {
+    success: {
+      bgColor: "bg-green-50",
+      borderColor: "border-green-400",
+      iconBg: "bg-green-100",
+      textColor: "text-green-800",
+      icon: <CheckCircle className="text-green-500" size={24} />
+    },
+    error: {
+      bgColor: "bg-red-50",
+      borderColor: "border-red-400",
+      iconBg: "bg-red-100",
+      textColor: "text-red-800",
+      icon: <XCircle className="text-red-500" size={24} />
+    },
+    warning: {
+      bgColor: "bg-yellow-50",
+      borderColor: "border-yellow-400",
+      iconBg: "bg-yellow-100",
+      textColor: "text-yellow-800",
+      icon: <AlertTriangle className="text-yellow-500" size={24} />
+    },
+    info: {
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-400",
+      iconBg: "bg-blue-100",
+      textColor: "text-blue-800",
+      icon: <AlertCircle className="text-blue-500" size={24} />
+    }
+  };
+
+  const style = styles[type];
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+      <div className={`max-w-md w-full ${style.bgColor} ${style.textColor} border ${style.borderColor} rounded-lg shadow-lg overflow-hidden`}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-opacity-25 border-gray-600">
+          <div className="flex items-center">
+            <div className={`${style.iconBg} rounded-full p-1 mr-3`}>
+              {style.icon}
+            </div>
+            <h3 className="font-bold text-lg">{title}</h3>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="px-4 py-3">
+          <p className="mb-4">{message}</p>
+          <div className="flex justify-center gap-2">
+            {action && (
+              <button
+                onClick={() => {
+                  action.onClick();
+                  onClose();
+                }}
+                className={`px-4 py-2 bg-${type === 'error' ? 'red' : type === 'warning' ? 'yellow' : type === 'info' ? 'blue' : 'green'}-500 text-white rounded-md hover:bg-${type === 'error' ? 'red' : type === 'warning' ? 'yellow' : type === 'info' ? 'blue' : 'green'}-600 transition-colors`}
+              >
+                {action.label}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const PreviewPage = () => {
   const navigate = useNavigate();
@@ -20,6 +96,31 @@ const PreviewPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [savedPaperId, setSavedPaperId] = useState(id);
   const [apiUrl, setApiUrl] = useState("http://localhost:5000/api/papers/save");
+  
+  // New state for the alert system
+  const [alert, setAlert] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "success",
+    action: null
+  });
+
+  // Helper function to show alerts
+  const showAlert = (title, message, type = "success", action = null) => {
+    setAlert({
+      isOpen: true,
+      title,
+      message,
+      type,
+      action
+    });
+  };
+
+  // Helper function to close the alert
+  const closeAlert = () => {
+    setAlert(prev => ({ ...prev, isOpen: false }));
+  };
   
   useEffect(() => {
     // Log initialized data for debugging
@@ -207,10 +308,12 @@ const PreviewPage = () => {
         console.log("Paper saved with ID:", responseData._id);
       }
       
-      alert("✅ Paper saved successfully!");
+      // Show success alert instead of using alert()
+      showAlert("Success", "Paper saved successfully!", "success");
     } catch (error) {
       console.error("Error saving paper:", error);
-      alert(`Error saving paper: ${error.message}`);
+      // Show error alert instead of using alert()
+      showAlert("Error Saving Paper", error.message, "error");
     } finally {
       setIsLoading(false);
     }
@@ -218,12 +321,12 @@ const PreviewPage = () => {
   
   const handleFinalPaper = async () => {
     try {
-      
       // Open modal after saving
       setModalOpen(true);
     } catch (error) {
       console.error("❌ Error finalizing paper:", error);
-      alert("Error finalizing paper: " + error.message);
+      // Show error alert instead of using alert()
+      showAlert("Error Finalizing Paper", error.message, "error");
     } finally {
       setIsLoading(false);
     }
@@ -240,7 +343,16 @@ const PreviewPage = () => {
       navigate(`/viewpaper/${paperId}`); // Navigate to ViewPaper.js with the paper ID
     } else {
       console.warn("No paper ID available for navigation");
-      alert("⚠️ Please save the paper");
+      // Show warning alert instead of using alert()
+      showAlert(
+        "Paper Not Saved", 
+        "Please save the paper before viewing.", 
+        "warning",
+        {
+          label: "Save Now",
+          onClick: handleSaveToBackend
+        }
+      );
     }
   };
 
@@ -252,11 +364,21 @@ const PreviewPage = () => {
 
   return (
     <div className="min-h-screen bg-amber-200 py-6 px-4 font-sans">
+      {/* Alert Component */}
+      <Alert
+        isOpen={alert.isOpen}
+        onClose={closeAlert}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        action={alert.action}
+      />
+      
       <div className="w-32 h-20 flex-inline text-red-800 p-1 bg-orange-200 rounded-md border border-red-200 font-semibold text-center text-sm mb-6 ml-auto">
         <span className="flex items-center gap-3">    
           NOTE: <br></br>THIS IS THE FINAL PREVIEW
-          </span>
-        </div>
+        </span>
+      </div>
       <div className="max-w-4xl mx-auto">
         <h2 className="text-2xl md:text-3xl font-bold text-black text-center mb-6 font-sans drop-shadow-md">
           Preview Questions
@@ -328,12 +450,20 @@ const PreviewPage = () => {
                             
                             <button 
                               onClick={() => {
-                                if (window.confirm("Are you sure you want to delete this question?")) {
-                                  setQuestionsData(prev => ({
-                                    ...prev,
-                                    [unit]: prev[unit].filter((_, i) => i !== questionIndex)
-                                  }));
-                                }
+                                showAlert(
+                                  "Confirm Deletion", 
+                                  "Are you sure you want to delete this question?", 
+                                  "warning",
+                                  {
+                                    label: "Delete",
+                                    onClick: () => {
+                                      setQuestionsData(prev => ({
+                                        ...prev,
+                                        [unit]: prev[unit].filter((_, i) => i !== questionIndex)
+                                      }));
+                                    }
+                                  }
+                                );
                               }}
                               className="self-end flex items-center justify-center w-7 h-7 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
                               title="Delete question"
@@ -398,12 +528,20 @@ const PreviewPage = () => {
                             
                             <button 
                               onClick={() => {
-                                if (window.confirm("Are you sure you want to delete this question?")) {
-                                  setQuestionsData(prev => ({
-                                    ...prev,
-                                    [unit]: prev[unit].filter((_, i) => i !== questionIndex)
-                                  }));
-                                }
+                                showAlert(
+                                  "Confirm Deletion", 
+                                  "Are you sure you want to delete this question?", 
+                                  "warning",
+                                  {
+                                    label: "Delete",
+                                    onClick: () => {
+                                      setQuestionsData(prev => ({
+                                        ...prev,
+                                        [unit]: prev[unit].filter((_, i) => i !== questionIndex)
+                                      }));
+                                    }
+                                  }
+                                );
                               }}
                               className="self-end flex items-center justify-center w-7 h-7 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
                               title="Delete question"
@@ -506,9 +644,17 @@ const PreviewPage = () => {
           </button>
         </div>
         
-        {/* Warning Message */}
-        <div className="bg-red-100 text-red-800 p-3 rounded-md border border-red-200 font-semibold text-center mb-6">
-          ⚠️ WARNING: MOVING BACK TO THE PREVIOUS PAGE CAN CAUSE YOU TO LOSE EVERYTHING ⚠️ 
+        {/* Warning Message - Styled similarly to our alerts */}
+        <div className="bg-red-50 text-red-800 p-4 rounded-lg border border-red-400 shadow-md mb-6">
+          <div className="flex items-center">
+            <div className="bg-red-100 rounded-full p-1 mr-3">
+              <AlertTriangle className="text-red-500" size={24} />
+            </div>
+            <h3 className="font-bold text-lg">Warning</h3>
+          </div>
+          <p className="mt-2 ml-10">
+            MOVING BACK TO THE PREVIOUS PAGE CAN CAUSE YOU TO LOSE EVERYTHING
+          </p>
         </div>
       </div>
     </div>
