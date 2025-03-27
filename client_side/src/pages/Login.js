@@ -78,8 +78,13 @@ const Login = () => {
       const response = await loginUser(credentials);
       login(response, response.token);
       navigate("/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.message || "Invalid username or password");
+    }catch (err) {
+      // Check specifically for rate limit error
+      if (err.response?.status === 429) {
+        setError(err.response?.data?.message || "Too many login attempts. Please try again later.");
+      } else {
+        setError(err.response?.data?.message || "Invalid username or password");
+      }
     }
   };
 

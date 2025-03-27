@@ -5,6 +5,7 @@ import MainLayout from "../components/MainLayout.js";
 import { QPProvider } from "../Contexts/QPContext.js"
 import PaperApprovals from "../pages/Papers/PaperApprovals_OpenElectiveSide.js";
 import PaperApprovals_EndSem from "../pages/Papers/PaperApprovals_EndSem.js";
+import PaperApprovals_Midsem from "../pages/Papers/PaperApprovals_MidSem.js"
 
 // ✅ Dino Routes
 import SelectMarks from "../components/Dino/EndFront/SelectedMarks.js";
@@ -58,7 +59,6 @@ import QuestionPreview from "../pages/Modules/QuestionPreview.js";
 import AnswerKey from "../pages/Modules/AnswerKey.js";
 import EntranceExamSide from "../pages/Papers/EntranceExamSide.js";
 import EntranceAdminApprovalPage from "../pages/Papers/PaperApprovals_Entrance.js";
-import PaperApprovals_MidSem from "../pages/Papers/PaperApprovals_MidSem.js";
 
 // ✅ Authentication Wrapper
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -99,7 +99,7 @@ const AppRoutes = () => {
         <Route path="/mypapers" element={<PrivateRoute allowedRoles={["Teacher"]}><MyPapers /></PrivateRoute>} />
         <Route path="/answer-keys" element={<PrivateRoute allowedRoles={["Teacher"]}><AnswerKey /></PrivateRoute>} />
         <Route path="/entrance-exam" element={<PrivateRoute allowedRoles={["Teacher"]}><EntranceExamSide/></PrivateRoute>} />
-        <Route path="/admin/papers/approval" element={<PrivateRoute allowedRoles={["Admin"]}><EntranceAdminApprovalPage/></PrivateRoute>} />
+        <Route path="/admin/papers/approval" element={<PrivateRoute allowedRoles={["Admin","SuperAdmin"]}><EntranceAdminApprovalPage/></PrivateRoute>} />
        
 
         {/* ✅ Admin & SuperAdmin Routes */}
@@ -132,7 +132,7 @@ const AppRoutes = () => {
         <Route path="/viewpaper/:id" element={<PrivateRoute allowedRoles={["Teacher"]}><ViewPaper /></PrivateRoute>} />
         <Route path="/modalrosh" element={<PrivateRoute allowedRoles={["Teacher"]}><ModalRosh/></PrivateRoute>} />
         <Route path="/midsemester" element={<PrivateRoute allowedRoles={["Teacher"]}><MidSemSide/></PrivateRoute>} />
-        <Route path="/approvalmid" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovals_MidSem/></PrivateRoute>} />
+        <Route path="/approvalmid" element={<PrivateRoute allowedRoles={["Admin", "SuperAdmin"]}><PaperApprovals_Midsem /></PrivateRoute>} />
 
         {/* ✅ Dino Existing Routes */}
         <Route path="/selected-marks" element={<PrivateRoute allowedRoles={["Teacher"]}><SelectMarks /></PrivateRoute>} />

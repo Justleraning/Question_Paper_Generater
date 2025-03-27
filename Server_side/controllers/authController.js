@@ -3,6 +3,7 @@ const ResetRequest = require("../models/ResetRequest");
 const { hashPassword, comparePassword } = require("../config/bcrypt");
 const generateToken = require("../config/jwt");
 const bcrypt = require("bcryptjs");
+const rateLimit = require('express-rate-limit');
 
 const login = async (req, res) => {
   const { username, password } = req.body;
@@ -158,4 +159,13 @@ const changePasswordAfterLogin = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-module.exports = { login, requestPasswordReset, viewResetRequests, resetPassword, changePasswordAfterLogin, changePasswordBeforeLogin };
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login attempts per window
+  message: "Too many login attempts. Try again later.",
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+module.exports = { login, requestPasswordReset, viewResetRequests, resetPassword, changePasswordAfterLogin, changePasswordBeforeLogin,loginLimiter };

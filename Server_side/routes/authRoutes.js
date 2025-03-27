@@ -6,19 +6,26 @@ const {
   resetPassword,
   changePasswordBeforeLogin,
   changePasswordAfterLogin,
+  loginLimiter,
 } = require("../controllers/authController");
 
 const User = require("../models/User");
 const { protect, adminOnly } = require("../middlewares/authMiddleware");
 
+
 const router = express.Router();
 
-router.post("/login", login);
+
+
+
+router.post("/login", loginLimiter,login);
 router.post("/request-reset", requestPasswordReset);
 router.get("/reset-requests", protect, adminOnly, viewResetRequests);
 router.patch("/reset-password", protect, adminOnly, resetPassword);
 router.post("/change-password-before-login", changePasswordBeforeLogin);
 router.patch("/change-password", protect, changePasswordAfterLogin);
+
+
 
 
 router.get("/verify", protect, async (req, res) => {
