@@ -28,7 +28,7 @@ const login = async (req, res) => {
     }
 
     const token = generateToken(user._id, user.role);
-    console.log("✅ Token Generated:", token);
+  
 
     res.status(200).json({
       _id: user._id,

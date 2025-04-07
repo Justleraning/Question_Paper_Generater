@@ -293,7 +293,6 @@ const QuestionEntry = () => {
         questionId,
       };
   
-      console.log("Saving question with payload:", payload);
   
       const result = await saveQuestion(decodedCourseName,SUBJECT_NAMES[subject] , payload);
       

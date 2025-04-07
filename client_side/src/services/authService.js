@@ -40,9 +40,9 @@ export const requestPasswordReset = async (resetForm) => {
 // ✅ Login Request - Updated to store user info in sessionStorage
 export const loginUser = async (credentials) => {
   try {
-    console.log(`🔍 API Call: POST ${AUTH_API_URL}/login with`, credentials);
+
     const response = await axios.post(`${AUTH_API_URL}/login`, credentials);
-    console.log("✅ API Response:", response.data);
+  
     
     // Store user data and token in sessionStorage
     if (response.data && response.data.token) {
@@ -51,7 +51,7 @@ export const loginUser = async (credentials) => {
       // Store the entire user object
       sessionStorage.setItem("user", JSON.stringify(response.data));
       
-      console.log("✅ User data saved to sessionStorage:", response.data);
+     
     }
     
     return response.data;

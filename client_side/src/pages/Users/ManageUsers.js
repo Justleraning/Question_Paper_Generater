@@ -51,24 +51,30 @@ const ManageUsers = () => {
   };
 
   // ✅ Validate Input
- // ✅ Validate Input
-const validateInput = () => {
-  const usernameRegex = /^[a-zA-Z][a-zA-Z0-9@#$%^&*()_+!~]*$/; // Must start with a letter, can contain numbers & special symbols after
-  const fullNameRegex = /^[a-zA-Z\s]+$/; // Only alphabets and spaces
-
-  if (!usernameRegex.test(newUser.username)) {
-    setErrorMessage("❌ Username must start with a letter and cannot contain spaces.");
-    return false;
-  }
-
-  if (!fullNameRegex.test(newUser.fullName)) {
-    setErrorMessage("❌ Full name can only contain alphabets and spaces.");
-    return false;
-  }
-
-  setErrorMessage(""); // Clear error message if valid
-  return true;
-};
+  const validateInput = () => {
+    // Must start with a letter, contain at least one number, and can include special symbols
+    const usernameRegex = /^[a-zA-Z][a-zA-Z0-9@#$%^&*()_+!~]*$/;
+    const fullNameRegex = /^[a-zA-Z\s]+$/; // Only alphabets and spaces
+    const containsLetterAndNumber = /^(?=.*[a-zA-Z])(?=.*[0-9])/; // Check for at least one letter and one number
+  
+    if (!usernameRegex.test(newUser.username)) {
+      setErrorMessage("❌ Username must start with a letter and cannot contain spaces.");
+      return false;
+    }
+  
+    if (!containsLetterAndNumber.test(newUser.username)) {
+      setErrorMessage("❌ Username must contain at least one letter and one number.");
+      return false;
+    }
+  
+    if (!fullNameRegex.test(newUser.fullName)) {
+      setErrorMessage("❌ Full name can only contain alphabets and spaces.");
+      return false;
+    }
+  
+    setErrorMessage(""); // Clear error message if valid
+    return true;
+  };
 
 
   // ✅ Handle Adding a User
@@ -79,7 +85,6 @@ const validateInput = () => {
     }
 
     try {
-      console.log("📢 Sending Add User Request:", newUser);
       const response = await addUser({
         username: newUser.username.trim(),
         fullName: newUser.fullName.trim(),
@@ -87,7 +92,6 @@ const validateInput = () => {
         role: authState.user?.role === "Admin" ? "Teacher" : "Admin",
       });
 
-      console.log("✅ Add User API Response:", response);
       if (response && response.user) {
         setUsers((prevUsers) => [...prevUsers, response.user]);
       } else {

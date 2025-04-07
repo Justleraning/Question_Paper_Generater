@@ -27,19 +27,18 @@ export const AuthProvider = ({ children }) => {
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [logoutCountdown, setLogoutCountdown] = useState(20);
-  const logoutTimerRef = useRef(null); // ✅ Track the countdown interval
+  const logoutTimerRef = useRef(null);
 
   useEffect(() => {
     const publicRoutes = ["/", "/login"];
 
     if (!authState.token && !publicRoutes.includes(location.pathname)) {
       console.log("🚨 No token found. Redirecting to login...");
-      resetLogoutState(); // ✅ Reset modal & countdown on manual logout
+      resetLogoutState();
       navigate("/login", { replace: true });
     }
   }, [authState.token, location.pathname, navigate]);
 
-  // ✅ Function to Verify User Existence
   const verifyAuth = async () => {
     try {
       if (!authState.token) return;
@@ -52,7 +51,6 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Use the API_URL constant for consistency
       const response = await axios.get(`${API_URL}/auth/verify`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -62,7 +60,6 @@ export const AuthProvider = ({ children }) => {
         triggerLogoutPopup();
       }
     } catch (error) {
-      // Don't force logout for network errors
       if (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
         console.warn("⚠️ Network or server error - Ignoring forced logout.");
         return;
@@ -84,13 +81,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ Run Periodic Verification Every 5 Seconds - but with proper error handling
   useEffect(() => {
     const interval = setInterval(() => {
       if (authState.token) {
         verifyAuth().catch(err => {
           console.warn("Auth verification failed:", err);
-          // Don't log out on network errors
         });
       }
     }, 5000);
@@ -98,9 +93,8 @@ export const AuthProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [authState.token]);
 
-  // The rest of the code remains unchanged
   const triggerLogoutPopup = () => {
-    if (showLogoutModal || logoutTimerRef.current) return; // Prevent multiple timers
+    if (showLogoutModal || logoutTimerRef.current) return;
 
     console.log("🚨 Logout countdown started...");
     setShowLogoutModal(true);
@@ -129,7 +123,7 @@ export const AuthProvider = ({ children }) => {
   const forceLogout = () => {
     console.warn("🚨 Forced logout triggered!");
 
-    resetLogoutState(); // ✅ Reset modal & timer state
+    resetLogoutState();
 
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
@@ -141,7 +135,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     console.log("👋logout triggered!");
 
-    resetLogoutState(); // ✅ Reset modal & countdown state properly
+    resetLogoutState();
 
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
@@ -152,7 +146,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = (user, token) => {
     try {
-      resetLogoutState(); // ✅ Ensure no old pop-up remains
+      resetLogoutState();
       sessionStorage.setItem("token", token);
       sessionStorage.setItem("user", JSON.stringify(user));
       setAuthState({ user, token });
@@ -167,12 +161,38 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{ authState, login, logout, forceLogout }}>
       {children}
 
-      {/* ✅ Logout Pop-Up */}
+      {/* Logout Pop-Up with higher z-index to appear above all content */}
       {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg text-center">
-            <h2 className="text-xl font-bold text-red-600">⚠️ You have been removed!</h2>
-            <p className="mt-2 text-gray-600">Logging out in {logoutCountdown} seconds...</p>
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl text-center max-w-md w-full">
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-red-100 rounded-full p-3">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-8 w-8 text-red-600" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                  />
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-red-600 mb-2">⚠️ Session Expired</h2>
+            <p className="mt-2 mb-4 text-gray-600">You will be logged out in <span className="font-bold">{logoutCountdown}</span> seconds...</p>
+            <div className="flex justify-center">
+              <button 
+                onClick={forceLogout}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              >
+                Logout Now
+              </button>
+            </div>
           </div>
         </div>
       )}

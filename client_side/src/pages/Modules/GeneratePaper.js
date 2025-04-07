@@ -74,7 +74,7 @@ const GeneratePaper = () => {
       try {
         setLoading(true);
         const availableCourses = await getAvailableCourses();
-        console.log("✅ Fetched Courses:", availableCourses);
+      
 
         if (!Array.isArray(availableCourses) || availableCourses.length === 0) {
           console.warn("⚠️ No courses available or invalid format.");
@@ -102,9 +102,6 @@ const GeneratePaper = () => {
 
     // Find the selected course
     const selectedCourse = courses.find((c) => String(c.id) === String(selectedCourseId));
-
-    console.log("📌 Selected Course:", selectedCourse);
-    console.log("📌 Subjects for selected course:", selectedCourse?.subjects || "No subjects found");
 
     // Ensure subjects exist before setting state
     if (selectedCourse && Array.isArray(selectedCourse.subjects) && selectedCourse.subjects.length > 0) {

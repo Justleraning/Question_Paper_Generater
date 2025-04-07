@@ -137,9 +137,6 @@ export const getAvailableCourses = async () => {
   try {
     const response = await axios.get(`${API_URL}/courses`, { headers: authHeaders() });
 
-    // Debugging Logs
-    console.log("✅ API Response - Available Courses:", response.data);
-
     if (!Array.isArray(response.data)) {
       throw new Error("Invalid API response format: Expected an array.");
     }
@@ -499,7 +496,7 @@ export const savePaper = async (paperData) => {
       }
     );
     
-    console.log("✅ Paper saved successfully:", response.data);
+    console.log("✅ Paper saved successfully:")
     return response.data;
   } catch (error) {
     console.error("❌ Detailed error saving paper:", 

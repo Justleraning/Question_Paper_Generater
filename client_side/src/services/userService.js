@@ -31,7 +31,6 @@ const handleAuthError = (error) => {
 export const getUsers = async () => {
   try {
     const response = await axios.get(`${USER_API_URL}/`, { headers: authHeaders() });
-    console.log("✅ Users Fetched:", response.data);
     return response.data;
   } catch (error) {
     console.error("❌ Error fetching users:", error.response?.data || error.message);
@@ -42,9 +41,9 @@ export const getUsers = async () => {
 // ✅ Add a User
 export const addUser = async (userData) => {
   try {
-    console.log("📢 Sending Add User Request:", userData);
+    console.log("📢 Sending Add User Request");
     const response = await axios.post(`${USER_API_URL}/add`, userData, { headers: authHeaders() });
-    console.log("✅ User Added:", response.data);
+    console.log("✅ User Added sucessfully:");
     return response.data;
   } catch (error) {
     console.error("❌ Error adding user:", error.response?.data || error.message);

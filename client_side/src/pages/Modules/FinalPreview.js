@@ -343,7 +343,7 @@ const FinalPreview = () => {
         }))
       };
       
-      console.log("Saving paper with user ID:", user._id);
+      console.log("Saving paper ");
       
       const paperResult = await savePaper(paperData);
       
@@ -551,7 +551,7 @@ const generateDOCX = () => {
               
               // SEMESTER EXAMINATION
               new Paragraph({
-                text: "SEMESTER EXAMINATION",
+                text: "ENTRANCE EXAMINATION",
                 heading: HeadingLevel.HEADING_3,
                 alignment: AlignmentType.CENTER,
                 bold: true,
