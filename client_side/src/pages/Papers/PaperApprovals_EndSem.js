@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Check, X, Eye, Calendar, ArrowLeft, Printer, Download, User, Filter, AlertTriangle } from 'lucide-react';
+import { FileText, Check, X, Eye, Calendar, ArrowLeft, Printer, Download, User, Filter, AlertTriangle, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,9 @@ function PaperApprovals_EndSem() {
   const [rejectingPaperId, setRejectingPaperId] = useState(null);
   const [previewingPaper, setPreviewingPaper] = useState(null);
   const [showPaper, setShowPaper] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
   const componentRef = useRef();
   const navigate = useNavigate();
 
@@ -88,6 +91,45 @@ function PaperApprovals_EndSem() {
         border-radius: 4px;
       }
       
+      /* Refresh Button */
+      .din8-refresh-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        background-color: var(--white);
+        border: 1px solid var(--primary);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--primary);
+        transition: var(--transition);
+        cursor: pointer;
+      }
+      
+      .din8-refresh-button:hover {
+        background-color: rgba(79, 70, 229, 0.05);
+        transform: translateY(-2px);
+      }
+      
+      .din8-refresh-button:active {
+        transform: translateY(0);
+      }
+      
+      .din8-refresh-button svg {
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+      
+      .din8-refresh-button.refreshing svg {
+        animation: rotate 1s linear infinite;
+      }
+      
+      @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      
       /* Empty State */
       .din8-empty-state {
         background-color: var(--white);
@@ -140,6 +182,7 @@ function PaperApprovals_EndSem() {
         box-shadow: var(--shadow);
         overflow: hidden;
         transition: var(--transition);
+        position: relative;
       }
       
       .din8-approval-card:hover {
@@ -431,8 +474,8 @@ function PaperApprovals_EndSem() {
         border: 1px solid #000;
         padding: 5px;
         position: absolute;
-        top: 20mm;
-        right: 15mm;
+        top: 6mm;
+        right: 6mm;
         width: 50mm;
         font-size: 12px;
       }
@@ -506,7 +549,7 @@ function PaperApprovals_EndSem() {
         border: 1px dashed #ccc;
       }
       
-      /* Rejection Dialog */
+      /* Modal Styles */
       .din8-modal-backdrop {
         position: fixed;
         inset: 0;
@@ -667,6 +710,25 @@ function PaperApprovals_EndSem() {
         font-size: 1.125rem;
         backdrop-filter: blur(3px);
       }
+
+      /* Paper Numbering */
+      .din8-paper-number {
+        position: absolute;
+        top: 0;
+        left: 0;
+        min-width: 30px;
+        height: 30px;
+        background-color: var(--primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-top-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        font-weight: bold;
+        font-size: 14px;
+        z-index: 10;
+      }
       
       /* Responsive Styles */
       @media (max-width: 767px) {
@@ -716,39 +778,53 @@ function PaperApprovals_EndSem() {
     `;
     
     document.head.appendChild(styleElement);
-    
-    return () => {
-      document.head.removeChild(styleElement);
-    };
+    return () => document.head.removeChild(styleElement);
   }, []);
 
   // Fetch papers pending approval
+  const fetchPapers = async () => {
+    try {
+      setLoading(true);
+      console.log("Fetching papers pending approval...");
+      
+      const response = await axios.get('/api/endpapers/approvals', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+
+      console.log('Papers pending approval:', response.data.papers);
+      
+      // Sort papers by submission date (oldest first)
+      const sortedPapers = (response.data.papers || []).sort((a, b) => 
+        new Date(a.metadata?.submittedAt || a.metadata?.createdAt) - 
+        new Date(b.metadata?.submittedAt || b.metadata?.createdAt)
+      );
+      
+      setPapers(sortedPapers);
+      setLoading(false);
+      setRefreshing(false);
+    } catch (err) {
+      console.error('Error fetching papers for approval:', err);
+      setError(err.message);
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Initial fetch on component mount
   useEffect(() => {
-    const fetchPapers = async () => {
-      try {
-        console.log("Fetching papers pending approval...");
-        
-        // Use the dedicated pending approvals endpoint
-        const response = await axios.get('/api/endpapers/approvals', {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-          }
-        });
-
-        console.log('Papers pending approval:', response.data.papers);
-        
-        setPapers(response.data.papers || []);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching papers for approval:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    };
-
     fetchPapers();
   }, []);
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    if (refreshing) return;
+    
+    setRefreshing(true);
+    fetchPapers();
+  };
 
   // Format date function
   const formatDate = (dateString) => {
@@ -766,7 +842,6 @@ function PaperApprovals_EndSem() {
       console.log("View paper requested for:", paper._id);
       setPreviewingPaper(paper);
       setShowPaper(true);
-      // Scroll to top when viewing paper
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error("Error in viewPaper function:", error);
@@ -789,19 +864,16 @@ function PaperApprovals_EndSem() {
   const downloadPaper = () => {
     if (!previewingPaper) return;
     
-    // Show loading indicator
     const loadingOverlay = document.createElement('div');
     loadingOverlay.className = 'din8-loading-overlay';
     loadingOverlay.innerHTML = '<div class="din8-loading-spinner"></div><div style="margin-top: 20px;">Generating PDF...</div>';
     document.body.appendChild(loadingOverlay);
     
-    // Load jsPDF
     const jsPDFScript = document.createElement('script');
     jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
     jsPDFScript.async = true;
     document.body.appendChild(jsPDFScript);
     
-    // Check if libraries are loaded
     const checkLibrariesLoaded = () => {
       if (window.jspdf && window.jspdf.jsPDF) {
         generatePDF();
@@ -810,39 +882,32 @@ function PaperApprovals_EndSem() {
       }
     };
     
-    // Start checking if libraries are loaded
     jsPDFScript.onload = checkLibrariesLoaded;
     
-    // Function to generate the PDF
     const generatePDF = () => {
       try {
         const { jsPDF } = window.jspdf;
         const { examDetails, university, paperStructure } = previewingPaper;
         
-        // Create new PDF document
         const pdf = new jsPDF({
           orientation: 'portrait',
           unit: 'mm',
           format: 'a4'
         });
         
-        // Define page dimensions (A4)
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 15; // margins in mm
+        const margin = 15;
         const contentWidth = pageWidth - (margin * 2);
         
-        // Prepare paper data
         const paperDetails = {
           university: university?.name || "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
           maxMarks: examDetails?.maxMarks || "60"
         };
         
-        // Current Y position on the page
         let yPos = margin;
         let currentPage = 1;
         
-        // Registration Number and Date box in extreme right corner
         pdf.setDrawColor(0);
         pdf.setLineWidth(0.1);
         const boxWidth = 50;
@@ -855,7 +920,6 @@ function PaperApprovals_EndSem() {
         pdf.text("Registration Number:", boxX + 2, boxY + 5);
         pdf.text("Date:", boxX + 2, boxY + 11);
         
-        // Function to add university logo
         const addLogo = async () => {
           return new Promise((resolve) => {
             const logo = new Image();
@@ -897,7 +961,6 @@ function PaperApprovals_EndSem() {
           });
         };
         
-        // Function to add page header
         const addPageHeader = async () => {
           await addLogo();
           
@@ -939,7 +1002,6 @@ function PaperApprovals_EndSem() {
           yPos += 10;
         };
         
-        // Function to check if we need a new page
         const checkPageBreak = (neededSpace) => {
           if (yPos + neededSpace > pageHeight - margin) {
             pdf.addPage();
@@ -950,23 +1012,19 @@ function PaperApprovals_EndSem() {
           return false;
         };
         
-        // Find parts
         const partA = paperStructure?.parts?.find(p => p.partId === 'A');
         const partB = paperStructure?.parts?.find(p => p.partId === 'B');
         const partC = paperStructure?.parts?.find(p => p.partId === 'C');
         
-        // Function to render a part with its questions
         const renderPart = (part, startNumber) => {
           if (!part) return startNumber;
           
-          // Add part title
           checkPageBreak(15);
           pdf.setFontSize(12);
           pdf.setFont('helvetica', 'bold');
           pdf.text(part.partTitle, pageWidth/2, yPos, { align: 'center' });
           yPos += 8;
           
-          // Add instructions
           pdf.setFontSize(10);
           pdf.setFont('helvetica', 'bold');
           for (const instruction of part.instructions) {
@@ -975,62 +1033,43 @@ function PaperApprovals_EndSem() {
           }
           yPos += 5;
           
-          // Add questions
           pdf.setFontSize(10);
           pdf.setFont('helvetica', 'normal');
           
           part.questions.forEach((question, index) => {
             const questionNumber = question.questionNumber || (startNumber + index);
             
-            // Check if we need a new page for this question
-            checkPageBreak(15); // Minimum space for a question
+            checkPageBreak(15);
             
-            // Question number and text
             const questionText = `${questionNumber}. ${question.questionText}`;
             
-            // Split long text into multiple lines
             const textLines = pdf.splitTextToSize(questionText, contentWidth);
+            const textHeight = textLines.length * 5;
             
-            // Calculate space needed for text
-            const textHeight = textLines.length * 5; // 5mm per line
-            
-            // Check again with the actual text height
-            if (checkPageBreak(textHeight + 10)) { // 10mm buffer
-              // If we added a new page, reset yPos
+            if (checkPageBreak(textHeight + 10)) {
               yPos = margin;
             }
             
-            // Add text
             pdf.text(textLines, margin, yPos);
-            yPos += textHeight + 8; // Space after text
+            yPos += textHeight + 8;
             
-            // Add image if present
             if (question.hasImage && question.imageUrl) {
-              // Handle image later - this is complex in jsPDF
-              yPos += 10; // Space for image placeholder
+              yPos += 10;
             }
           });
           
           return startNumber + part.questions.length;
         };
         
-        // Add first page header
         addPageHeader().then(() => {
           try {
-            // Render Part A
             let nextQuestionNumber = renderPart(partA, 1);
-            
-            // Render Part B
             nextQuestionNumber = renderPart(partB, nextQuestionNumber);
-            
-            // Render Part C
             renderPart(partC, nextQuestionNumber);
             
-            // Save the PDF with both subject code and subject name in the filename
             const sanitizedSubjectName = examDetails.subjectName.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
             pdf.save(`${examDetails.subjectCode}_${sanitizedSubjectName}_Question_Paper.pdf`);
             
-            // Remove loading overlay
             document.body.removeChild(loadingOverlay);
             
           } catch (error) {
@@ -1070,16 +1109,12 @@ function PaperApprovals_EndSem() {
       );
 
       if (response.data.success) {
-        // Update local state to remove the approved paper from the list
         setPapers(papers.filter(paper => paper._id !== paperId));
-        
-        // Exit preview mode if we were previewing the approved paper
         if (previewingPaper && previewingPaper._id === paperId) {
           setPreviewingPaper(null);
           setShowPaper(false);
         }
-        
-        alert('Paper approved successfully');
+        setShowApprovalModal(true);
       } else {
         alert('Error: ' + (response.data.message || 'Failed to approve paper'));
       }
@@ -1123,20 +1158,14 @@ function PaperApprovals_EndSem() {
       );
 
       if (response.data.success) {
-        // Update local state to remove the rejected paper from the list
         setPapers(papers.filter(paper => paper._id !== rejectingPaperId));
-        
-        // Exit preview mode if we were previewing the rejected paper
         if (previewingPaper && previewingPaper._id === rejectingPaperId) {
           setPreviewingPaper(null);
           setShowPaper(false);
         }
-        
-        // Clear rejection state
         setRejectingPaperId(null);
         setRejectionComment('');
-        
-        alert('Paper rejected successfully');
+        setShowRejectionModal(true);
       } else {
         alert('Error: ' + (response.data.message || 'Failed to reject paper'));
       }
@@ -1171,6 +1200,12 @@ function PaperApprovals_EndSem() {
       <div className="din8-container">
         <div className="din8-page-header">
           <h1>Paper Approvals</h1>
+          <button 
+            className="din8-refresh-button"
+            onClick={handleRefresh}
+          >
+            <RefreshCw size={18} /> Retry
+          </button>
         </div>
         <div className="din8-empty-state">
           <AlertTriangle size={48} />
@@ -1185,14 +1220,12 @@ function PaperApprovals_EndSem() {
   if (previewingPaper && showPaper) {
     const { university, examDetails, paperStructure } = previewingPaper;
     
-    // Transform paperStructure to questions format needed by the paper viewer
     const questions = {
       partA: [],
       partB: [],
       partC: []
     };
 
-    // Process each part's questions
     paperStructure.parts.forEach(part => {
       if (part.partId === 'A') {
         questions.partA = part.questions.map(q => ({
@@ -1230,7 +1263,6 @@ function PaperApprovals_EndSem() {
       }
     });
 
-    // Paper details
     const paperDetails = {
       university: university?.name || "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
       maxMarks: examDetails?.maxMarks || "60",
@@ -1244,12 +1276,6 @@ function PaperApprovals_EndSem() {
           <div className="din8-preview-actions">
             <button className="din8-preview-button" onClick={exitPreview}>
               <ArrowLeft size={18} /> Back to Approvals
-            </button>
-            <button className="din8-preview-button" onClick={printPaper}>
-              <Printer size={18} /> Print
-            </button>
-            <button className="din8-preview-button" onClick={downloadPaper}>
-              <Download size={18} /> Download PDF
             </button>
           </div>
         </div>
@@ -1290,7 +1316,6 @@ function PaperApprovals_EndSem() {
                 This paper contains {paperStructure.totalPages || 2} printed pages and {paperStructure.parts.length} parts
               </div>
               
-              {/* Part A */}
               <div className="din8-part-title">PART-A</div>
               <div className="din8-part-instructions">
                 <div>{paperStructure.parts.find(p => p.partId === 'A')?.instructions[0] || "Answer all FIVE questions"}</div>
@@ -1303,8 +1328,6 @@ function PaperApprovals_EndSem() {
                     <div className="din8-question" id={question._id} key={question._id || index}>
                       <span className="din8-question-number">{question.questionNumber}.</span>
                       <span className="din8-question-text">{question.question}</span>
-                      
-                      {/* Show image if available */}
                       {question.hasImage && question.imageUrl && (
                         <div className="din8-question-image-container">
                           <img 
@@ -1322,7 +1345,6 @@ function PaperApprovals_EndSem() {
                 )}
               </div>
               
-              {/* Part B */}
               <div className="din8-part-title">PART-B</div>
               <div className="din8-part-instructions">
                 <div>{paperStructure.parts.find(p => p.partId === 'B')?.instructions[0] || "Answer any FIVE questions"}</div>
@@ -1335,8 +1357,6 @@ function PaperApprovals_EndSem() {
                     <div className="din8-question" id={question._id} key={question._id || index}>
                       <span className="din8-question-number">{question.questionNumber}.</span>
                       <span className="din8-question-text">{question.question}</span>
-                      
-                      {/* Show image if available */}
                       {question.hasImage && question.imageUrl && (
                         <div className="din8-question-image-container">
                           <img 
@@ -1354,7 +1374,6 @@ function PaperApprovals_EndSem() {
                 )}
               </div>
               
-              {/* Part C */}
               <div className="din8-part-title">PART-C</div>
               <div className="din8-part-instructions">
                 <div>{paperStructure.parts.find(p => p.partId === 'C')?.instructions[0] || "Answer any THREE questions"}</div>
@@ -1367,8 +1386,6 @@ function PaperApprovals_EndSem() {
                     <div className="din8-question" id={question._id} key={question._id || index}>
                       <span className="din8-question-number">{question.questionNumber}.</span>
                       <span className="din8-question-text">{question.question}</span>
-                      
-                      {/* Show image if available */}
                       {question.hasImage && question.imageUrl && (
                         <div className="din8-question-image-container">
                           <img 
@@ -1389,30 +1406,25 @@ function PaperApprovals_EndSem() {
           </div>
         </div>
 
-        {/* Action buttons for approval/rejection */}
         <div className="din8-action-buttons">
-          <button 
-            className="din8-approve-button"
-            onClick={() => approvePaper(previewingPaper._id)}
-          >
-            <Check size={20} /> Approve Paper
-          </button>
-          <button 
-            className="din8-reject-button"
-            onClick={() => showRejectionDialog(previewingPaper._id)}
-          >
-            <X size={20} /> Reject Paper
-          </button>
+          
         </div>
       </div>
     );
   }
 
-  // Otherwise, render the list of papers pending approval
+  // Render the list of papers pending approval
   return (
     <div className="din8-container">
       <div className="din8-page-header">
         <h1>Paper Approvals for End Semester</h1>
+        <button 
+          className={`din8-refresh-button ${refreshing ? 'refreshing' : ''}`}
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw size={18} /> {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
       
       {papers.length === 0 ? (
@@ -1424,8 +1436,9 @@ function PaperApprovals_EndSem() {
         </div>
       ) : (
         <div className="din8-approvals-grid">
-          {papers.map((paper) => (
+          {papers.map((paper, index) => (
             <div key={paper._id} className="din8-approval-card">
+              <div className="din8-paper-number">{index + 1}</div>
               <div className="din8-approval-card-inner">
                 <div className="din8-approval-card-top">
                   <div className="din8-approval-card-content">
@@ -1519,6 +1532,52 @@ function PaperApprovals_EndSem() {
                 className="din8-modal-confirm-button"
               >
                 Reject Paper
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Success Modal */}
+      {showApprovalModal && (
+        <div className="din8-modal-backdrop">
+          <div className="din8-modal">
+            <div className="din8-modal-header">
+              <h3 className="din8-modal-title">Paper Approved</h3>
+            </div>
+            <div className="din8-modal-body">
+              <p className="text-gray-600">The paper has been successfully approved.</p>
+            </div>
+            <div className="din8-modal-footer">
+              <button
+                onClick={() => setShowApprovalModal(false)}
+                className="din8-modal-confirm-button"
+                style={{ backgroundColor: 'var(--success)' }}
+              >
+                Okay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Success Modal */}
+      {showRejectionModal && (
+        <div className="din8-modal-backdrop">
+          <div className="din8-modal">
+            <div className="din8-modal-header">
+              <h3 className="din8-modal-title">Paper Rejected</h3>
+            </div>
+            <div className="din8-modal-body">
+              <p className="text-gray-600">The paper has been successfully rejected with your feedback.</p>
+            </div>
+            <div className="din8-modal-footer">
+              <button
+                onClick={() => setShowRejectionModal(false)}
+                className="din8-modal-confirm-button"
+                style={{ backgroundColor: 'var(--danger)' }}
+              >
+                Okay
               </button>
             </div>
           </div>

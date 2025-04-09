@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Download, Edit, Trash2, Eye, Send, Calendar, AlertTriangle, ArrowLeft, Printer, Filter, User } from 'lucide-react';
+import { FileText, Download, Edit, Trash2, Eye, Send, Calendar, AlertTriangle, ArrowLeft, Printer, Filter, User, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 
 // Helper function to check if a paper can be submitted for approval
 const canSubmitForApproval = (paper) => {
   console.log("Checking if paper can be submitted:", paper);
   
-  // Check if paper exists
   if (!paper || !paper._id) {
     console.log("Paper is missing or has no ID");
     return { 
@@ -16,26 +15,21 @@ const canSubmitForApproval = (paper) => {
     };
   }
   
-  // Check paper status - using lowercase for case-insensitive comparison
   const status = (paper.status || '').toLowerCase();
   if (status !== 'draft' && status !== 'rejected' && status !== 'submitted') {
     console.log(`Paper has invalid status: ${paper.status}`);
-    
-    // Special message if paper is already submitted
     if (status === 'submitted') {
       return {
         canSubmit: false,
         reason: "This paper has already been submitted for approval."
       };
     }
-    
     return { 
       canSubmit: false, 
       reason: `Cannot submit papers with status '${paper.status}'. Only papers in draft or rejected status can be submitted.` 
     };
   }
   
-  // If status is already "submitted", prevent resubmission
   if (status === 'submitted') {
     console.log("Paper is already submitted");
     return {
@@ -44,7 +38,6 @@ const canSubmitForApproval = (paper) => {
     };
   }
   
-  // If we made it here, paper can be submitted
   return { 
     canSubmit: true, 
     reason: null 
@@ -57,31 +50,30 @@ export function EndSemSide() {
   const [filteredPapers, setFilteredPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
   
-  // State for view mode
   const [previewingPaper, setPreviewingPaper] = useState(null);
   const [showPaper, setShowPaper] = useState(false);
   const componentRef = useRef();
 
-  // State for filters
   const [filters, setFilters] = useState({
     semester: '',
     subjectCode: '',
     status: ''
   });
 
-  // Unique semesters from papers
   const [uniqueSemesters, setUniqueSemesters] = useState([]);
   const [uniqueSubjectCodes, setUniqueSubjectCodes] = useState([]);
 
-  // Add enhanced styles to the page
+  // Modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [paperToDelete, setPaperToDelete] = useState(null);
+
   useEffect(() => {
     const styleElement = document.createElement('style');
     styleElement.textContent = `
-      /* Enhanced End Semester Papers Stylesheet */
-      
-      /* Reset and Base Styles */
       :root {
         --primary: #4f46e5;
         --primary-light: #818cf8;
@@ -110,7 +102,6 @@ export function EndSemSide() {
         --transition: all 0.2s ease-in-out;
       }
       
-      /* Layout and Container Styles */
       .din8-container {
         max-width: 1280px;
         margin-left: auto;
@@ -118,7 +109,6 @@ export function EndSemSide() {
         padding: 2rem 1.5rem;
       }
       
-      /* Page Header */
       .din8-page-header {
         display: flex;
         align-items: center;
@@ -148,7 +138,6 @@ export function EndSemSide() {
         border-radius: 4px;
       }
       
-      /* Filter Section */
       .din8-filters-container {
         background-color: var(--white);
         border-radius: 12px;
@@ -224,7 +213,6 @@ export function EndSemSide() {
         pointer-events: none;
       }
       
-      /* Paper Cards */
       .din8-papers-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -322,7 +310,7 @@ export function EndSemSide() {
         color: var(--success);
       }
       
-      .din8-status-rejected {
+      .din8-status PARKrejected {
         background-color: rgba(239, 68, 68, 0.1);
         color: var(--danger);
       }
@@ -415,7 +403,6 @@ export function EndSemSide() {
         margin-left: 1.75rem;
       }
       
-      /* Empty State */
       .din8-empty-state {
         display: flex;
         flex-direction: column;
@@ -447,7 +434,6 @@ export function EndSemSide() {
         margin-right: auto;
       }
       
-      /* Paper Preview Styles */
       .din8-approval-container {
         max-width: 1200px;
         margin: 0 auto;
@@ -508,7 +494,6 @@ export function EndSemSide() {
         overflow: hidden;
       }
       
-      /* Loading Animation */
       .din8-loading-container {
         display: flex;
         justify-content: center;
@@ -530,7 +515,6 @@ export function EndSemSide() {
         100% { transform: rotate(360deg); }
       }
       
-      /* PDF download loading styles */
       .din8-loading-overlay {
         position: fixed;
         top: 0;
@@ -547,15 +531,93 @@ export function EndSemSide() {
         font-size: 1.125rem;
         backdrop-filter: blur(3px);
       }
+
+      .din8-paper-number {
+        position: absolute;
+        top: 0;
+        left: 0;
+        min-width: 30px;
+        height: 30px;
+        background-color: var(--primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-top-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        font-weight: bold;
+        font-size: 14px;
+        z-index: 10;
+      }
       
-      /* Responsive Styles */
+      .din8-refresh-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        background-color: var(--primary);
+        border: none;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: white;
+        transition: var(--transition);
+        cursor: pointer;
+      }
+      
+      .din8-refresh-button:hover {
+        background-color: var(--primary-dark);
+      }
+      
+      .din8-refresh-button svg {
+        animation: none;
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+      
+      .din8-refresh-button.refreshing svg {
+        animation: spinner 1s linear infinite;
+      }
+      
+      .din8-go-back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        background-color: var(--gray-100);
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--gray-700);
+        transition: var(--transition);
+        cursor: pointer;
+        margin-bottom: 1rem;
+      }
+      
+      .din8-go-back-button:hover {
+        background-color: var(--gray-200);
+        color: var(--gray-900);
+      }
+      
+      .din8-go-back-button svg {
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+      
+      .din8-paper-editor-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+      }
+      
       @media (min-width: 768px) {
         .din8-filters-grid {
           grid-template-columns: repeat(3, 1fr);
         }
       }
       
-      /* Print Styles */
       @media print {
         .din8-preview-header,
         .din8-preview-actions,
@@ -576,44 +638,48 @@ export function EndSemSide() {
     `;
     
     document.head.appendChild(styleElement);
-    
     return () => {
       document.head.removeChild(styleElement);
     };
   }, []);
 
+  const fetchPapers = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/api/endpapers', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+
+      const fetchedPapers = response.data.papers || [];
+      setPapers(fetchedPapers);
+      setFilteredPapers(fetchedPapers);
+
+      const semesters = [...new Set(fetchedPapers.map(p => p.examDetails.semester))];
+      const subjectCodes = [...new Set(fetchedPapers.map(p => p.examDetails.subjectCode))];
+      
+      setUniqueSemesters(semesters);
+      setUniqueSubjectCodes(subjectCodes);
+
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchPapers();
+    setRefreshing(false);
+  };
+
   useEffect(() => {
-    const fetchPapers = async () => {
-      try {
-        const response = await axios.get('/api/endpapers', {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-          }
-        });
-
-        const fetchedPapers = response.data.papers || [];
-        setPapers(fetchedPapers);
-        setFilteredPapers(fetchedPapers);
-
-        // Extract unique semesters and subject codes
-        const semesters = [...new Set(fetchedPapers.map(p => p.examDetails.semester))];
-        const subjectCodes = [...new Set(fetchedPapers.map(p => p.examDetails.subjectCode))];
-        
-        setUniqueSemesters(semesters);
-        setUniqueSubjectCodes(subjectCodes);
-
-        setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
-      }
-    };
-
     fetchPapers();
   }, []);
 
-  // Apply filters
   useEffect(() => {
     let result = papers;
 
@@ -632,7 +698,6 @@ export function EndSemSide() {
     setFilteredPapers(result);
   }, [filters, papers]);
 
-  // Format date function
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -642,7 +707,6 @@ export function EndSemSide() {
     });
   };
 
-  // View/Preview Paper
   const viewPaper = (paper) => {
     try {
       console.log("View paper requested for:", paper._id);
@@ -651,23 +715,20 @@ export function EndSemSide() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error("Error in viewPaper function:", error);
-      alert("An error occurred while trying to view the paper. Please try again.");
     }
   };
 
-  // Exit preview mode
   const exitPreview = () => {
     setPreviewingPaper(null);
     setShowPaper(false);
   };
 
-  // Print paper
   const printPaper = () => {
     window.print();
   };
 
-  // Edit Paper
   const editPaper = (paper) => {
+    localStorage.setItem('paperEditReturnPath', window.location.pathname);
     navigate('/create-papers', { 
       state: { 
         paperDetails: paper,
@@ -675,25 +736,24 @@ export function EndSemSide() {
         enableInlineEditing: true,
         disableReplaceButtons: true,
         hideReplaceButtons: true,
-        removeReplaceButtons: true
+        removeReplaceButtons: true,
+        showBackButton: true,
+        returnToEndSem: true
       } 
     });
   };
 
   const downloadPaper = (paper) => {
-    // Show loading indicator
     const loadingOverlay = document.createElement('div');
     loadingOverlay.className = 'din8-loading-overlay';
     loadingOverlay.innerHTML = '<div class="din8-loading-spinner"></div><div style="margin-top: 20px;">Generating PDF...</div>';
     document.body.appendChild(loadingOverlay);
     
-    // Load jsPDF
     const jsPDFScript = document.createElement('script');
     jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
     jsPDFScript.async = true;
     document.body.appendChild(jsPDFScript);
     
-    // Check if libraries are loaded
     const checkLibrariesLoaded = () => {
       if (window.jspdf && window.jspdf.jsPDF) {
         generatePDF();
@@ -702,28 +762,22 @@ export function EndSemSide() {
       }
     };
     
-    // Start checking if libraries are loaded
     jsPDFScript.onload = checkLibrariesLoaded;
     
-    // Function to generate the PDF
     const generatePDF = () => {
       try {
         const { jsPDF } = window.jspdf;
-        
-        // Create new PDF document
         const pdf = new jsPDF({
           orientation: 'portrait',
           unit: 'mm',
           format: 'a4'
         });
         
-        // Define page dimensions (A4)
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 15; // margins in mm
+        const margin = 15;
         const contentWidth = pageWidth - (margin * 2);
         
-        // Prepare paper data from the selected paper
         const paperDetails = {
           university: paper.university.name || "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
           maxMarks: paper.examDetails.maxMarks || "60"
@@ -731,7 +785,6 @@ export function EndSemSide() {
         
         const examDetails = paper.examDetails;
         
-        // Make sure questions arrays exist
         const questionsPartA = Array.isArray(paper.paperStructure.parts.find(p => p.partId === 'A')?.questions) 
           ? paper.paperStructure.parts.find(p => p.partId === 'A').questions 
           : [];
@@ -742,11 +795,9 @@ export function EndSemSide() {
           ? paper.paperStructure.parts.find(p => p.partId === 'C').questions 
           : [];
         
-        // Current Y position on the page
         let yPos = margin;
         let currentPage = 1;
         
-        // Registration Number and Date box in extreme right corner
         pdf.setDrawColor(0);
         pdf.setLineWidth(0.1);
         const boxWidth = 50;
@@ -759,7 +810,6 @@ export function EndSemSide() {
         pdf.text("Registration Number:", boxX + 2, boxY + 5);
         pdf.text("Date:", boxX + 2, boxY + 11);
         
-        // Function to add university logo
         const addLogo = async () => {
           return new Promise((resolve) => {
             const logo = new Image();
@@ -769,15 +819,12 @@ export function EndSemSide() {
               try {
                 const imgWidth = 30;
                 const imgHeight = 30;
-                
                 const canvas = document.createElement('canvas');
                 canvas.width = logo.width;
                 canvas.height = logo.height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(logo, 0, 0);
-                
                 pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, imgWidth, imgHeight);
-                
                 resolve();
               } catch (err) {
                 console.error('Failed to add logo to PDF:', err);
@@ -791,7 +838,6 @@ export function EndSemSide() {
             };
             
             logo.src = paper.university.logoUrl || '/SJU.png';
-            
             setTimeout(() => {
               if (!logo.complete) {
                 console.warn('Logo loading timed out');
@@ -801,47 +847,37 @@ export function EndSemSide() {
           });
         };
         
-        // Function to add page header
         const addPageHeader = async () => {
           await addLogo();
-          
           pdf.setFontSize(12);
           pdf.setFont('helvetica', 'bold');
           pdf.text(paperDetails.university, pageWidth/2, margin + 7, { align: 'center' });
-          
           yPos = margin + 15;
           pdf.setFontSize(10);
           pdf.setFont('helvetica', 'bold');
           pdf.text(`${examDetails.course} - ${examDetails.semester} SEMESTER`, pageWidth/2, yPos, { align: 'center' });
           yPos += 6;
-          
           pdf.text(`SEMESTER EXAMINATION: ${examDetails.semesterExamination}`, pageWidth/2, yPos, { align: 'center' });
           yPos += 6;
-          
           pdf.setFont('helvetica', 'normal');
           pdf.text(`(Examination conducted in ${examDetails.examinationConducted})`, pageWidth/2, yPos, { align: 'center' });
           yPos += 6;
-          
           pdf.setFont('helvetica', 'bold');
           pdf.text(`${examDetails.subjectCode}: ${examDetails.subjectName}`, pageWidth/2, yPos, { align: 'center' });
           yPos += 6;
-          
           pdf.setFont('helvetica', 'normal');
           pdf.text("(For Current batch student only)", pageWidth/2, yPos, { align: 'center' });
           yPos += 10;
-          
           pdf.setFontSize(10);
           pdf.text(`Time: ${examDetails.examTimings}`, margin, yPos);
           pdf.text(`Max Marks: ${paperDetails.maxMarks}`, pageWidth - margin, yPos, { align: 'right' });
           yPos += 6;
-          
           const totalPages = 2;
           pdf.setFont('helvetica', 'normal');
           pdf.text(`This paper contains ${totalPages} printed pages and 3 parts`, pageWidth/2, yPos, { align: 'center' });
           yPos += 10;
         };
-  
-        // Function to check if we need a new page
+        
         const checkPageBreak = (neededSpace) => {
           if (yPos + neededSpace > pageHeight - margin) {
             pdf.addPage();
@@ -851,34 +887,26 @@ export function EndSemSide() {
           }
           return false;
         };
-  
-        // Function to render Parts A and B with their questions
+        
         const renderPartAB = (partTitle, instructions, questionsList, startNumber) => {
           pdf.setFontSize(10);
           pdf.setFont('helvetica', 'bold');
           pdf.text(partTitle, pageWidth/2, yPos, { align: 'center' });
           yPos += 8;
-          
           pdf.setFont('helvetica', 'bold');
           pdf.text(instructions[0].toUpperCase(), margin, yPos);
           pdf.text(instructions[1], pageWidth - margin, yPos, { align: 'right' });
           yPos += 8;
-          
           pdf.setFont('helvetica', 'normal');
           
           for (let i = 0; i < questionsList.length; i++) {
             const question = questionsList[i];
-            
             const questionText = question.questionText || "No question text available";
-            
             pdf.text(`${startNumber + i}.`, margin, yPos);
-            
             const textLines = pdf.splitTextToSize(questionText, contentWidth - 10);
             pdf.text(textLines, margin + 7, yPos);
-            
             if (textLines.length > 1) {
-              yPos += 5;
-              yPos += 4 * (textLines.length - 1);
+              yPos += 5 + 4 * (textLines.length - 1);
             } else {
               yPos += 5;
             }
@@ -887,21 +915,17 @@ export function EndSemSide() {
               try {
                 const img = new Image();
                 img.src = question.imageUrl;
-                
                 if (img.complete) {
                   const imgWidth = Math.min(contentWidth - 20, 100);
                   const imgHeight = (img.height * imgWidth) / img.width;
-                  
                   if (yPos + imgHeight > pageHeight - margin) {
                     checkPageBreak(imgHeight);
                   }
-                  
                   const canvas = document.createElement('canvas');
                   canvas.width = img.width;
                   canvas.height = img.height;
                   const ctx = canvas.getContext('2d');
                   ctx.drawImage(img, 0, 0);
-                  
                   pdf.addImage(canvas.toDataURL('image/jpeg'), 'JPEG', margin + 10, yPos, imgWidth, imgHeight);
                   yPos += imgHeight + 5;
                 }
@@ -909,49 +933,36 @@ export function EndSemSide() {
                 console.error("Error adding image:", err);
               }
             }
-            
             yPos += 5;
           }
-          
           yPos += 5;
         };
-  
-        // Function to render Part C with special handling
+        
         const renderPartC = (partTitle, instructions, questionsList, startNumber) => {
           pdf.setFontSize(10);
           pdf.setFont('helvetica', 'bold');
           pdf.text(partTitle, pageWidth/2, yPos, { align: 'center' });
           yPos += 8;
-          
           pdf.setFont('helvetica', 'bold');
           pdf.text(instructions[0].toUpperCase(), margin, yPos);
           pdf.text(instructions[1], pageWidth - margin, yPos, { align: 'right' });
           yPos += 8;
-          
           pdf.setFont('helvetica', 'normal');
           
           for (let i = 0; i < questionsList.length; i++) {
             const question = questionsList[i];
-            
             const questionText = question.questionText || "No question text available";
-            
             const textLines = pdf.splitTextToSize(questionText, contentWidth - 10);
-            
             const neededSpace = textLines.length * 5 + 10;
-            
             if (yPos + neededSpace > pageHeight - margin) {
               pdf.addPage();
               currentPage++;
               yPos = margin;
             }
-            
             pdf.text(`${startNumber + i}.`, margin, yPos);
-            
             pdf.text(textLines, margin + 7, yPos);
-            
             if (textLines.length > 1) {
-              yPos += 5;
-              yPos += 4 * (textLines.length - 1);
+              yPos += 5 + 4 * (textLines.length - 1);
             } else {
               yPos += 5;
             }
@@ -960,17 +971,14 @@ export function EndSemSide() {
               try {
                 const img = new Image();
                 img.src = question.imageUrl;
-                
                 if (img.complete) {
                   const imgWidth = Math.min(contentWidth - 20, 100);
                   const imgHeight = (img.height * imgWidth) / img.width;
-                  
                   const canvas = document.createElement('canvas');
                   canvas.width = img.width;
                   canvas.height = img.height;
                   const ctx = canvas.getContext('2d');
                   ctx.drawImage(img, 0, 0);
-                  
                   pdf.addImage(canvas.toDataURL('image/jpeg'), 'JPEG', margin + 10, yPos, imgWidth, imgHeight);
                   yPos += imgHeight + 5;
                 }
@@ -978,47 +986,19 @@ export function EndSemSide() {
                 console.error("Error adding image:", err);
               }
             }
-            
             yPos += 5;
           }
         };
-  
-        // Add first page header
+        
         addPageHeader().then(() => {
           try {
-            // Render Part A
-            renderPartAB(
-              'PART-A', 
-              ['Answer all FIVE questions', '(2 X 5 = 10)'], 
-              questionsPartA,
-              1
-            );
-            
-            // Render Part B
-            renderPartAB(
-              'PART-B', 
-              ['Answer any FIVE questions', '(4 X 5 = 20)'],
-              questionsPartB,
-              questionsPartA.length + 1
-            );
-            
+            renderPartAB('PART-A', ['Answer all FIVE questions', '(2 X 5 = 10)'], questionsPartA, 1);
+            renderPartAB('PART-B', ['Answer any FIVE questions', '(4 X 5 = 20)'], questionsPartB, questionsPartA.length + 1);
             yPos += 5;
-            
-            // Render Part C
-            renderPartC(
-              'PART-C', 
-              ['Answer any THREE questions', '(10 X 3 = 30)'],
-              questionsPartC,
-              questionsPartA.length + questionsPartB.length + 1
-            );
-            
-            // Save the PDF with both subject code and subject name in the filename
+            renderPartC('PART-C', ['Answer any THREE questions', '(10 X 3 = 30)'], questionsPartC, questionsPartA.length + questionsPartB.length + 1);
             const sanitizedSubjectName = examDetails.subjectName.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
             pdf.save(`${examDetails.subjectCode}_${sanitizedSubjectName}_Question_Paper.pdf`);
-            
-            // Remove loading overlay
             document.body.removeChild(loadingOverlay);
-            
           } catch (error) {
             console.error('Error rendering PDF:', error);
             document.body.removeChild(loadingOverlay);
@@ -1037,55 +1017,51 @@ export function EndSemSide() {
     };
   };
 
-  // Delete Paper
-  const deletePaper = async (paper) => {
-    const confirmDelete = window.confirm('Are you sure you want to delete this paper?');
-    
-    if (confirmDelete) {
-      try {
-        await axios.delete(`/api/endpapers/${paper._id}`, {
-          headers: {
-            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-          }
-        });
+  const deletePaper = (paper) => {
+    setPaperToDelete(paper);
+    setShowDeleteModal(true);
+  };
 
-        // Remove the paper from the list
-        setPapers(papers.filter(p => p._id !== paper._id));
-        setFilteredPapers(filteredPapers.filter(p => p._id !== paper._id));
-        
-        alert('Paper deleted successfully');
-      } catch (error) {
-        console.error('Error deleting paper:', error);
-        alert('Failed to delete paper');
-      }
+  const confirmDelete = async () => {
+    if (!paperToDelete) return;
+
+    try {
+      await axios.delete(`/api/endpapers/${paperToDelete._id}`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+
+      setPapers(papers.filter(p => p._id !== paperToDelete._id));
+      setFilteredPapers(filteredPapers.filter(p => p._id !== paperToDelete._id));
+      
+      setShowDeleteModal(false);
+      setPaperToDelete(null);
+    } catch (error) {
+      console.error('Error deleting paper:', error);
+      setShowDeleteModal(false);
+      alert('Failed to delete paper');
     }
   };
 
-  // Send for approval function
   const sendForApproval = async (paper) => {
     try {
       console.log("=== SEND FOR APPROVAL - START ===");
       
-      // Check if the paper status is already "Submitted"
       if (paper.status === 'Submitted') {
         alert("This paper has already been submitted for approval.");
         return;
       }
       
-      // Check if the paper can be submitted for approval
       const { canSubmit, reason } = canSubmitForApproval(paper);
-      
       if (!canSubmit) {
         alert(reason);
         return;
       }
       
       console.log("Sending approval request to backend...");
-      
-      // Direct API URL from console logs
       const API_URL = "/api";
       
-      // Call the dedicated approval endpoint
       const approvalResponse = await axios.post(`${API_URL}/endpapers/${paper._id}/approval`, 
         {
           comments: 'Submitted for approval'
@@ -1101,7 +1077,6 @@ export function EndSemSide() {
       console.log("Response received:", approvalResponse.data);
 
       if (approvalResponse.data.success) {
-        // Update frontend state to match the new status
         const updatedPapers = papers.map(p => 
           p._id === paper._id 
             ? { 
@@ -1133,7 +1108,7 @@ export function EndSemSide() {
           )
         );
 
-        alert('Paper sent for approval successfully. Please check the approvals page.');
+        setShowApprovalModal(true);
       } else {
         console.error("API reported failure:", approvalResponse.data);
         alert('Error: ' + (approvalResponse.data.message || 'Failed to send paper for approval'));
@@ -1141,7 +1116,6 @@ export function EndSemSide() {
     } catch (error) {
       console.error('=== ERROR SENDING PAPER FOR APPROVAL ===');
       console.error('Error object:', error);
-      
       let errorMessage = 'Failed to send paper for approval';
       if (error.response && error.response.data) {
         if (error.response.data.message) {
@@ -1150,12 +1124,10 @@ export function EndSemSide() {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
       alert(`Failed to send paper for approval: ${errorMessage}`);
     }
   };
 
-  // Get status class based on paper status
   const getStatusClass = (status) => {
     const statusLower = (status || '').toLowerCase();
     switch(statusLower) {
@@ -1167,7 +1139,6 @@ export function EndSemSide() {
     }
   };
 
-  // If we're in loading state, show loading spinner
   if (loading) {
     return (
       <div className="din8-loading-container">
@@ -1176,12 +1147,19 @@ export function EndSemSide() {
     );
   }
 
-  // If there was an error fetching the papers
   if (error) {
     return (
       <div className="din8-container">
         <div className="din8-page-header">
           <h1>Question Papers</h1>
+          <button 
+            className={`din8-refresh-button ${refreshing ? 'refreshing' : ''}`}
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw size={16} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
         </div>
         <div className="din8-empty-state">
           <AlertTriangle size={48} />
@@ -1192,18 +1170,15 @@ export function EndSemSide() {
     );
   }
 
-  // If we're previewing a paper, render the preview
   if (previewingPaper && showPaper) {
     const { university, examDetails, paperStructure } = previewingPaper;
     
-    // Transform paperStructure to questions format needed by the paper viewer
     const questions = {
       partA: [],
       partB: [],
       partC: []
     };
 
-    // Process each part's questions
     paperStructure.parts.forEach(part => {
       if (part.partId === 'A') {
         questions.partA = part.questions.map(q => ({
@@ -1241,7 +1216,6 @@ export function EndSemSide() {
       }
     });
 
-    // Paper details
     const paperDetails = {
       university: university?.name || "ST. JOSEPH'S UNIVERSITY, BENGALURU - 27",
       maxMarks: examDetails?.maxMarks || "60",
@@ -1255,9 +1229,6 @@ export function EndSemSide() {
           <div className="din8-preview-actions">
             <button className="din8-preview-button" onClick={exitPreview}>
               <ArrowLeft size={16} /> Back to Papers
-            </button>
-            <button className="din8-preview-button" onClick={printPaper}>
-              <Printer size={16} /> Print
             </button>
           </div>
         </div>
@@ -1298,7 +1269,6 @@ export function EndSemSide() {
                 This paper contains {paperStructure.totalPages || 2} printed pages and {paperStructure.parts.length} parts
               </div>
               
-              {/* Part A */}
               <div className="din8-part-title">PART-A</div>
               <div className="din8-part-instructions">
                 <div>{paperStructure.parts.find(p => p.partId === 'A')?.instructions[0] || "Answer all FIVE questions"}</div>
@@ -1311,8 +1281,6 @@ export function EndSemSide() {
                     <div className="din8-question" id={question._id} key={question._id || index}>
                       <span className="din8-question-number">{question.questionNumber}.</span>
                       <span className="din8-question-text">{question.question}</span>
-                      
-                      {/* Show image if available */}
                       {question.hasImage && question.imageUrl && (
                         <div className="din8-question-image-container">
                           <img 
@@ -1330,7 +1298,6 @@ export function EndSemSide() {
                 )}
               </div>
               
-              {/* Part B */}
               <div className="din8-part-title">PART-B</div>
               <div className="din8-part-instructions">
                 <div>{paperStructure.parts.find(p => p.partId === 'B')?.instructions[0] || "Answer any FIVE questions"}</div>
@@ -1343,8 +1310,6 @@ export function EndSemSide() {
                     <div className="din8-question" id={question._id} key={question._id || index}>
                       <span className="din8-question-number">{question.questionNumber}.</span>
                       <span className="din8-question-text">{question.question}</span>
-                      
-                      {/* Show image if available */}
                       {question.hasImage && question.imageUrl && (
                         <div className="din8-question-image-container">
                           <img 
@@ -1362,7 +1327,6 @@ export function EndSemSide() {
                 )}
               </div>
               
-              {/* Part C */}
               <div className="din8-part-title">PART-C</div>
               <div className="din8-part-instructions">
                 <div>{paperStructure.parts.find(p => p.partId === 'C')?.instructions[0] || "Answer any THREE questions"}</div>
@@ -1375,8 +1339,6 @@ export function EndSemSide() {
                     <div className="din8-question" id={question._id} key={question._id || index}>
                       <span className="din8-question-number">{question.questionNumber}.</span>
                       <span className="din8-question-text">{question.question}</span>
-                      
-                      {/* Show image if available */}
                       {question.hasImage && question.imageUrl && (
                         <div className="din8-question-image-container">
                           <img 
@@ -1400,14 +1362,20 @@ export function EndSemSide() {
     );
   }
 
-  // Main component rendering
   return (
     <div className="din8-container">
       <div className="din8-page-header">
         <h1>Question Papers for End Semester</h1>
+        <button 
+          className={`din8-refresh-button ${refreshing ? 'refreshing' : ''}`}
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw size={16} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
 
-      {/* Filters Section */}
       <div className="din8-filters-container">
         <div className="din8-filters-header">
           <span className="din8-icon">
@@ -1458,10 +1426,10 @@ export function EndSemSide() {
         </div>
       </div>
 
-      {/* Papers List */}
       <div className="din8-papers-grid">
         {filteredPapers.map((paper, index) => (
           <div key={paper._id} className="din8-paper-card">
+            <div className="din8-paper-number">{filteredPapers.length - index}</div>
             <div className="din8-paper-card-inner">
               <div className="din8-paper-card-top">
                 <div className="din8-paper-card-content">
@@ -1499,7 +1467,6 @@ export function EndSemSide() {
                   >
                     <Eye size={20} />
                   </button>
-                  
                   <button 
                     onClick={() => downloadPaper(paper)}
                     className="din8-paper-card-action-btn din8-action-download"
@@ -1507,7 +1474,6 @@ export function EndSemSide() {
                   >
                     <Download size={20} />
                   </button>
-                  
                   <button 
                     onClick={() => editPaper(paper)}
                     className="din8-paper-card-action-btn din8-action-edit"
@@ -1515,7 +1481,6 @@ export function EndSemSide() {
                   >
                     <Edit size={20} />
                   </button>
-                  
                   <button 
                     onClick={() => sendForApproval(paper)}
                     className="din8-paper-card-action-btn din8-action-approve"
@@ -1523,7 +1488,6 @@ export function EndSemSide() {
                   >
                     <Send size={20} />
                   </button>
-                  
                   <button 
                     onClick={() => deletePaper(paper)}
                     className="din8-paper-card-action-btn din8-action-delete"
@@ -1534,7 +1498,6 @@ export function EndSemSide() {
                 </div>
               </div>
               
-              {/* Show rejection comments if paper is rejected */}
               {paper.status === 'Rejected' && paper.reviewComments && (
                 <div className="din8-paper-card-rejection">
                   <div className="din8-paper-card-rejection-header">
@@ -1549,12 +1512,53 @@ export function EndSemSide() {
         ))}
       </div>
       
-      {/* Empty state when no papers match the filters */}
       {filteredPapers.length === 0 && (
         <div className="din8-empty-state">
           <FileText size={48} />
           <h3 className="din8-empty-state-title">No Papers Found</h3>
           <p className="din8-empty-state-text">Try adjusting your filters or create a new paper.</p>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Delete</h3>
+            <p className="text-gray-600 mb-6">Are you sure you want to delete this paper? This action cannot be undone.</p>
+            <div className="flex justify-end gap-4">
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Success Modal */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Success</h3>
+            <p className="text-gray-600 mb-6">Paper sent for approval successfully.</p>
+            <div className="flex justify-end">
+              <button 
+                onClick={() => setShowApprovalModal(false)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+              >
+                Okay
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

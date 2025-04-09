@@ -18,12 +18,50 @@ body {
   margin: 0 auto;
 }
 
+/* Header with Back Button */
+.din8-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
 /* Main title */
 .din8-main-title {
   font-size: 28px;
   text-align: center;
-  margin: 20px 0;
   color: #333;
+}
+
+/* Back Button Styles */
+.din8-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 16px;
+  font-weight: 500;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #333333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.din8-back-btn:hover {
+  background-color: #f8f9fa;
+  border-color: #1a73e8;
+  color: #1a73e8;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.din8-arrow {
+  font-size: 18px;
+  font-weight: bold;
 }
 
 /* Generator controls */
@@ -286,7 +324,7 @@ body.din8-printing {
     background-color: white;
   }
   
-  .din8-main-title, .din8-generator-controls, .din8-paper-actions, .din8-replace-btn {
+  .din8-main-title, .din8-generator-controls, .din8-paper-actions, .din8-replace-btn, .din8-back-btn {
     display: none !important;
   }
   
@@ -388,6 +426,16 @@ body.din8-printing {
   
   .din8-action-btn {
     width: 100%;
+  }
+
+  .din8-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .din8-back-btn {
+    margin-top: 10px;
+    align-self: flex-end;
   }
 }
 
@@ -540,4 +588,48 @@ body.din8-printing {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Modal Styles */
+.din8-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.din8-modal {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 300px;
+  text-align: center;
+}
+
+.din8-modal-title {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.din8-modal-btn {
+  padding: 8px 16px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.din8-modal-btn:hover {
+  background-color: #45a049;
 }

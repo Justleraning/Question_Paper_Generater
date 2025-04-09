@@ -364,3 +364,59 @@
   .din3-search-input::placeholder {
     color: #999;
   }
+
+  .din3-back-button-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+}
+
+.din3-back-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 16px;
+    font-weight: 500;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: #ffffff;
+    color: #333333;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.din3-back-button:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.din3-back-button span {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Adjust the container to accommodate the back button */
+.din3-question-pool-container {
+    position: relative;
+    margin-top: 60px;
+}
+
+/* Responsive adjustment for the back button */
+@media (max-width: 768px) {
+    .din3-back-button-container {
+        top: -50px;
+        left: 50%;
+        transform: translateX(-50%);
+        right: auto; /* Reset right positioning on mobile */
+    }
+    
+    .din3-question-pool-container {
+        margin-top: 80px;
+    }
+}

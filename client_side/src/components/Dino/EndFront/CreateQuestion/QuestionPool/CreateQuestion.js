@@ -7,7 +7,6 @@ function CreateQuestion() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Subject options for lookup
   const SUBJECT_OPTIONS = [
     { code: "CA 3222", name: "C# AND DOT NET FRAMEWORK" },
     { code: "CA 3233", name: "Java Programming" },
@@ -15,12 +14,9 @@ function CreateQuestion() {
     { code: "DAV02", name: "Power BI"},
   ];
   
-  // State for subject details
   const [subjectCode, setSubjectCode] = useState("");
   const [subjectName, setSubjectName] = useState("");
   const [defaultPart, setDefaultPart] = useState("A");
-  
-  // State for questions
   const [questions, setQuestions] = useState([
     {
       id: Date.now(),
@@ -34,34 +30,28 @@ function CreateQuestion() {
       marks: 2
     }
   ]);
-  
-  // Loading and error states
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  // New state for success modal
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [savedCount, setSavedCount] = useState(0);
 
-  // Initialize from URL params on component mount
   useEffect(() => {
-    // Parse URL query parameters
     const queryParams = new URLSearchParams(location.search);
     const subjectCodeParam = queryParams.get('subjectCode');
     const partParam = queryParams.get('part');
     
-    // Set subject code if present in URL
     if (subjectCodeParam) {
       setSubjectCode(subjectCodeParam);
-      
-      // Look up subject name based on subject code
       const subject = SUBJECT_OPTIONS.find(s => s.code === subjectCodeParam);
       if (subject) {
         setSubjectName(subject.name);
       }
     }
     
-    // Set default part if present in URL
     if (partParam) {
       setDefaultPart(partParam);
-      
-      // Update the first question's part
       setQuestions(prevQuestions => 
         prevQuestions.map((q, idx) => 
           idx === 0 ? { ...q, part: `Part ${partParam}` } : q
@@ -70,32 +60,26 @@ function CreateQuestion() {
     }
   }, [location.search]);
 
-  // Handle Bloom Level Change
   const handleBloomLevelChange = (id, value) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, bloomLevel: value } : q)));
   };
 
-  // Handle Unit Change
   const handleUnitChange = (id, value) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, unit: value } : q)));
   };
 
-  // Handle Part Change
   const handlePartChange = (id, value) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, part: value } : q)));
   };
 
-  // Handle Question Text Change
   const handleQuestionChange = (id, value) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, text: value } : q)));
   };
   
-  // Handle Marks Change
   const handleMarksChange = (id, value) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, marks: parseInt(value) || 2 } : q)));
   };
 
-  // Handle Image Source Change
   const handleImageSourceChange = (id, source) => {
     setQuestions(questions.map((q) => 
       q.id === id 
@@ -109,7 +93,6 @@ function CreateQuestion() {
     ));
   };
 
-  // Handle Image Upload
   const handleImageUpload = (id, file) => {
     setQuestions(questions.map((q) => 
       q.id === id 
@@ -118,7 +101,6 @@ function CreateQuestion() {
     ));
   };
 
-  // Handle Image URL Input
   const handleImageUrlChange = (id, url) => {
     setQuestions(questions.map((q) => 
       q.id === id 
@@ -127,7 +109,6 @@ function CreateQuestion() {
     ));
   };
 
-  // Delete Image
   const handleDeleteImage = (id) => {
     setQuestions(questions.map((q) => 
       q.id === id 
@@ -141,12 +122,10 @@ function CreateQuestion() {
     ));
   };
 
-  // Delete Question
   const deleteQuestion = (id) => {
     setQuestions(questions.filter((q) => q.id !== id));
   };
 
-  // Add New Question
   const addNewQuestion = () => {
     setQuestions([
       ...questions,
@@ -164,7 +143,6 @@ function CreateQuestion() {
     ]);
   };
 
-  // Validate a question
   const validateQuestion = (question) => {
     if (!question.bloomLevel) return "Bloom Level is required";
     if (!question.unit) return "Unit is required";
@@ -172,9 +150,24 @@ function CreateQuestion() {
     return null;
   };
 
-  // Save Questions to Database & Redirect to Question Pool
+  const handleBackClick = () => {
+    if (questions.length > 0 && questions.some(q => q.text.trim() !== "")) {
+      setShowConfirmation(true);
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleConfirmBack = () => {
+    setShowConfirmation(false);
+    navigate(-1);
+  };
+
+  const handleCancelBack = () => {
+    setShowConfirmation(false);
+  };
+
   const handleSaveQuestions = async () => {
-    // Validate all questions first
     for (const question of questions) {
       const validationError = validateQuestion(question);
       if (validationError) {
@@ -185,50 +178,35 @@ function CreateQuestion() {
     
     setSaving(true);
     setError(null);
-    
-    // Track saved questions to return to QuestionPool
     const savedQuestions = [];
     
     try {
-      // Save each question individually
       for (const question of questions) {
-        // Create FormData for image upload
         const formData = new FormData();
-        
-        // Add question data to FormData
         formData.append('subjectCode', subjectCode);
-        formData.append('part', question.part.replace('Part ', '')); // Extract part letter (A, B, C)
+        formData.append('part', question.part.replace('Part ', ''));
         formData.append('question', question.text);
         formData.append('bloomLevel', question.bloomLevel);
         formData.append('unit', question.unit);
         formData.append('marks', question.marks || 2);
         
-        // Handle image (URL or file)
         if (question.imageSource === 'url' && question.questionImageUrl) {
           formData.append('imageUrl', question.questionImageUrl);
         } else if (question.imageSource === 'upload' && question.questionImage) {
           formData.append('questionImage', question.questionImage);
         }
         
-        // Save question to database
         const response = await axios.post('/api/endsem-questions/questions', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
         
         console.log("Question saved:", response.data);
         savedQuestions.push(response.data.question);
       }
       
-    
-      
-      // Navigate back to question pool
-      navigate(`/question-pool?subjectCode=${encodeURIComponent(subjectCode)}&part=${defaultPart}`, { 
-        state: { 
-          updatedQuestions: savedQuestions
-        }
-      });
+      // Show success modal with the count of saved questions
+      setSavedCount(savedQuestions.length);
+      setShowSuccessModal(true);
       
     } catch (err) {
       console.error("Error saving questions:", err);
@@ -239,28 +217,30 @@ function CreateQuestion() {
     }
   };
 
+  // Handle Okay button click in success modal
+  const handleSuccessOkay = () => {
+    setShowSuccessModal(false);
+    navigate(`/question-pool?subjectCode=${encodeURIComponent(subjectCode)}&part=${defaultPart}`, { 
+      state: { updatedQuestions: questions }
+    });
+  };
+
   return (
     <div className="din4-outer-container">
       <div className="din4-inner-container">
-        <h1 className="din4-page-title">Create Questions</h1>
+        <div className="din4-header">
+          <h1 className="din4-page-title">Create Questions</h1>
+          <button className="din4-back-btn" onClick={handleBackClick}>← Back</button>
+        </div>
         
-        {/* Subject and Subject Code Display */}
         <div className="din4-subject-info">
           <div className="din4-subject-code">
             <label>Subject Code:</label>
-            <input 
-              type="text" 
-              value={subjectCode} 
-              readOnly 
-            />
+            <input type="text" value={subjectCode} readOnly />
           </div>
           <div className="din4-subject-name">
             <label>Subject Name:</label>
-            <input 
-              type="text" 
-              value={subjectName} 
-              readOnly 
-            />
+            <input type="text" value={subjectName} readOnly />
           </div>
         </div>
 
@@ -269,10 +249,7 @@ function CreateQuestion() {
         {questions.map((q) => (
           <div key={q.id} className="din4-question-container">
             <button className="din4-delete-btn" onClick={() => deleteQuestion(q.id)}>✖</button>
-              
-            {/* Bloom Level, Unit, Part and Marks Dropdowns */}
             <div className="din4-dropdown-group-container">
-              {/* Bloom Level Dropdown */}
               <div className="din4-dropdown-group">
                 <label className="din4-label">Bloom Level:</label>
                 <select 
@@ -289,8 +266,6 @@ function CreateQuestion() {
                   <option value="Create L3">Create L3</option>
                 </select>
               </div>
-
-              {/* Unit Dropdown */}
               <div className="din4-dropdown-group">
                 <label className="din4-label">Unit:</label>
                 <select 
@@ -306,8 +281,6 @@ function CreateQuestion() {
                   <option value="5">5</option>
                 </select>
               </div>
-
-              {/* Part Dropdown */}
               <div className="din4-dropdown-group">
                 <label className="din4-label">Part:</label>
                 <select 
@@ -320,8 +293,6 @@ function CreateQuestion() {
                   <option value="Part C">Part C</option>
                 </select>
               </div>
-              
-              {/* Marks Dropdown */}
               <div className="din4-dropdown-group">
                 <label className="din4-label">Marks:</label>
                 <select 
@@ -335,8 +306,6 @@ function CreateQuestion() {
                 </select>
               </div>
             </div>    
-
-            {/* Question Input */}
             <label className="din4-label">Type Question:</label>
             <textarea 
               className="din4-question-input" 
@@ -344,12 +313,8 @@ function CreateQuestion() {
               value={q.text} 
               onChange={(e) => handleQuestionChange(q.id, e.target.value)} 
             />
-
-            {/* Image Upload Options */}
             <div className="din4-image-upload-container">
               <label className="din4-label">Upload Image:</label>
-              
-
               {q.imageSource === "upload" ? (
                 <input 
                   type="file" 
@@ -364,8 +329,6 @@ function CreateQuestion() {
                   onChange={(e) => handleImageUrlChange(q.id, e.target.value)}
                 />
               )}
-
-              {/* Image Preview */}
               {(q.questionImage || q.questionImageUrl) && (
                 <div className="din4-image-preview-frame">
                   <img 
@@ -397,6 +360,49 @@ function CreateQuestion() {
           {saving ? "Saving..." : "Save Questions"}
         </button>
       </div>
+
+      {/* Confirmation Dialog */}
+      {showConfirmation && (
+        <div className="din4-modal-overlay">
+          <div className="din4-modal-content">
+            <h3>Unsaved Changes</h3>
+            <p>Any unsaved questions will not be saved. Are you sure you want to go back?</p>
+            <div className="din4-modal-buttons">
+              <button 
+                className="din4-modal-btn din4-modal-cancel" 
+                onClick={handleCancelBack}
+              >
+                No, Stay Here
+              </button>
+              <button 
+                className="din4-modal-btn din4-modal-confirm" 
+                onClick={handleConfirmBack}
+              >
+                Yes, Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="din4-modal-overlay">
+          <div className="din4-modal-content">
+            <h3 style={{ color: '#2ecc71' }}>Questions Saved</h3>
+            <p>{savedCount} question{savedCount !== 1 ? 's' : ''} saved successfully!</p>
+            <div className="din4-modal-buttons">
+              <button 
+                className="din4-modal-btn din4-modal-confirm" 
+                style={{ backgroundColor: '#2ecc71', border: '1px solid #27ae60' }}
+                onClick={handleSuccessOkay}
+              >
+                Okay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

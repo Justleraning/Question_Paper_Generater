@@ -1,5 +1,3 @@
-/* CreateQuestion.css with din4 prefix */
-
 /* Reset and Base Styles */
 * {
     margin: 0;
@@ -94,6 +92,164 @@ html, body {
 
 .din4-question-container:hover {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Header layout with back button */
+.din4-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.din4-page-title {
+    margin: 0;
+    flex-grow: 1;
+    text-align: left;
+}
+
+/* Back Button Container and Button */
+.din4-back-button-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+}
+
+.din4-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 16px;
+    font-weight: 500;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: #ffffff;
+    color: #333333;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.din4-back-btn:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.din4-back-btn span {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Adjust the header to accommodate the back button */
+.din4-header {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.din4-page-title {
+    text-align: center;
+    margin: 0;
+}
+
+/* Responsive adjustment for the back button */
+@media (max-width: 768px) {
+    .din4-back-button-container {
+        top: -40px;
+        left: 50%;
+        transform: translateX(-50%);
+        right: auto;
+    }
+    
+    .din4-inner-container {
+        margin-top: 40px;
+    }
+}
+
+/* Modal Styles (Shared for Confirmation and Success) */
+.din4-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.din4-modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.din4-modal-content h3 {
+    margin-top: 0;
+    color: #d32f2f; /* Default color for confirmation modal */
+}
+
+.din4-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.din4-modal-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.din4-modal-cancel {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+}
+
+.din4-modal-confirm {
+    background-color: #d32f2f;
+    color: white;
+    border: 1px solid #b71c1c;
+}
+
+.din4-modal-confirm:hover {
+    background-color: #b71c1c;
+}
+
+.din4-modal-cancel:hover {
+    background-color: #e0e0e0;
+}
+
+/* Success Modal Specific Styles */
+.din4-success-modal-content h3 {
+    color: #2ecc71; /* Green for success */
+}
+
+.din4-success-modal-btn {
+    background-color: #2ecc71;
+    color: white;
+    border: 1px solid #27ae60;
+}
+
+.din4-success-modal-btn:hover {
+    background-color: #27ae60;
 }
 
 /* Delete Question Button */
@@ -330,7 +486,7 @@ html, body {
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
-    height: 0; /* Hide horizontal scrollbar */
+    height: 0;
 }
 
 ::-webkit-scrollbar-track {

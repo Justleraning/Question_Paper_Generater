@@ -19,7 +19,7 @@ function ExamDetails() {
     { code: "CA 3222", name: "C# AND DOT NET FRAMEWORK" },
     { code: "CA 3233", name: "Java Programming" },
     { code: "CA 3244", name: "Python Basics" },
-    { code: "DAV02", name: "Power BI"},
+    { code: "DAV02", name: "Power BI" },
   ], []);
 
   // Course options with only BCA
@@ -32,42 +32,46 @@ function ExamDetails() {
     { value: "III", display: "III SEMESTER" },
     { value: "IV", display: "IV SEMESTER" },
     { value: "V", display: "V SEMESTER" },
-    { value: "VI", display: "VI SEMESTER" }
+    { value: "VI", display: "VI SEMESTER" },
   ], []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name === "subjectCode") {
       const selectedSubject = subjectOptions.find(
         (subject) => subject.code === value
       );
-      setDetails(prev => ({
+      setDetails((prev) => ({
         ...prev,
         subjectCode: value,
         subjectName: selectedSubject ? selectedSubject.name : "",
       }));
     } else {
-      setDetails(prev => ({ ...prev, [name]: value }));
+      setDetails((prev) => ({ ...prev, [name]: value }));
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Log for debugging
+
     console.log("Exam Details Submitted:", details);
-    
-    // Store the details in localStorage for access in other components
-    localStorage.setItem('examDetails', JSON.stringify(details));
-    
-    // Navigate to Exam Pattern page
-    navigate('/exam-pattern');
+    localStorage.setItem("examDetails", JSON.stringify(details));
+    navigate("/exam-pattern");
+  };
+
+  const handleBackClick = () => {
+    navigate(-1); // Directly navigate to SelectMarks page
   };
 
   return (
     <div className="din6-details-container">
-      <h1>Enter Exam Details</h1>
+      <div className="din6-header">
+        <h1>Enter Exam Details</h1>
+        <button className="din6-back-btn" onClick={handleBackClick}>
+          <span className="din6-arrow">←</span> Back
+        </button>
+      </div>
       <form onSubmit={handleSubmit}>
         <div className="din6-form-group">
           <label htmlFor="course">Course</label>

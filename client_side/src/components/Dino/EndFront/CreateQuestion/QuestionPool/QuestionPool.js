@@ -134,6 +134,11 @@ function QuestionPool() {
     }));
   };
 
+  // Handle back button click
+  const handleBack = () => {
+    navigate(-1); // This will navigate to the previous page in history
+  };
+
   // Render expanded question content
   const renderQuestionContent = (question) => {
     const isExpanded = expandedQuestions[question._id];
@@ -224,6 +229,13 @@ function QuestionPool() {
 
   return (
     <div className="din3-question-pool-container">
+      {/* Back Button */}
+      <div className="din3-back-button-container">
+        <button className="din3-back-button" onClick={handleBack}>
+          ← Back
+        </button>
+      </div>
+      
       <h1>Question Pool</h1>
 
       {/* Filters Section */}

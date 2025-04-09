@@ -38,8 +38,20 @@ function SelectParts() {
     navigate(`/question-pool?subjectCode=${encodeURIComponent(selectedSubjectCode)}&part=${partLetter}`);
   };
 
+  const handleGoBack = () => {
+    navigate(-1); // Navigate back to the previous page
+  };
+
   return (
     <div className="din2-main-container">
+      {/* Back Button */}
+      <button 
+        className="din2-arrow-back-btn" 
+        onClick={handleGoBack}
+      >
+        <span className="din2-arrow">←</span> Back
+      </button>
+      
       {/* Subject Selection Container */}
       <div className="din2-container">
         <h1 className="din2-heading">Select Subject</h1>

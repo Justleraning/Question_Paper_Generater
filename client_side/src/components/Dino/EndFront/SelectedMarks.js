@@ -13,8 +13,20 @@ function SelectMarks() {
     navigate("/exam-details");
   };
 
+  const handleGoBack = () => {
+    navigate(-1); // Navigate back to the previous page
+  };
+
   return (
     <div className="din1-main-container">
+      {/* Back Button */}
+      <button 
+        className="din1-arrow-back-btn" 
+        onClick={handleGoBack}
+      >
+        <span className="din1-arrow">←</span> Back
+      </button>
+      
       {/* Left Container for "Create Questions" */}
       <div className="din1-marks-container">
         <h1 className="din1-heading">Create Questions</h1>

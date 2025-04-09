@@ -22,7 +22,6 @@ function EditQuestion() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // State for filters (from QuestionPool)
   const [filters, setFilters] = useState({
     subjectCode: "",
     part: "",
@@ -30,7 +29,6 @@ function EditQuestion() {
     unit: ""
   });
 
-  // State for questions list (from QuestionPool)
   const [subjectName, setSubjectName] = useState("");
   const [questions, setQuestions] = useState([]);
   const [expandedQuestions, setExpandedQuestions] = useState({});
@@ -38,13 +36,17 @@ function EditQuestion() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // State for editing panel (from CreateQuestion)
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [showEditPanel, setShowEditPanel] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
-  // Initialize filters from URL params
+  // Modal states
+  const [showEditSuccessModal, setShowEditSuccessModal] = useState(false);
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState(null);
+
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const subjectCode = queryParams.get('subjectCode');
@@ -56,24 +58,16 @@ function EditQuestion() {
     
     setFilters(updatedFilters);
     
-    // Find and set the subject name based on the code
     if (subjectCode) {
       const subject = SUBJECT_OPTIONS.find(s => s.code === subjectCode);
       setSubjectName(subject ? subject.name : "");
     }
   }, [location.search]);
 
-  // Fetch Questions
   const fetchQuestions = useCallback(async () => {
-    // Only fetch if we have the required filters
-    if (!filters.subjectCode || !filters.part) {
-      return;
-    }
+    if (!filters.subjectCode || !filters.part) return;
     
-    // Construct query parameters
     const { subjectCode, part, bloomType, unit } = filters;
-    
-    // Prepare query params
     const params = {
       subjectCode,
       part,
@@ -84,32 +78,16 @@ function EditQuestion() {
     try {
       setLoading(true);
       setError(null);
-
-      console.log("Fetching questions with params:", params);
-
-      // Fixed: Remove trailing slash in API endpoint
       const response = await axios.get("/api/endsem-questions", { params });
-
-      // Update questions
       const fetchedQuestions = response.data?.questions || [];
-      console.log("Fetched questions:", fetchedQuestions);
       setQuestions(fetchedQuestions);
-
-      // Reset expanded state for new questions
       const newExpandedState = fetchedQuestions.reduce((acc, question) => {
         acc[question._id] = false;
         return acc;
       }, {});
       setExpandedQuestions(newExpandedState);
-
     } catch (err) {
-      // Comprehensive error handling
-      const errorMessage = 
-        err.response?.data?.message || 
-        err.message || 
-        "Failed to fetch questions";
-      
-      console.error("Question fetch error:", err);
+      const errorMessage = err.response?.data?.message || err.message || "Failed to fetch questions";
       setError(errorMessage);
       setQuestions([]);
     } finally {
@@ -117,12 +95,10 @@ function EditQuestion() {
     }
   }, [filters]);
 
-  // Trigger fetch on filter changes
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
 
-  // Toggle question expansion
   const toggleExpand = (questionId) => {
     setExpandedQuestions(prev => ({
       ...prev,
@@ -130,18 +106,13 @@ function EditQuestion() {
     }));
   };
 
-  // Render expanded question content (from QuestionPool)
   const renderQuestionContent = (question) => {
     const isExpanded = expandedQuestions[question._id];
-    
     if (!isExpanded) return null;
 
     return (
       <div className="din5-expanded-content">
-        {/* Full Text */}
         {question.fullText && <p>{question.fullText}</p>}
-
-        {/* MCQ Options */}
         {question.questionType === "mcq" && (
           <ul className="din5-mcq-options">
             {question.options?.map((option, i) => (
@@ -149,34 +120,23 @@ function EditQuestion() {
             ))}
           </ul>
         )}
-
-        {/* MCQ Image Options */}
         {question.questionType === "mcq-image" && (
           <div className="din5-mcq-image-options">
             {question.options?.map((option, i) => (
               <div key={i} className="din5-mcq-image-option">
-                <img 
-                  src={option.image} 
-                  alt={option.text || `Option ${i + 1}`} 
-                />
+                <img src={option.image} alt={option.text || `Option ${i + 1}`} />
                 {option.text && <p>{option.text}</p>}
               </div>
             ))}
           </div>
         )}
-
-        {/* Question Image */}
         {question.imageUrl && (
           <div className="din5-question-image-container">
             <img 
               src={question.imageUrl} 
               alt="Question visual" 
               className="din5-question-image" 
-              onError={(e) => {
-                console.error("Image failed to load:", e);
-                e.target.src = "/placeholder-image.png"; // Fallback image
-                e.target.alt = "Image failed to load";
-              }}
+              onError={(e) => { e.target.src = "/placeholder-image.png"; }}
             />
           </div>
         )}
@@ -184,9 +144,7 @@ function EditQuestion() {
     );
   };
 
-  // Open edit panel for a question
   const handleEditClick = (question) => {
-    // Format the question for editing
     const formattedQuestion = {
       id: question._id,
       bloomLevel: question.bloomLevel,
@@ -198,32 +156,23 @@ function EditQuestion() {
       questionImageUrl: question.imageUrl || "",
       marks: question.marks || 2
     };
-    
     setEditingQuestion(formattedQuestion);
     setShowEditPanel(true);
   };
 
-  // Close edit panel
   const handleCloseEditPanel = () => {
     setShowEditPanel(false);
     setEditingQuestion(null);
     setSaveError(null);
   };
 
-  // Handle changes in edit panel
   const handleEditChange = (field, value) => {
     if (!editingQuestion) return;
-    
-    setEditingQuestion(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setEditingQuestion(prev => ({ ...prev, [field]: value }));
   };
 
-  // Handle image upload in edit panel
   const handleImageUpload = (file) => {
     if (!editingQuestion) return;
-    
     setEditingQuestion(prev => ({
       ...prev,
       questionImage: file,
@@ -232,10 +181,8 @@ function EditQuestion() {
     }));
   };
 
-  // Handle image URL change in edit panel
   const handleImageUrlChange = (url) => {
     if (!editingQuestion) return;
-    
     setEditingQuestion(prev => ({
       ...prev,
       questionImageUrl: url,
@@ -244,10 +191,8 @@ function EditQuestion() {
     }));
   };
 
-  // Delete image in edit panel
   const handleDeleteImage = () => {
     if (!editingQuestion) return;
-    
     setEditingQuestion(prev => ({
       ...prev,
       questionImage: null,
@@ -256,11 +201,9 @@ function EditQuestion() {
     }));
   };
 
-  // Save edited question
   const handleSaveQuestion = async () => {
     if (!editingQuestion) return;
     
-    // Validate question
     if (!editingQuestion.bloomLevel) {
       alert("Bloom Level is required");
       return;
@@ -278,106 +221,102 @@ function EditQuestion() {
     setSaveError(null);
     
     try {
-      // Create FormData for image upload
       const formData = new FormData();
-      
-      // Add question data to FormData
       formData.append('subjectCode', filters.subjectCode);
-      formData.append('part', editingQuestion.part.replace('Part ', '')); // Extract part letter (A, B, C)
+      formData.append('part', editingQuestion.part.replace('Part ', ''));
       formData.append('question', editingQuestion.text);
       formData.append('bloomLevel', editingQuestion.bloomLevel);
       formData.append('unit', editingQuestion.unit);
       formData.append('marks', editingQuestion.marks || 2);
       
-      // Handle image (URL or file)
       if (editingQuestion.imageSource === 'url' && editingQuestion.questionImageUrl) {
         formData.append('image', editingQuestion.questionImageUrl);
       } else if (editingQuestion.imageSource === 'upload' && editingQuestion.questionImage) {
         formData.append('questionImage', editingQuestion.questionImage);
       }
       
-      // Save question to database
       const response = await axios.put(`/api/endsem-questions/questions/${editingQuestion.id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       
       console.log("Question updated:", response.data);
-      
-      
-      
-      // Close edit panel and refresh questions
       setShowEditPanel(false);
       setEditingQuestion(null);
+      setShowEditSuccessModal(true);
       fetchQuestions();
-      
     } catch (err) {
-      console.error("Error updating question:", err);
       setSaveError(err.response?.data?.message || err.message || "Failed to update question");
       alert(`Error: ${err.response?.data?.message || err.message || "Failed to update question"}`);
     } finally {
       setSaving(false);
     }
   };
- 
-  // Handle filter changes
-const handleFilterChange = (field, value) => {
-  setFilters(prev => ({
-    ...prev,
-    [field]: value
-  }));
-};
 
-  // Delete question
-  const handleDeleteQuestion = async (questionId) => {
-    if (!window.confirm("Are you sure you want to delete this question?")) {
-      return;
-    }
-    
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleDeleteQuestion = (questionId) => {
+    setQuestionToDelete(questionId);
+    setShowDeleteConfirmModal(true);
+  };
+
+  const confirmDeleteQuestion = async () => {
+    if (!questionToDelete) return;
+
     try {
       setLoading(true);
-      
-      // Delete question from database
-      await axios.delete(`/api/endsem-questions/questions/${questionId}`);
-      
-     
-      
-      // Close edit panel if open and refresh questions
-      if (editingQuestion && editingQuestion.id === questionId) {
+      await axios.delete(`/api/endsem-questions/questions/${questionToDelete}`);
+      if (editingQuestion && editingQuestion.id === questionToDelete) {
         setShowEditPanel(false);
         setEditingQuestion(null);
       }
-      
       fetchQuestions();
-      
+      setShowDeleteConfirmModal(false);
+      setShowDeleteSuccessModal(true);
     } catch (err) {
-      console.error("Error deleting question:", err);
       alert(`Error: ${err.response?.data?.message || err.message || "Failed to delete question"}`);
     } finally {
       setLoading(false);
+      setQuestionToDelete(null);
     }
   };
 
-  // Filter questions based on search term
+  const cancelDeleteQuestion = () => {
+    setShowDeleteConfirmModal(false);
+    setQuestionToDelete(null);
+  };
+
   const filteredQuestions = questions.filter(question => 
     question.question.toLowerCase().includes(searchTerm.toLowerCase()) || 
     (question.fullText && question.fullText.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const handleBackClick = () => {
+    navigate(`/question-pool?subjectCode=${encodeURIComponent(filters.subjectCode)}&part=${filters.part}`);
+  };
+
+  const handleEditSuccessOkay = () => {
+    setShowEditSuccessModal(false);
+  };
+
+  const handleDeleteSuccessOkay = () => {
+    setShowDeleteSuccessModal(false);
+  };
+
   return (
     <div className="din5-question-pool-container">
-      <h1>Edit Questions</h1>
+      <div className="din5-header">
+        <h1>Edit Questions</h1>
+        <button className="din5-back-btn" onClick={handleBackClick}>← Back</button>
+      </div>
 
-      {/* Filters Section (from QuestionPool) */}
       <div className="din5-header-container">
-        {/* Display subject information */}
         <div className="din5-subject-info">
           <div className="din5-display-box">
             <label>Subject Code:</label>
             <div className="din5-display-value">{filters.subjectCode}</div>
           </div>
-          
           <div className="din5-display-box">
             <label>Subject Name:</label>
             <div className="din5-display-value">{subjectName}</div>
@@ -385,7 +324,6 @@ const handleFilterChange = (field, value) => {
         </div>
         
         <div className="din5-filters-row">
-          {/* Part Dropdown */}
           <div className="din5-dropdown-group">
             <label>Part:</label>
             <select 
@@ -398,8 +336,6 @@ const handleFilterChange = (field, value) => {
               <option value="C">Part C</option>
             </select>
           </div>
-
-          {/* Bloom Type Dropdown */}
           <div className="din5-dropdown-group">
             <label>Bloom Type:</label>
             <select 
@@ -413,8 +349,6 @@ const handleFilterChange = (field, value) => {
               ))}
             </select>
           </div>
-
-          {/* Unit Dropdown */}
           <div className="din5-dropdown-group">
             <label>Unit:</label>
             <select 
@@ -431,7 +365,6 @@ const handleFilterChange = (field, value) => {
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="din5-search-container">
         <input
           type="text"
@@ -442,18 +375,15 @@ const handleFilterChange = (field, value) => {
         />
       </div>
 
-      {/* Loading and Error Handling */}
       {loading && <p className="din5-loading">Loading questions...</p>}
       {error && <p className="din5-error">{error}</p>}
 
-      {/* Question List */}
       <div className="din5-question-pool">
         <h2>Questions: {filteredQuestions.length}</h2>
         <div className="din5-questions-box">
           {filteredQuestions.length > 0 ? (
             filteredQuestions.map((question, index) => (
               <div key={question._id} className="din5-question">
-                {/* Question Header */}
                 <div className="din5-question-header">
                   <div className="din5-question-info">
                     <span className="din5-question-text">
@@ -463,27 +393,10 @@ const handleFilterChange = (field, value) => {
                       (Unit {question.unit} - {question.bloomLevel})
                     </span>
                   </div>
-                  
-                  {/* Action Buttons */}
                   <div className="din5-question-actions">
-                    <button 
-                      className="din5-edit-btn" 
-                      onClick={() => handleEditClick(question)}
-                      title="Edit Question"
-                    >
-                      ✏️
-                    </button>
-                    <button 
-                      className="din5-delete-btn" 
-                      onClick={() => handleDeleteQuestion(question._id)}
-                      title="Delete Question"
-                    >
-                      🗑️
-                    </button>
-                    {(question.fullText || 
-                      question.options || 
-                      question.hasImage || 
-                      question.imageUrl) && (
+                    <button className="din5-edit-btn" onClick={() => handleEditClick(question)} title="Edit Question">✏️</button>
+                    <button className="din5-delete-btn" onClick={() => handleDeleteQuestion(question._id)} title="Delete Question">🗑️</button>
+                    {(question.fullText || question.options || question.hasImage || question.imageUrl) && (
                       <button 
                         className="din5-expand-btn" 
                         onClick={() => toggleExpand(question._id)}
@@ -494,8 +407,6 @@ const handleFilterChange = (field, value) => {
                     )}
                   </div>
                 </div>
-
-                {/* Expanded Content */}
                 {renderQuestionContent(question)}
               </div>
             ))
@@ -507,7 +418,6 @@ const handleFilterChange = (field, value) => {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="din5-button-group">
         <button 
           className="din5-action-btn" 
@@ -523,7 +433,6 @@ const handleFilterChange = (field, value) => {
         </button>
       </div>
 
-      {/* Floating Edit Panel (similar to CreateQuestion) */}
       {showEditPanel && editingQuestion && (
         <div className="din5-edit-panel-overlay">
           <div className="din5-edit-panel">
@@ -533,7 +442,6 @@ const handleFilterChange = (field, value) => {
             {saveError && <div className="din5-error-message">{saveError}</div>}
             
             <div className="din5-dropdown-group-container">
-              {/* Bloom Level Dropdown */}
               <div className="din5-dropdown-group">
                 <label className="din5-label">Bloom Level:</label>
                 <select 
@@ -550,8 +458,6 @@ const handleFilterChange = (field, value) => {
                   <option value="Create L3">Create L3</option>
                 </select>
               </div>
-
-              {/* Unit Dropdown */}
               <div className="din5-dropdown-group">
                 <label className="din5-label">Unit:</label>
                 <select 
@@ -567,8 +473,6 @@ const handleFilterChange = (field, value) => {
                   <option value="5">5</option>
                 </select>
               </div>
-
-              {/* Part Dropdown */}
               <div className="din5-dropdown-group">
                 <label className="din5-label">Part:</label>
                 <select 
@@ -581,8 +485,6 @@ const handleFilterChange = (field, value) => {
                   <option value="Part C">Part C</option>
                 </select>
               </div>
-              
-              {/* Marks Dropdown */}
               <div className="din5-dropdown-group">
                 <label className="din5-label">Marks:</label>
                 <select 
@@ -597,7 +499,6 @@ const handleFilterChange = (field, value) => {
               </div>
             </div>
 
-            {/* Question Input */}
             <label className="din5-label">Question Text:</label>
             <textarea 
               className="din5-question-input" 
@@ -606,7 +507,6 @@ const handleFilterChange = (field, value) => {
               onChange={(e) => handleEditChange('text', e.target.value)} 
             />
 
-            {/* Image Upload Options */}
             <div className="din5-image-upload-container">
               <label className="din5-label">Image Source:</label>
               <select 
@@ -633,7 +533,6 @@ const handleFilterChange = (field, value) => {
                 />
               )}
 
-              {/* Image Preview */}
               {(editingQuestion.questionImage || editingQuestion.questionImageUrl) && (
                 <div className="din5-image-preview-frame">
                   <img 
@@ -644,23 +543,62 @@ const handleFilterChange = (field, value) => {
                     } 
                     alt="Uploaded" 
                   />
-                  <button 
-                    className="din5-delete-image-btn" 
-                    onClick={handleDeleteImage}
-                  >
-                    ✖
-                  </button>
+                  <button className="din5-delete-image-btn" onClick={handleDeleteImage}>✖</button>
                 </div>
               )}
             </div>
 
-            <button 
-              className="din5-save-btn" 
-              onClick={handleSaveQuestion}
-              disabled={saving}
-            >
+            <button className="din5-save-btn" onClick={handleSaveQuestion} disabled={saving}>
               {saving ? "Saving..." : "Save Question"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Success Modal */}
+      {showEditSuccessModal && (
+        <div className="din5-modal-overlay">
+          <div className="din5-modal-content din5-success-modal-content">
+            <h3>Question Edited Successfully</h3>
+            <p>The question has been updated successfully.</p>
+            <div className="din5-modal-buttons">
+              <button className="din5-modal-btn din5-success-modal-btn" onClick={handleEditSuccessOkay}>
+                Okay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Success Modal */}
+      {showDeleteSuccessModal && (
+        <div className="din5-modal-overlay">
+          <div className="din5-modal-content din5-success-modal-content">
+            <h3>Question Deleted Successfully</h3>
+            <p>The question has been deleted successfully.</p>
+            <div className="din5-modal-buttons">
+              <button className="din5-modal-btn din5-success-modal-btn" onClick={handleDeleteSuccessOkay}>
+                Okay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmModal && (
+        <div className="din5-modal-overlay">
+          <div className="din5-modal-content">
+            <h3>Confirm Deletion</h3>
+            <p>Are you sure you want to delete this question?</p>
+            <div className="din5-modal-buttons">
+              <button className="din5-modal-btn din5-modal-cancel" onClick={cancelDeleteQuestion}>
+                Cancel
+              </button>
+              <button className="din5-modal-btn din5-modal-confirm" onClick={confirmDeleteQuestion}>
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

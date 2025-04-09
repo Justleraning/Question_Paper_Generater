@@ -14,9 +14,9 @@ export const useExamConfig = () => {
   return context;
 };
 
-const ExamDetails = () => {
+const ExamPattern = () => {
   const navigate = useNavigate();
-  
+
   // Initial exam pattern configuration with values from the provided table
   const [examConfig, setExamConfig] = useState({
     totalMarks: 78, // Updated to 78 as per requirement
@@ -274,6 +274,11 @@ const ExamDetails = () => {
     });
   };
 
+  // Function to handle back button click
+  const handleBackClick = () => {
+    navigate('/exam-details'); // Navigate back to ExamDetails page
+  };
+
   // Calculate totals for validation and display
   const calculateTotals = () => {
     const partTotals = examConfig.parts.map(part => {
@@ -350,12 +355,17 @@ const ExamDetails = () => {
   return (
     <ExamConfigContext.Provider value={contextValue}>
       <div className="din7-exam-details-container">
-        <header className="din7-exam-header">
-          <h1>Exam Pattern Configuration</h1>
-          <p className="din7-header-description">
-            Configure your exam pattern with units, Bloom's taxonomy levels, and question distribution
-          </p>
-        </header>
+        <div className="din7-header">
+          <header className="din7-exam-header">
+            <h1>Exam Pattern Configuration</h1>
+            <p className="din7-header-description">
+              Configure your exam pattern with units, Bloom's taxonomy levels, and question distribution
+            </p>
+          </header>
+          <button className="din7-back-btn" onClick={handleBackClick}>
+            <span className="din7-arrow">←</span> Back
+          </button>
+        </div>
 
         <div className="din7-config-section">
           <h2>Units and Bloom's Taxonomy</h2>
@@ -522,4 +532,4 @@ const ExamDetails = () => {
   );
 };
 
-export default ExamDetails;
+export default ExamPattern;
