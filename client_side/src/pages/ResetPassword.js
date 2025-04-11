@@ -151,9 +151,7 @@ const ResetPassword = () => {
       {showSuperAdminDialog && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg text-center w-96">
-            <h3 className="text-lg font-semibold mb-3">SuperAdmin Reset Request</h3>
             <p className="text-gray-700">SuperAdmin must contact:</p>
-            <p className="font-bold text-blue-600">manavnair917@gmail.com</p>
             <button
               className="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
               onClick={handleCloseDialog}

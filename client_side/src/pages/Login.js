@@ -489,48 +489,8 @@ const Login = () => {
       </div>
 
       {/* SuperAdmin Reset Request Dialog Box */}
-      {showSuperAdminDialog && (
-        <Dialog open={showSuperAdminDialog} onClose={() => setShowSuperAdminDialog(false)} className="fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
-          
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <Dialog.Panel className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md transition-all duration-300 animate-fadeIn">
-              <div className="flex justify-center mb-4">
-                <div className="p-3 rounded-full bg-gradient-to-r from-red-50 to-red-100 text-red-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-              </div>
-              
-              <Dialog.Title className="text-xl font-bold text-center mb-2">
-                SuperAdmin Reset Request
-              </Dialog.Title>
-              
-              <div className="text-center mb-6">
-                <p className="text-gray-700">
-                  For security reasons, SuperAdmin password resets require direct contact with support.
-                </p>
-                <p className="mt-2 font-medium">
-                  Please email: <a href="mailto:manavnair917@gmail.com" className="text-blue-600 hover:underline">manavnair917@gmail.com</a>
-                </p>
-              </div>
-              
-              <div className="flex justify-center">
-                <button
-                  className="bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 font-medium flex items-center transform hover:scale-[1.02] active:scale-[0.98]"
-                  onClick={() => setShowSuperAdminDialog(false)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Close
-                </button>
-              </div>
-            </Dialog.Panel>
-          </div>
-        </Dialog>
-      )}
+      
+    
     </div>
   );
 };
