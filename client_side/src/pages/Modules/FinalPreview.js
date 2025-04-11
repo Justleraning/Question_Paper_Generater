@@ -98,7 +98,7 @@ const FinalPreview = () => {
         const questionsWithSubject = subjectQuestions.map(q => ({
           id: q.questionId || Math.random().toString(36).substr(2, 9),
           subject: SUBJECT_NAMES[subjectCode],
-          question: q.text,
+          question: stripHTMLTags(q.text),
           options: q.options.map(opt => ({
             type: "Text", // Force all options to be Text type
             value: opt.value || ""
@@ -711,7 +711,7 @@ const processQuestionsForDOCX = () => {
   // Start editing a question
   const startEditingQuestion = (question) => {
     setEditingQuestionId(question.id);
-    setEditedQuestionText(question.question);
+    setEditedQuestionText(stripHTMLTags(question.question));
     setEditedOptions(question.options);
     setEditedCorrectOption(question.correctOption);
   };
@@ -922,7 +922,7 @@ const processQuestionsForDOCX = () => {
                           // View mode
                           <div className="group">
                             <div className="flex justify-between items-start">
-                              <p className="font-medium mb-2">{idx + 1}. {stripHTMLTags(q.question)}</p>
+                              <p className="font-medium mb-2">{idx + 1}. {q.question}</p>
                               <button
                                 onClick={() => startEditingQuestion(q)}
                                 className="px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 opacity-0 group-hover:opacity-100 transition-opacity"

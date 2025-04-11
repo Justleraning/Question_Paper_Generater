@@ -55,7 +55,7 @@ const requestPasswordReset = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (user.role === "SuperAdmin") {
-      return res.status(403).json({ message: "SuperAdmin must contact support" });
+      return res.status(403).json({ message: "SuperAdmin must contact support: manavnair917@gmail.com" });
     }
 
     const existingRequest = await ResetRequest.findOne({ username });
@@ -67,7 +67,7 @@ const requestPasswordReset = async (req, res) => {
     await ResetRequest.create({ 
       username, 
       fullName, 
-      role: user.role // Include the role
+      role: user.role 
     });
 
     res.status(201).json({ message: "Reset request submitted" });
